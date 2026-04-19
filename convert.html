@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html><body>
+<img id="img" src="白蛇っち.jpg" onload="process()">
+<pre id="output">Processing...</pre>
+<script>
+function process() {
+  const img = document.getElementById('img');
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const frameW = Math.floor(w / 3);
+  
+  let arrays = [];
+  
+  for(let i=0; i<3; i++) {
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = frameW;
+    cropCanvas.height = h;
+    const cropCtx = cropCanvas.getContext('2d');
+    cropCtx.drawImage(img, i*frameW, 0, frameW, h, 0, 0, frameW, h);
+    
+    // Find BBox
+    const imgData = cropCtx.getImageData(0, 0, frameW, h);
+    const data = imgData.data;
+    let minX = frameW, minY = h, maxX = 0, maxY = 0;
+    for(let y=0; y<h; y++) {
+      for(let x=0; x<frameW; x++) {
+        const idx = (y*frameW + x) * 4;
+        const brightness = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+        if(brightness < 230) { 
+          if(x < minX) minX = x;
+          if(x > maxX) maxX = x;
+          if(y < minY) minY = y;
+          if(y > maxY) maxY = y;
+        }
+      }
+    }
+    
+    let resData = [];
+    if(minX <= maxX && minY <= maxY) {
+       let cW = maxX - minX + 1;
+       let cH = maxY - minY + 1;
+       let sqSize = Math.max(cW, cH);
+       
+       let sqCanvas = document.createElement('canvas');
+       sqCanvas.width = sqSize;
+       sqCanvas.height = sqSize;
+       let sqCtx = sqCanvas.getContext('2d');
+       sqCtx.fillStyle = 'white';
+       sqCtx.fillRect(0,0,sqSize,sqSize);
+       
+       let offsetX = Math.floor((sqSize - cW)/2);
+       let offsetY = Math.floor((sqSize - cH)/2);
+       sqCtx.drawImage(cropCanvas, minX, minY, cW, cH, offsetX, offsetY, cW, cH);
+       
+       let finalCanvas = document.createElement('canvas');
+       finalCanvas.width = 24;
+       finalCanvas.height = 24;
+       let finalCtx = finalCanvas.getContext('2d');
+       finalCtx.imageSmoothingEnabled = false;
+       finalCtx.drawImage(sqCanvas, 0, 0, 24, 24);
+       
+       const fData = finalCtx.getImageData(0,0,24,24).data;
+       for(let y=0; y<24; y++) {
+         let line = '';
+         for(let x=0; x<24; x++) {
+           let idx = (y*24 + x) * 4;
+           let b = (fData[idx] + fData[idx+1] + fData[idx+2]) / 3;
+           if(b < 200) line += '█';
+           else line += ' ';
+         }
+         resData.push('"' + line + '"');
+       }
+    } else {
+       for(let j=0; j<24; j++) resData.push('"' + ' '.repeat(24) + '"');
+    }
+    arrays.push("[\n  " + resData.join(",\n  ") + "\n]");
+  }
+  
+  document.getElementById('output').innerText = "ANIM_FRAMES:\n" + arrays.join(",\n");
+}
+</script>
+</body></html>

@@ -1,0 +1,712 @@
+:root {
+            --device-bg: #4A90E2;    /* 筐体の色を少しクールに変更 */
+            --screen-bg: #B5C6A9;    /* 背景ベースを少し明るい緑に */
+            --screen-text: #0f380f;
+            --screen-shadow: #306230;
+        }
+
+        body {
+            font-family: 'DotGothic16', sans-serif;
+            background: #e6f0ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            
+            /* Apple審査対策：Web特有の挙動を無効化 */
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 筐体デザイン */
+        .device {
+            background: var(--device-bg);
+            border-radius: 50px 50px 70px 70px;
+            padding: 40px 30px;
+            box-shadow: 
+                inset -5px -5px 15px rgba(0,0,0,0.2),
+                inset 5px 5px 15px rgba(255,255,255,0.4),
+                10px 10px 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 380px;
+            position: relative;
+        }
+
+        .device-title {
+            color: white;
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+            letter-spacing: 2px;
+        }
+
+        /* 液晶画面周り */
+        .screen-container {
+            background: #e0e0e0;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #5a5a5a;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3);
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+        }
+
+        .screen {
+            background-color: #B5C6A9; /* ベースの液晶色 */
+            /* ★ 実際のたまごっち風の背景柄（上下ボーダー＋方眼） */
+            background-image: 
+                /* 1. 薄いドット方眼（ピクセルごとのマス目感） */
+                linear-gradient(rgba(15, 56, 15, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 56, 15, 0.05) 1px, transparent 1px),
+                /* 2. 背景の模様（写真のようなピンクや黄色の淡いボーダー） */
+                linear-gradient(to bottom, 
+                    rgba(255, 235, 100, 0.3) 0%, rgba(255, 235, 100, 0.3) 20%, 
+                    rgba(150, 190, 220, 0.3) 20%, rgba(150, 190, 220, 0.3) 80%,
+                    rgba(255, 235, 100, 0.3) 80%, rgba(255, 235, 100, 0.3) 100%
+                );
+            background-size: 4px 4px, 4px 4px, 100% 100%; /* 方眼のサイズ */
+            color: var(--screen-text);
+            width: 100%;
+            height: 280px;
+            border-radius: 4px;
+            box-shadow: inset 2px 2px 8px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            text-align: center;
+            height: 1.2rem;
+            margin-bottom: 5px;
+        }
+
+        /* ★ 高解像度ドット絵表示用 Canvas ★ */
+        .art-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            position: relative;
+            /* キャンバスの後ろにうっすらと非点灯ドットを見せる */
+            background-image: 
+                radial-gradient(rgba(15, 56, 15, 0.1) 1px, transparent 1px);
+            background-size: 8px 8px; /* 192px / 24ドット = 8pxマスのグリッドに合わせる */
+            background-position: center;
+            border-radius: 8px;
+        }
+
+        #pixelCanvas {
+            width: 192px;  /* 24px * 8倍拡大 */
+            height: 192px; /* 24px * 8倍拡大 */
+            image-rendering: pixelated; /* ドットをくっきり表示 */
+            transition: transform 0.2s;
+            filter: drop-shadow(2px 2px 0px rgba(15, 56, 15, 0.4));
+        }
+
+        /* 揺れアニメーション */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-4px) rotate(-5deg); }
+            50% { transform: translateX(0); }
+            75% { transform: translateX(4px) rotate(5deg); }
+            100% { transform: translateX(0); }
+        }
+        
+        .animated { animation: shake 0.5s ease-in-out; }
+        .bouncing { animation: shake 1s infinite alternate; }
+
+        .main-stats-display {
+            position: absolute;
+            top: 30px;
+            left: 12px;
+            font-size: 1.15rem; /* 約1.5倍〜倍近くに拡大して視認性アップ */
+            line-height: 1.5;
+            color: var(--screen-shadow);
+            z-index: 10;
+            font-family: 'DotGothic16', sans-serif;
+            text-shadow: none;
+            /* font-weight: bold; ←これを削除してドット感を統一 */
+        }
+
+        /* プログレスバー */
+        .progress-container {
+            border: 2px solid var(--screen-text);
+            height: 14px;
+            width: 100%;
+            margin-top: 10px;
+            position: relative;
+        }
+        .progress-bar {
+            background: var(--screen-text);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            position: absolute;
+            top: -2px; left: 0; width: 100%;
+            text-align: center; font-size: 0.8rem;
+            color: white; mix-blend-mode: difference;
+        }
+
+        .stats-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(181, 198, 169, 0.95); /* screen-bgに合わせた色 */
+            padding: 10px; box-sizing: border-box;
+            display: none; flex-direction: column; overflow-y: auto; z-index: 10;
+        }
+        .stats-overlay.visible { display: flex; }
+        .stats-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; border-bottom: 1px dashed var(--screen-shadow); }
+        .stats-group { margin-top: 10px; font-weight: bold; border-bottom: 2px solid var(--screen-text); padding-bottom: 2px; }
+        .close-stats-btn { margin-top: auto; align-self: center; background: none; border: 2px solid var(--screen-text); color: var(--screen-text); font-family: inherit; padding: 4px 10px; cursor: pointer; }
+
+        .zukan-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(181, 198, 169, 0.95); padding: 10px; box-sizing: border-box; display: none; flex-direction: column; overflow-y: auto; z-index: 10; }
+        .zukan-overlay.visible { display: flex; }
+        .zukan-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+        .zukan-stage-title { font-size: 0.8rem; border-bottom: 1px dotted var(--screen-shadow); margin-bottom: 5px; text-align: center; }
+        .zukan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .zukan-item { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 5px; }
+        .zukan-canvas { width: 48px; height: 48px; image-rendering: pixelated; background: #B5C6A9; border: 1px solid #5a5a5a; border-radius: 2px; }
+        .zukan-name { font-size: 0.55rem; margin-top: 4px; text-align: center; width: 100%; word-break: break-all; line-height: 1.1; font-weight: bold; }
+
+        /* ボタン群 */
+        .controls { display: flex; justify-content: space-around; width: 100%; margin-top: 30px; }
+        .btn-round { width: 60px; height: 60px; border-radius: 50%; background: #F8B400; border: none; box-shadow: inset -2px -2px 8px rgba(0,0,0,0.3), inset 2px 2px 8px rgba(255,255,255,0.5), 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; color: #C0392B; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .btn-round.mic-active { background: #E74C3C; color: white; animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
+        .btn-label { margin-top: 10px; font-size: 0.8rem; color: white; text-align: center; }
+
+        /* テストパネル */
+        .test-panel { background: white; padding: 15px; border-radius: 8px; margin-top: 20px; width: 100%; max-width: 380px; font-family: sans-serif; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .test-panel h3 { margin-top: 0; font-size: 1rem; }
+        .test-btns { display: flex; flex-wrap: wrap; gap: 5px; }
+        .test-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; border-radius: 4px; cursor: pointer; }
+
+        /* お祝いオーバーレイ */
+        .celebration-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none; align-items: center; justify-content: center;
+            z-index: 100; text-align: center;
+            flex-direction: column;
+            animation: fadeIn 0.3s forwards;
+            pointer-events: none;
+        }
+        .celebration-overlay.visible { display: flex; }
+        .celebration-content {
+            background: #fdfdfd; 
+            border: 4px double #5a5a5a; 
+            border-radius: 0; 
+            padding: 20px; 
+            box-shadow: 6px 6px 0 rgba(0,0,0,0.1);
+            animation: popUp 0.4s steps(4);
+            max-width: 85%;
+            pointer-events: auto;
+            position: relative;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popUp { 0% { transform: scale(0.8); } 100% { transform: scale(1); } }
+        .confetti { 
+            position: absolute; 
+            width: 8px; 
+            height: 8px; 
+            pointer-events: none; 
+            z-index: 101; 
+        }
+
+        /* 派手なフラッシュ白飛び用 */
+        @keyframes flashFade { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* ドキドキ進化暗転エフェクト用 */
+        .evolution-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 150;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1.0s ease-out;
+        }
+        .evolution-overlay.flashing {
+            animation: evolutionPulsate 3.0s step-end forwards;
+        }
+        @keyframes evolutionPulsate {
+            0%   { opacity: 0; }
+            15%  { opacity: 1; }
+            22%  { opacity: 0; }
+            35%  { opacity: 1; }
+            40%  { opacity: 0; }
+            50%  { opacity: 1; }
+            54%  { opacity: 0; }
+            62%  { opacity: 1; }
+            65%  { opacity: 0; }
+            72%  { opacity: 1; }
+            74%  { opacity: 0; }
+            80%  { opacity: 1; }
+            82%  { opacity: 0; }
+            87%  { opacity: 1; }
+            88%  { opacity: 0; }
+            92%  { opacity: 1; }
+            93%  { opacity: 0; }
+            95%  { opacity: 1; }
+            96%  { opacity: 0; }
+            98%  { opacity: 1; }
+            99%  { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        .evolution-overlay.flashing-ultimate {
+            background: #fff; /* デフォルト黒を上書きして白ベースに */
+            animation: ultimatePulsate 9.0s ease-in forwards;
+        }
+        @keyframes ultimatePulsate {
+            0%   { opacity: 0; background: #fff; }
+            /* ゆっくりした点滅 */
+            5%   { opacity: 0.8; background: #f1c40f; }
+            10%  { opacity: 0; }
+            15%  { opacity: 0.9; background: #fff; }
+            20%  { opacity: 0; }
+            25%  { opacity: 1; background: #f39c12; }
+            30%  { opacity: 0; }
+            /* 少し早くなる点滅 */
+            35%  { opacity: 1; background: #e74c3c; }
+            39%  { opacity: 0; }
+            43%  { opacity: 1; background: #fff; }
+            47%  { opacity: 0; }
+            51%  { opacity: 1; background: #f1c40f; }
+            55%  { opacity: 0; }
+            /* さらに早くなる点滅 */
+            58%  { opacity: 1; background: #e74c3c; }
+            61%  { opacity: 0; }
+            64%  { opacity: 1; background: #f39c12; }
+            67%  { opacity: 0; }
+            70%  { opacity: 1; background: #fff; }
+            73%  { opacity: 0; }
+            75%  { opacity: 1; background: #e74c3c; }
+            77%  { opacity: 0; }
+            /* 激しく点滅 (パパパパパッ) */
+            79%  { opacity: 1; background: #fff; }
+            80%  { opacity: 0; }
+            81%  { opacity: 1; background: #f1c40f; }
+            82%  { opacity: 0; }
+            83%  { opacity: 1; background: #e74c3c; }
+            84%  { opacity: 0; }
+            85%  { opacity: 1; background: #fff; }
+            86%  { opacity: 0; }
+            87%  { opacity: 1; background: #f1c40f; }
+            88%  { opacity: 0; }
+            89%  { opacity: 1; background: #e74c3c; }
+            90%  { opacity: 0; }
+            /* クライマックスの超高速フラッシュ */
+            91%  { opacity: 1; background: #fff; }
+            92%  { opacity: 0; background: #e74c3c; }
+            93%  { opacity: 1; background: #fff; }
+            94%  { opacity: 0; background: #f1c40f; }
+            95%  { opacity: 1; background: #fff; }
+            96%  { opacity: 0; background: #e74c3c; }
+            97%  { opacity: 1; background: #fff; }
+            98%  { opacity: 0; background: #f39c12; }
+            99%  { opacity: 1; background: #fff; }
+            100% { opacity: 1; background: #fff; } /* 最後は真っ白 */
+        }
+        
+        /* 転生（ゆっくり暗転・ゆっくり明転）エフェクト用 */
+        .rebirth-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 150;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 3.0s ease-in-out;
+        }
+        .rebirth-overlay.active {
+            opacity: 1;
+        }
+
+        /* レアアイテム・ポップアップ */
+        .rare-item-content {
+            background: linear-gradient(135deg, #fffbeb, #ffebb3);
+            border: 5px solid #f1c40f; 
+            border-radius: 8px; 
+            padding: 15px 10px; 
+            box-shadow: 0 0 30px #f1c40f, inset 0 0 20px rgba(241, 196, 15, 0.5);
+            animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 90%;
+            pointer-events: auto;
+            position: relative;
+            text-align: center;
+            overflow: hidden;
+        }
+        .rare-item-content::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0) 100%);
+            transform: rotate(30deg);
+            animation: sweepShine 1.5s infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        @keyframes sweepShine {
+            0% { left: -150%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            70% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        .item-glow-bg {
+            position: relative;
+            margin: 0 auto 5px auto;
+            width: 70px; height: 70px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        /* 回転する放射線（サンバースト） */
+        .item-glow-bg::before {
+            content: '';
+            position: absolute;
+            top: -40px; left: -40px; right: -40px; bottom: -40px;
+            background: repeating-conic-gradient(from 0deg, #f1c40f 0deg 15deg, transparent 15deg 30deg);
+            animation: spinBurst 4s linear infinite;
+            border-radius: 50%;
+            z-index: 0;
+            opacity: 0.6;
+        }
+        /* 後光の激しいパルス */
+        .item-glow-bg::after {
+            content: '';
+            position: absolute;
+            top: -10px; left: -10px; right: -10px; bottom: -10px;
+            background: radial-gradient(circle, #fff 0%, #f39c12 50%, transparent 70%);
+            animation: pulseInnerGlow 0.6s infinite alternate;
+            z-index: 0;
+            border-radius: 50%;
+        }
+        @keyframes spinBurst {
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes pulseInnerGlow {
+            from { transform: scale(0.9); opacity: 0.8; }
+            to { transform: scale(1.2); opacity: 1; }
+        }
+        .item-popup-canvas-container {
+            position: relative;
+            z-index: 1;
+            background: rgba(255,255,255,0.9);
+            border: 3px solid #f39c12;
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: 0 0 15px #e74c3c, 0 0 30px #f1c40f;
+            animation: floatItemAndGlow 1.2s ease-in-out infinite alternate;
+        }
+        @keyframes floatItemAndGlow {
+            from { transform: translateY(0) scale(1.0); box-shadow: 0 0 10px #e74c3c, 0 0 20px #f1c40f; }
+            to { transform: translateY(-3px) scale(1.08); box-shadow: 0 0 25px #e74c3c, 0 0 50px #f1c40f; }
+        }
+        .flashy-title {
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: #FFEA00;
+            text-shadow: 
+                1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
+                0 0 10px #ff2a00, 0 0 20px #ff2a00, 0 0 30px #ff0080;
+            margin-bottom: 10px;
+            line-height: 1.3;
+            animation: textPulseScale 0.5s infinite alternate;
+        }
+        @keyframes textPulseScale {
+            from { transform: scale(1); }
+            to { transform: scale(1.08); text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 0 15px #ff2a00, 0 0 30px #ff2a00, 0 0 40px #ff0080; }
+        }
+        .rare-btn {
+            border-radius: 20px; font-weight: bold; background: #e74c3c; color: white; border: 2px solid #c0392b; padding: 6px 20px; box-shadow: 0 4px 0 #c0392b; font-family: inherit; cursor: pointer; font-size: 0.9rem;
+            transition: transform 0.1s;
+            margin-top: 5px;
+        }
+        .rare-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #c0392b;
+        }
+
+        /* --- バトル用 --- */
+        .battle-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--screen-bg);
+            box-shadow: inset 0 0 0 4px var(--screen-text);
+            display: none; flex-direction: column; z-index: 200; overflow: hidden;
+            border-radius: 8px; /* 画面の角丸に合わせる */
+        }
+        .battle-overlay.visible { display: flex; }
+        
+        .battle-flash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; opacity: 0; z-index: 210; pointer-events: none;
+        }
+        .battle-flash.active { animation: flashAnim 0.15s ease-out; }
+        @keyframes flashAnim { 0% { opacity: 1; } 100% { opacity: 0; } }
+        
+        .battle-vs-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--screen-bg); z-index: 205; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background-image: 
+                linear-gradient(45deg, rgba(15, 56, 15, 0.1) 25%, transparent 25%, transparent 75%, rgba(15, 56, 15, 0.1) 75%), 
+                linear-gradient(45deg, rgba(15, 56, 15, 0.1) 25%, transparent 25%, transparent 75%, rgba(15, 56, 15, 0.1) 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+        .battle-vs-screen .vs-text {
+            font-size: 4rem; font-weight: bold; color: var(--screen-text);
+            font-style: italic; text-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+            animation: vsBlink 0.15s steps(2, start) infinite;
+        }
+        .battle-vs-screen .standby-text {
+            font-size: 1.2rem; margin-top: 10px; font-weight: bold; color: var(--screen-text);
+            animation: blink 1s infinite alternate;
+        }
+        @keyframes vsBlink { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0; } }
+        @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
+        
+        .battle-arena {
+            flex: 1; position: relative; width: 100%; height: 100%; display: none;
+            background-color: var(--screen-bg);
+            background-size: cover;
+            background-position: center bottom;
+            background-repeat: no-repeat;
+            image-rendering: pixelated;
+        }
+        
+        .battle-hp-container {
+            position: absolute; width: 40%; border: 2px solid var(--screen-text); background: rgba(255,255,255,0.8);
+            padding: 2px; border-radius: 4px; z-index: 201; box-sizing: border-box;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+        }
+        .battle-hp-container.enemy-hp { top: 12px; left: 12px; }
+        .battle-hp-container.my-hp { bottom: 12px; right: 12px; }
+        
+        .battle-hp-bar { height: 6px; background: var(--screen-text); width: 100%; transition: width 0.3s ease-out; }
+        .battle-hp-label { position: absolute; top: -14px; font-size: 0.6rem; font-weight: bold; }
+        
+        .battle-character {
+            position: absolute; width: 120px; height: 120px; z-index: 200;
+        }
+        .battle-character canvas { 
+            width: 100%; height: 100%; image-rendering: pixelated; 
+            background-color: var(--screen-bg); /* 背景を透過させない（実機の液晶色） */
+            border: 4px solid var(--screen-text);
+            border-radius: 4px;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+        } 
+        
+        /* 敵は右上から */
+        .battle-character.enemy { top: 10px; right: 10px; }
+        /* 敵を反転させて自分の方を向かせる */
+        .battle-character.enemy canvas { transform: scaleX(-1); }
+        /* 自分は左下から */
+        .battle-character.mine { bottom: 10px; left: 10px; }
+
+        .battle-character.attack-enemy { animation: attackAnimEnemy 0.6s cubic-bezier(0.4, -0.4, 0.2, 1.5); z-index: 205; }
+        .battle-character.attack-mine { animation: attackAnimMine 0.6s cubic-bezier(0.4, -0.4, 0.2, 1.5); z-index: 205; }
+        
+        .battle-character.hit { animation: hitAnim 0.4s steps(4); filter: brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5); }
+        .battle-character.miss { animation: missAnim 0.5s ease-out; opacity: 0.5; }
+        .battle-character.win { animation: winAnim 0.5s steps(2) infinite alternate; }
+        .battle-character.lose { animation: loseAnim 0.5s ease-in forwards; filter: grayscale(1); }
+
+        @keyframes attackAnimMine {
+            0% { transform: translate(0, 0); }
+            30% { transform: translate(-10px, 10px); } /* 少し後ろに下がる（チャージ） */
+            60% { transform: translate(50px, -50px); } /* 突進 */
+            100% { transform: translate(0, 0); }
+        }
+        @keyframes attackAnimEnemy {
+            0% { transform: translate(0, 0); }
+            30% { transform: translate(10px, -10px); } /* 少し後ろに下がる（チャージ） */
+            60% { transform: translate(-50px, 50px); } /* 突進 */
+            100% { transform: translate(0, 0); }
+        }
+        @keyframes hitAnim {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-15px) rotate(-10deg); }
+            50% { transform: translateX(15px) rotate(10deg); }
+            75% { transform: translateX(-15px) rotate(-10deg); }
+        }
+        @keyframes missAnim {
+            0% { transform: translateY(0); }
+            50% { transform: translate(-20px, -30px); }
+            100% { transform: translateY(0); }
+        }
+        @keyframes winAnim {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-20px) scale(1.1); }
+        }
+        @keyframes loseAnim {
+            0% { transform: rotate(0deg) translate(0, 0); opacity: 1; }
+            100% { transform: rotate(90deg) translate(20px, 20px); opacity: 0.5; }
+        }
+        @keyframes hitFxAnim {
+            0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+
+        .hit-fx {
+            position: absolute; z-index: 206; width: 8px; height: 8px;
+            background: white; transform: translate(-50%, -50%);
+            animation: pixelExplosion 0.4s steps(4) forwards;
+            pointer-events: none;
+        }
+        @keyframes pixelExplosion {
+            0% {
+                box-shadow: 0 0 0 #ffeb3b, 0 0 0 #ffffff, 0 0 0 #ffeb3b, 0 0 0 #ffffff; 
+                transform: scale(1);
+            }
+            25% {
+                box-shadow: 
+                    -15px -15px 0 #ffeb3b, 15px -15px 0 #ffeb3b, -15px 15px 0 #ffeb3b, 15px 15px 0 #ffeb3b,
+                    0 -20px 0 #ff5722, 0 20px 0 #ff5722, -20px 0 0 #ff5722, 20px 0 0 #ff5722;
+                transform: scale(2);
+            }
+            50% {
+                box-shadow: 
+                    -25px -25px 0 #ff5722, 25px -25px 0 #ff5722, -25px 25px 0 #ff5722, 25px 25px 0 #ff5722,
+                    0 -30px 0 #f44336, 0 30px 0 #f44336, -30px 0 0 #f44336, 30px 0 0 #f44336;
+                transform: scale(3) rotate(45deg);
+            }
+            100% {
+                box-shadow: 
+                    -35px -35px 0 transparent, 35px -35px 0 transparent, -35px 35px 0 transparent, 35px 35px 0 transparent;
+                transform: scale(4) rotate(45deg); opacity: 0;
+            }
+        }
+
+        .battle-popup-text {
+            position: absolute; z-index: 210; font-size: 1.2rem; font-weight: bold;
+            font-family: 'DotGothic16', sans-serif; pointer-events: none;
+            text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff;
+            animation: popupTextAnim 1.0s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popupTextAnim {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-10px) scale(1.2); opacity: 1; }
+            80% { transform: translateY(-20px) scale(1); opacity: 1; }
+            100% { transform: translateY(-30px) scale(1); opacity: 0; }
+        }
+
+        .battle-message {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 2.2rem; font-weight: bold; color: #ff2a00; z-index: 208;
+            text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff, 2px -2px 0px #fff, -2px 2px 0px #fff, 0 0 10px #ff2a00;
+            text-align: center; display: none; animation: popUp 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+        }
+
+        /* --- 神器カットイン専用 --- */
+        .miracle-cutin-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; justify-content: center; align-items: center; z-index: 300;
+            overflow: hidden; pointer-events: none;
+        }
+        .miracle-cutin-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 301;
+        }
+        .miracle-cutin-lines {
+            position: absolute; top: 50%; left: 50%; width: 200%; height: 200%;
+            transform: translate(-50%, -50%);
+            background: repeating-conic-gradient(from 0deg, transparent 0deg 10deg, rgba(255, 255, 255, 0.15) 10deg 20deg);
+            animation: spinLines 5s linear infinite; z-index: 302;
+        }
+        @keyframes spinLines {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        .miracle-cutin-content {
+            position: relative; z-index: 305; display: flex; flex-direction: column; align-items: center;
+            opacity: 0; transform: scale(0.1);
+        }
+        .miracle-cutin-content.show {
+            animation: miracleCutinEnter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, gogogogoShake 0.1s linear infinite;
+        }
+        @keyframes miracleCutinEnter {
+            0% { opacity: 0; transform: scale(0.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes gogogogoShake {
+            0% { margin-left: 0px; margin-top: 0px; }
+            25% { margin-left: -5px; margin-top: 5px; }
+            50% { margin-left: 5px; margin-top: -5px; }
+            75% { margin-left: -5px; margin-top: -5px; }
+            100% { margin-left: 5px; margin-top: 5px; }
+        }
+        .miracle-cutin-zukan-frame {
+            background: #eadecd;
+            border: 6px solid #c0392b;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 0 40px rgba(255,234,0,0.8);
+            display: flex; justify-content: center; align-items: center;
+        }
+        #miracleCutinCanvas {
+            width: 140px; height: 140px; image-rendering: auto;
+        }
+        .miracle-cutin-name {
+            margin-top: 15px; font-size: 1.8rem; font-weight: bold; color: #FFF;
+            text-shadow: 2px 2px 0 #D35400, -2px -2px 0 #D35400, 0 0 15px #FFEA00;
+            white-space: nowrap;
+        }
+        .miracle-cutin-flash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #FFF; z-index: 310; opacity: 0; pointer-events: none;
+        }
+        .miracle-cutin-flash.active {
+            animation: miracleFlashAnim 0.8s ease-out forwards;
+        }
+        @keyframes miracleFlashAnim {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* --- 通信対戦(PvP)メニュー --- */
+        .pvp-menu-overlay, .pvp-challenge-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(181, 198, 169, 0.95); z-index: 50; display: none;
+            flex-direction: column; padding: 15px; box-sizing: border-box;
+            color: var(--screen-text); transition: opacity 0.3s;
+            justify-content: center; align-items: center; text-align: center;
+        }
+        .pvp-menu-overlay.visible, .pvp-challenge-overlay.visible {
+            display: flex;
+        }
+        .pvp-btn {
+            background: var(--screen-bg); border: 2px solid var(--screen-text);
+            color: var(--screen-text); padding: 10px; margin: 8px 0;
+            font-family: 'DotGothic16', sans-serif; cursor: pointer; border-radius: 4px;
+            width: 85%; font-size: 1rem;
+        }
+        .pvp-btn:active { background: var(--screen-text); color: var(--screen-bg); }
+        #challengeUrlText {
+            width: 100%; word-break: break-all; font-size: 0.7rem; color: #fff;
+            margin: 10px 0; background: #000; padding: 5px; box-sizing: border-box;
+            font-family: monospace; resize: none; border: 1px solid #7f8c8d;
+        }

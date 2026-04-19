@@ -1,0 +1,19 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Capacitor
+/ios/App/Pods/
+/ios/App/App.xcworkspace/xcuserdata
+/ios/App/Podfile.lock
+/android/app/build/
+/android/app/src/main/assets/public
+
+# Build outputs
+/www/
+/dist/
