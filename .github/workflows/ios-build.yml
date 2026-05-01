@@ -98,7 +98,12 @@ jobs:
           ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
         run: |
           mkdir -p ~/.appstoreconnect/private_keys/
-          echo "$API_KEY" | tr -d '\r' > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          # Extract the base64 payload and strip all whitespace and newlines
+          CLEAN_B64=$(echo "$API_KEY" | sed 's/-----BEGIN PRIVATE KEY-----//g' | sed 's/-----END PRIVATE KEY-----//g' | tr -d ' \t\n\r')
+          # Reconstruct the PEM file with proper 64-character line breaks
+          echo "-----BEGIN PRIVATE KEY-----" > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          echo "$CLEAN_B64" | fold -w 64 >> ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          echo "-----END PRIVATE KEY-----" >> ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
           xcrun altool --upload-app -f ios/App/build/App.ipa -t ios --apiKey $KEY_ID --apiIssuer $ISSUER_ID
 
       - name: Clean up keychain and provisioning profile
