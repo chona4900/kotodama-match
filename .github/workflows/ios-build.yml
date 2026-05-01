@@ -91,6 +91,14 @@ jobs:
           name: app-ipa
           path: ios/App/build/App.ipa
 
+      - name: Upload app to TestFlight
+        uses: apple-actions/upload-testflight-build@v4
+        with:
+          app-path: ios/App/build/App.ipa
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+
       - name: Clean up keychain and provisioning profile
         if: ${{ always() }}
         run: |
