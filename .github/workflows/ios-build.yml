@@ -92,12 +92,14 @@ jobs:
           path: ios/App/build/App.ipa
 
       - name: Upload app to TestFlight
-        uses: apple-actions/upload-testflight-build@v4
-        with:
-          app-path: ios/App/build/App.ipa
-          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
-          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
-          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        env:
+          API_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys/
+          echo "$API_KEY" | tr -d '\r' > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          xcrun altool --upload-app -f ios/App/build/App.ipa -t ios --apiKey $KEY_ID --apiIssuer $ISSUER_ID
 
       - name: Clean up keychain and provisioning profile
         if: ${{ always() }}
