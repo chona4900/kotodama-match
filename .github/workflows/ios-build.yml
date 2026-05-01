@@ -71,7 +71,8 @@ jobs:
             -allowProvisioningUpdates \
             CODE_SIGN_STYLE="Manual" \
             DEVELOPMENT_TEAM="72SZ49GXQU" \
-            PROVISIONING_PROFILE_SPECIFIER="Kotodama Match App Store"
+            PROVISIONING_PROFILE_SPECIFIER="Kotodama Match App Store" \
+            CODE_SIGN_IDENTITY="Apple Distribution"
           
           # Export ipa
           # Note: ExportOptions.plist is required for correct packaging. It can be provided as a secret or committed.
