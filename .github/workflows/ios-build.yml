@@ -69,7 +69,9 @@ jobs:
             -configuration Release \
             -archivePath $PWD/build/App.xcarchive \
             -allowProvisioningUpdates \
-            CODE_SIGN_STYLE="Manual"
+            CODE_SIGN_STYLE="Manual" \
+            DEVELOPMENT_TEAM="72SZ49GXQU" \
+            PROVISIONING_PROFILE_SPECIFIER="Kotodama Match App Store"
           
           # Export ipa
           # Note: ExportOptions.plist is required for correct packaging. It can be provided as a secret or committed.
