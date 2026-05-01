@@ -64,7 +64,7 @@ jobs:
           # If using CocoaPods natively, pod install might be needed. Cap sync handles it usually.
           # Build Archive
           xcodebuild archive \
-            -workspace App.xcworkspace \
+            -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -archivePath $PWD/build/App.xcarchive \
