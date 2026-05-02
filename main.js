@@ -2053,77 +2053,38 @@
 
         // --- 音声認識 ---
         let isListening = false;
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = null;
+        const WebSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let webRecognition = null;
+        let useNativeSpeech = window.Capacitor && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins.SpeechRecognition;
 
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.lang = 'ja-JP';
-            recognition.continuous = true;
-            recognition.continuous = true;
-            recognition.interimResults = true; // 途中結果を取得してリアルタイムに反応させる
+        if (!useNativeSpeech && WebSpeechRecognition) {
+            webRecognition = new WebSpeechRecognition();
+            webRecognition.lang = 'ja-JP';
+            webRecognition.continuous = true;
+            webRecognition.interimResults = true;
 
             let lastResultIndex = -1;
             let interimMatchCounts = {};
 
-            recognition.onstart = () => {
+            webRecognition.onstart = () => {
                 isListening = true;
                 micBtnEl.classList.add('mic-active');
-                // if(currentStage < 3) statusTextEl.textContent = "ききんちゅう...";
             };
 
-            recognition.onresult = (event) => {
-                // 新しい文の認識が始まったらカウント状態をリセット
+            webRecognition.onresult = (event) => {
                 if (event.resultIndex !== lastResultIndex) {
                     interimMatchCounts = {};
                     lastResultIndex = event.resultIndex;
                 }
-
                 const currentResult = event.results[event.resultIndex];
-                // 認識結果から空白や句読点を取り除き、長い言霊もマッチしやすくする
-                let transcript = currentResult[0].transcript.replace(/[\s　、。！？,!?]/g, '');
-                
-                // 長いフレーズ順に判定を行う（「もっと自分をゆるします」が先、「ゆるします」が後）
-                const sortedWords = [...allWords].sort((a, b) => b.length - a.length);
-
-                sortedWords.forEach(w => {
-                    let pattern = w;
-                    if (WORD_ALIASES[w]) {
-                        pattern = `(?:${w}|${WORD_ALIASES[w].join('|')})`;
-                    }
-                    const regex = new RegExp(pattern, 'g');
-                    const matches = transcript.match(regex);
-                    
-                    const currentMatchCount = matches ? matches.length : 0;
-                    const previousMatchCount = interimMatchCounts[w] || 0;
-                    
-                    // 前回よりマッチ数が増えていたら、その差分だけを新しく「言った」と判定する
-                    if (currentMatchCount > previousMatchCount) {
-                        addWordLog(w, currentMatchCount - previousMatchCount);
-                        interimMatchCounts[w] = currentMatchCount;
-                    }
-                    
-                    // マッチした文字列部分を消去（別の短い言霊として多重カウントされるのを完全に防ぐ）
-                    if (matches) {
-                        transcript = transcript.replace(regex, '');
-                    }
-                });
-
-                // 文章が確定(isFinal)したのに一つもマッチしなかった時だけメッセージを表示
-                const isFinal = currentResult.isFinal;
-                const hasAnyMatchInSentence = Object.values(interimMatchCounts).some(v => v > 0);
-                if (isFinal && !hasAnyMatchInSentence && currentStage < 3) {
-                    statusTextEl.textContent = "おしい";
-                }
+                let transcript = currentResult[0].transcript;
+                processTranscript(transcript, currentResult.isFinal, interimMatchCounts);
             };
 
-            recognition.onerror = (e) => {
-                stopMic();
-            };
-
-            recognition.onend = () => {
+            webRecognition.onerror = (e) => { stopMic(); };
+            webRecognition.onend = () => {
                 if (isListening) {
-                    try { recognition.start(); } catch(e) {}
+                    try { webRecognition.start(); } catch(e) {}
                 } else {
                     micBtnEl.classList.remove('mic-active');
                     if(currentStage < 3) statusTextEl.textContent = "マイクがオフです";
@@ -2131,16 +2092,96 @@
             };
         }
 
-        function toggleMic() {
-            if(!recognition) return alert('このブラウザは音声認識に非対応です');
+        // 共通の認識文字列処理
+        function processTranscript(rawTranscript, isFinal, interimMatchCounts) {
+            let transcript = rawTranscript.replace(/[\s　、。！？,!?]/g, '');
+            const sortedWords = [...allWords].sort((a, b) => b.length - a.length);
+
+            sortedWords.forEach(w => {
+                let pattern = w;
+                if (WORD_ALIASES[w]) pattern = `(?:${w}|${WORD_ALIASES[w].join('|')})`;
+                const regex = new RegExp(pattern, 'g');
+                const matches = transcript.match(regex);
+                
+                const currentMatchCount = matches ? matches.length : 0;
+                const previousMatchCount = interimMatchCounts[w] || 0;
+                
+                if (currentMatchCount > previousMatchCount) {
+                    addWordLog(w, currentMatchCount - previousMatchCount);
+                    interimMatchCounts[w] = currentMatchCount;
+                }
+                
+                if (matches) transcript = transcript.replace(regex, '');
+            });
+
+            const hasAnyMatchInSentence = Object.values(interimMatchCounts).some(v => v > 0);
+            if (isFinal && !hasAnyMatchInSentence && currentStage < 3) {
+                statusTextEl.textContent = "おしい";
+            }
+        }
+
+        async function toggleMic() {
+            if (!useNativeSpeech && !webRecognition) return alert('この環境は音声認識に非対応です');
             if(isListening) {
                 stopMic();
             } else {
+                if (useNativeSpeech) {
+                    try {
+                        const hasPerm = await window.Capacitor.Plugins.SpeechRecognition.hasPermission();
+                        if (!hasPerm.permission) {
+                            await window.Capacitor.Plugins.SpeechRecognition.requestPermission();
+                        }
+                    } catch (e) {
+                        console.error('Permission request failed', e);
+                    }
+                }
                 startMic();
             }
         }
-        function startMic(){ try{ recognition.start(); }catch(e){} }
-        function stopMic(){ isListening = false; if(recognition) recognition.stop(); }
+
+        let nativeInterimMatchCounts = {};
+        
+        async function startMic(){ 
+            if (useNativeSpeech) {
+                isListening = true;
+                micBtnEl.classList.add('mic-active');
+                nativeInterimMatchCounts = {};
+                
+                window.Capacitor.Plugins.SpeechRecognition.addListener('partialResults', (data) => {
+                    if (data && data.matches && data.matches.length > 0) {
+                        processTranscript(data.matches[0], false, nativeInterimMatchCounts);
+                    }
+                });
+
+                try {
+                    await window.Capacitor.Plugins.SpeechRecognition.start({
+                        language: "ja-JP",
+                        maxResults: 1,
+                        prompt: "言霊を唱えてください",
+                        partialResults: true,
+                        popup: false
+                    });
+                } catch(e) {
+                    console.error('Speech recognition failed to start', e);
+                    stopMic();
+                }
+            } else if (webRecognition) {
+                try{ webRecognition.start(); }catch(e){} 
+            }
+        }
+
+        async function stopMic(){ 
+            isListening = false; 
+            if (useNativeSpeech) {
+                micBtnEl.classList.remove('mic-active');
+                try {
+                    await window.Capacitor.Plugins.SpeechRecognition.stop();
+                    await window.Capacitor.Plugins.SpeechRecognition.removeAllListeners();
+                } catch(e){}
+            } else if (webRecognition) {
+                webRecognition.stop(); 
+            }
+        }
 
         // --- UI用 ---
         function createTestButtons() {

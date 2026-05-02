@@ -8,6 +8,16 @@
                 audioCtx.resume();
             }
         }
+        
+        // iOS/WKWebView向けに、最初のタップでAudioContextを強制起動・ロック解除する
+        const unlockAudio = function() {
+            initAudio();
+            document.removeEventListener('touchstart', unlockAudio);
+            document.removeEventListener('click', unlockAudio);
+        };
+        document.addEventListener('touchstart', unlockAudio, { once: true });
+        document.addEventListener('click', unlockAudio, { once: true });
+
         function playOscillator(freq, startTime, duration, vol=0.1, type='square') {
             if(!audioCtx) return;
             const osc = audioCtx.createOscillator();
