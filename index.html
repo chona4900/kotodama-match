@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>言霊たまごっち v2</title>
+    <title>コトダマっち</title>
     <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="device">
-        <h2 class="device-title">言霊っち</h2>
+        <h2 class="device-title">コトダマっち</h2>
         
         <div class="screen-container">
             <div class="screen">
@@ -39,13 +39,13 @@
                 </div>
 
                 <div class="stats-overlay" id="statsOverlay">
-                    <div style="text-align:center; margin-bottom:5px;">★心のごはん★</div>
+                    <div style="text-align:center; margin-bottom:5px; font-weight:bold; font-size:1.2rem;">★心のごはん★</div>
                     <div id="statsList"></div>
                     <button class="close-stats-btn" onclick="toggleAButton()">つぎへ</button>
                 </div>
 
                 <div class="stats-overlay" id="oyatsuOverlay">
-                    <div style="text-align:center; margin-bottom:5px;">★魂のおやつ★</div>
+                    <div style="text-align:center; margin-bottom:5px; font-weight:bold; font-size:1.2rem;">★魂のおやつ★</div>
                     <div id="oyatsuList"></div>
                     <button class="close-stats-btn" onclick="toggleAButton()">つぎへ</button>
                 </div>
@@ -202,7 +202,7 @@
     </div>
 
     <!-- デバッグ用パネル (A/B/Cグループごとに追加しやすく) -->
-    <div class="test-panel">
+    <div class="test-panel" style="display:none;">
         <h3>開発者用テスト (+100回)</h3>
         <p style="font-size:0.8rem; margin:0 0 10px 0;">各グループのボタンを押して進化ルートをテストできます。</p>
         <div class="test-btns" id="testBtns"></div>

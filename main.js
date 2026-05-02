@@ -1872,7 +1872,7 @@
                 let count = wordCounts[w];
                 let row = document.createElement('div');
                 row.className = 'stats-row';
-                row.innerHTML = `<span>${w}</span><span>${count} 回</span>`;
+                row.innerHTML = `<span style="font-size:0.95rem;">${w}</span><span style="font-size:0.95rem;">${count} 回</span>`;
                 statsListEl.appendChild(row);
             });
         }
@@ -1885,8 +1885,8 @@
                 let count = wordCounts[w] || 0;
                 let row = document.createElement('div');
                 row.className = 'stats-row';
-                row.style.fontSize = '0.75rem'; // 文字が長いので少し小さめに
-                row.style.lineHeight = '1.2';
+                row.style.fontSize = '0.9rem'; // 文字が長いので少し小さめに
+                row.style.lineHeight = '1.3';
                 row.style.marginBottom = '8px';
                 row.innerHTML = `<span style="flex:1; padding-right:5px; word-break:keep-all;">${w}</span><span style="white-space:nowrap; align-self:center;">${count} 回</span>`;
                 oyatsuListEl.appendChild(row);
