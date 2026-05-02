@@ -31,6 +31,16 @@
             osc.start(startTime);
             osc.stop(startTime + duration);
         }
+        
+        function playToggleSound() {
+            initAudio();
+            const now = audioCtx.currentTime;
+            // ピコピコピコという短い音を3回連続で鳴らす
+            playOscillator(880, now, 0.05, 0.1, 'square');
+            playOscillator(1108.73, now + 0.08, 0.05, 0.1, 'square');
+            playOscillator(1318.51, now + 0.16, 0.05, 0.1, 'square');
+        }
+
         function playCelebrateSound() {
             initAudio();
             const now = audioCtx.currentTime;

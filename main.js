@@ -627,15 +627,20 @@
                 const data = imgData.data;
                 for (let i = 0; i < data.length; i += 4) {
                     if (data[i+3] === 0) continue;
-                    const r = data[i], g = data[i+1], b = data[i+2];
-                    const brightness = (r + g + b) / 3;
+                    const r = data[i]/255, g = data[i+1]/255, b = data[i+2]/255;
+                    const sum = r + g + b;
+                    let a_out = 1.0;
+                    
                     if (filterType === 'remove-white') {
-                        if (brightness > 200) data[i+3] = 0;
-                        else { data[i] = 15; data[i+1] = 56; data[i+2] = 15; }
+                        a_out = -sum + 2.5;
                     } else if (filterType === 'remove-black') {
-                        if (brightness < 50) data[i+3] = 0;
-                        else { data[i] = 15; data[i+1] = 56; data[i+2] = 15; }
+                        a_out = sum - 0.5;
                     }
+                    
+                    data[i] = 15;
+                    data[i+1] = 56;
+                    data[i+2] = 15;
+                    data[i+3] = Math.max(0, Math.min(255, a_out * 255));
                 }
                 targetCtx.putImageData(imgData, 0, 0);
             } catch(e) {
@@ -1123,11 +1128,11 @@
             const mainStatsDisplay = document.getElementById('mainStatsDisplay');
             if (mainStatsDisplay) {
                 mainStatsDisplay.innerHTML = `
-                    HP: ${currentStats.hp}<br>
-                    攻: ${currentStats.attack}<br>
-                    避: ${Math.floor(currentStats.evasionRate)}%<br>
-                    会: ${Math.floor(currentStats.criticalRate)}%<br>
-                    陰徳: ${intokuPower}
+                    HP:${currentStats.hp}<br>
+                    攻:${currentStats.attack}<br>
+                    避:${Math.floor(currentStats.evasionRate)}%<br>
+                    会:${Math.floor(currentStats.criticalRate)}%<br>
+                    陰徳:${intokuPower}
                 `;
             }
 
@@ -1505,6 +1510,7 @@
         const zukanListEl = document.getElementById('zukanList');
 
         function toggleAButton() {
+            playToggleSound();
             if (overlayState === 0) {
                 overlayState = 1;
                 statsOverlayEl.classList.add('visible');
