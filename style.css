@@ -754,3 +754,12 @@ html, body { max-width: 100vw; overflow-x: hidden; }
     .controls { margin: auto auto 5px auto !important; }
 }
 
+
+/* Final spacing adjustments */
+@media (max-width: 600px) {
+    .device { justify-content: flex-start !important; padding-top: 40px !important; padding-bottom: 20px !important; }
+    .screen-container { flex: 1 !important; margin-top: 0 !important; margin-bottom: 25px !important; display: flex; flex-direction: column; }
+    .screen { flex: 1 !important; height: auto !important; }
+    .controls { margin-top: 0 !important; margin-bottom: 10px !important; }
+}
+
