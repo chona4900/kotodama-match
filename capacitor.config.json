@@ -1,5 +1,6 @@
 {
   "appId": "com.kotodamamatch.app",
   "appName": "Kotodama-tchi",
-  "webDir": "www"
+  "webDir": "www",
+  "backgroundColor": "#00000000"
 }

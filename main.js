@@ -618,6 +618,30 @@
         // --- DOM ---
         const canvas = document.getElementById('pixelCanvas');
         const ctx = canvas.getContext('2d');
+
+        // --- フィルター関数 (iOSでのSVG filter非対応対策) ---
+        function applyPixelFilter(targetCtx, width, height, filterType) {
+            if (filterType === 'none' || !filterType) return;
+            try {
+                const imgData = targetCtx.getImageData(0, 0, width, height);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i+3] === 0) continue;
+                    const r = data[i], g = data[i+1], b = data[i+2];
+                    const brightness = (r + g + b) / 3;
+                    if (filterType === 'remove-white') {
+                        if (brightness > 200) data[i+3] = 0;
+                        else { data[i] = 15; data[i+1] = 56; data[i+2] = 15; }
+                    } else if (filterType === 'remove-black') {
+                        if (brightness < 50) data[i+3] = 0;
+                        else { data[i] = 15; data[i+1] = 56; data[i+2] = 15; }
+                    }
+                }
+                targetCtx.putImageData(imgData, 0, 0);
+            } catch(e) {
+                console.warn("applyPixelFilter failed:", e);
+            }
+        }
         const progressBarEl = document.getElementById('progressBar');
         const progressTextEl = document.getElementById('progressText');
         const statusTextEl = document.getElementById('statusText');
@@ -905,20 +929,20 @@
 
                         // Canvas Contextのfilterを使って背景を透過し、緑色に着色 (ChromeのローカルファイルCORSエラー回避)
                         // Canvas Contextのfilterを使って背景を透過し、緑色に着色 (ChromeのローカルファイルCORSエラー回避)
-                        let baseFilter = "none";
+                        // Canvas Contextのfilterを使って背景を透過し、緑色に着色 (ChromeのローカルファイルCORSエラー回避)
+                        let pixelFilterType = "none";
                         if (artData.filter === 'black' || artData.filter === 'remove-black') {
-                            baseFilter = "url(#remove-black)";
+                            pixelFilterType = "remove-black";
                         } else if (artData.filter !== 'none') {
-                            baseFilter = "url(#remove-white)";
+                            pixelFilterType = "remove-white";
                         }
                         
-                        if (artData.brightness) {
-                            baseFilter = (baseFilter === "none" ? "" : baseFilter + " ") + `brightness(${artData.brightness})`;
-                        }
-                        
-                        targetCtx.filter = baseFilter || "none";
+                        targetCtx.filter = artData.brightness ? `brightness(${artData.brightness})` : "none";
                         targetCtx.drawImage(img, sx, sy, sWidth, sHeight, offX, offY, drawW, drawH);
                         targetCtx.filter = "none"; // 元に戻す
+                        
+                        // 代わりにJSでピクセル操作（iOS CanvasでのSVG filterバグ対策）
+                        applyPixelFilter(targetCtx, 192, 192, pixelFilterType);
                     };
 
                     // 最初のフレームを描画
@@ -1642,7 +1666,7 @@
                             can.width = 192;
                             can.height = 192;
                             can.style.imageRendering = 'auto'; // 高画質画像を滑らかに縮小
-                            zctx.filter = "url(#remove-white)";
+                            zctx.filter = "none";
                             
                             const t = itemData.trim || 0;
                             const sx = img.width * t;
@@ -1651,6 +1675,7 @@
                             const sH = img.height * (1 - t * 2);
                             
                             zctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
+                            applyPixelFilter(zctx, 192, 192, 'remove-white');
                         };
                     }
                 } else {
@@ -1814,7 +1839,7 @@
                     itemPopupCanvas.width = 192;
                     itemPopupCanvas.height = 192;
                     itemPopupCanvas.style.imageRendering = 'auto'; // 滑らかに縮小
-                    ictx.filter = "url(#remove-white)";
+                    ictx.filter = "none";
                     
                     const t = itemObj.trim || 0;
                     const sx = img.width * t;
@@ -1823,6 +1848,7 @@
                     const sH = img.height * (1 - t * 2);
                     
                     ictx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
+                    applyPixelFilter(ictx, 192, 192, 'remove-white');
                 };
             }
         }
@@ -2717,13 +2743,14 @@
                                 img.src = itemData.src;
                                 img.onload = () => {
                                     cctx.clearRect(0,0,192,192);
-                                    cctx.filter = "url(#remove-white)";
+                                    cctx.filter = "none";
                                     const t = itemData.trim || 0;
                                     const sx = img.width * t;
                                     const sy = img.height * t;
                                     const sW = img.width * (1 - t * 2);
                                     const sH = img.height * (1 - t * 2);
                                     cctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
+                                    applyPixelFilter(cctx, 192, 192, 'remove-white');
                                 };
                             }
 
