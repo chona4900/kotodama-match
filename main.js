@@ -1872,7 +1872,7 @@
                 let count = wordCounts[w];
                 let row = document.createElement('div');
                 row.className = 'stats-row';
-                row.innerHTML = `<span style="font-size:0.95rem;">${w}</span><span style="font-size:0.95rem;">${count} 回</span>`;
+                row.innerHTML = `<span style="font-size:1.8rem; font-weight:bold;">${w}</span><span style="font-size:1.8rem; font-weight:bold;">${count} 回</span>`;
                 statsListEl.appendChild(row);
             });
         }
@@ -1885,8 +1885,9 @@
                 let count = wordCounts[w] || 0;
                 let row = document.createElement('div');
                 row.className = 'stats-row';
-                row.style.fontSize = '0.9rem'; // 文字が長いので少し小さめに
-                row.style.lineHeight = '1.3';
+                row.style.fontSize = '1.6rem';
+                row.style.fontWeight = 'bold';
+                row.style.lineHeight = '1.4';
                 row.style.marginBottom = '8px';
                 row.innerHTML = `<span style="flex:1; padding-right:5px; word-break:keep-all;">${w}</span><span style="white-space:nowrap; align-self:center;">${count} 回</span>`;
                 oyatsuListEl.appendChild(row);
@@ -1899,6 +1900,7 @@
             totalRow.style.borderTop = '1px dashed var(--screen-shadow)';
             totalRow.style.paddingTop = '10px';
             totalRow.style.fontWeight = 'bold';
+            totalRow.style.fontSize = '2.0rem';
             totalRow.textContent = `トータル: ${totalOyatsu} 回`;
             oyatsuListEl.appendChild(totalRow);
 
@@ -1906,7 +1908,7 @@
             let hintRow = document.createElement('div');
             hintRow.style.textAlign = 'center';
             hintRow.style.marginTop = '10px';
-            hintRow.style.fontSize = '0.65rem';
+            hintRow.style.fontSize = '1.2rem';
             hintRow.style.color = '#5a5a5a';
             hintRow.textContent = '※それぞれの言霊を1万回言うと何かが起こる！？';
             oyatsuListEl.appendChild(hintRow);

@@ -726,3 +726,20 @@
     .btn-label { font-size: 0.95rem; margin-top: 5px; }
     .device-title { font-size: 1.8rem; margin: 10px 0; }
 }
+
+/* UI Updates */
+body, html { overflow-x: hidden; }
+
+.zukan-overlay::-webkit-scrollbar, .stats-overlay::-webkit-scrollbar, .pvp-menu-overlay::-webkit-scrollbar { width: 12px; background-color: rgba(255, 255, 255, 0.4); border-left: 1px solid rgba(0,0,0,0.1); }
+.zukan-overlay::-webkit-scrollbar-thumb, .stats-overlay::-webkit-scrollbar-thumb, .pvp-menu-overlay::-webkit-scrollbar-thumb { background-color: rgba(0, 0, 0, 0.6); border-radius: 6px; border: 2px solid rgba(255, 255, 255, 0.4); }
+
+.zukan-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+.zukan-canvas { width: 96px !important; height: 96px !important; }
+.zukan-name { font-size: 1.4rem !important; }
+.zukan-stage-title { font-size: 1.8rem !important; }
+
+.controls { flex-wrap: wrap !important; max-width: 320px !important; gap: 15px 20px !important; margin: 15px auto 0 auto !important; }
+
+
+.controls { justify-content: center !important; }
+
