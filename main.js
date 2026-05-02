@@ -372,9 +372,9 @@
                     { sx: 1071, sy: 3, sWidth: 510, sHeight: 510 }
                 ]
             },
-            // B-2-4：建御雷神っち - 高解像度スプライトシート版 (1600x529)
+            // B-2-4：武甕槌大神っち - 高解像度スプライトシート版 (1600x529)
             childB_2_4: { 
-                type: 'image', src: '建御雷神っち.jpg', frames: 3, speed: 800, 
+                type: 'image', src: '武甕槌大神っち.jpg', frames: 3, speed: 800, 
                 sqSize: 533,
                 customFrames: [
                     { sx: 18, sy: 8, sWidth: 500, sHeight: 510 },
@@ -382,9 +382,9 @@
                     { sx: 1084, sy: 8, sWidth: 500, sHeight: 510 }
                 ]
             },
-            // B-2-4：建御雷神っち（病気状態） (1024x339)
+            // B-2-4：武甕槌大神っち（病気状態） (1024x339)
             childB_2_4_sick: { 
-                type: 'image', src: '建御雷神っち（病気）.jpg', frames: 3, speed: 1000, 
+                type: 'image', src: '武甕槌大神っち（病気）.jpg', frames: 3, speed: 1000, 
                 sqSize: 341,
                 customFrames: [
                     { sx: 8, sy: 2, sWidth: 320, sHeight: 320 },
@@ -532,9 +532,9 @@
                     { sx: 1083, sy: 14, sWidth: 500, sHeight: 500 }
                 ]
             },
-            // C-2-4：木花之佐久夜毘売っち
+            // C-2-4：木花咲夜姫っち
             childC_2_4: { 
-                type: 'image', src: '木花之佐久夜毘売っち.jpg', frames: 3, speed: 800, 
+                type: 'image', src: '木花咲夜姫っち.jpg', frames: 3, speed: 800, 
                 sqSize: 533,
                 customFrames: [
                     { sx: 18, sy: 8, sWidth: 500, sHeight: 510 },
@@ -542,9 +542,9 @@
                     { sx: 1084, sy: 8, sWidth: 500, sHeight: 510 }
                 ]
             },
-            // C-2-4：木花之佐久夜毘売っち（病気状態）
+            // C-2-4：木花咲夜姫っち（病気状態）
             childC_2_4_sick: { 
-                type: 'image', src: '木花之佐久夜毘売っち（病気）.jpg', frames: 3, speed: 1000, 
+                type: 'image', src: '木花咲夜姫っち（病気）.jpg', frames: 3, speed: 1000, 
                 sqSize: 533,
                 customFrames: [
                     { sx: 18, sy: 8, sWidth: 500, sHeight: 510 },
@@ -1065,9 +1065,9 @@
                             childA_1_1: '天照大御神っち', childA_1_2: '玄武っち', childA_1_3: '福禄寿っち', childA_1_4: '阿弥陀如来っち',
                             childA_2_1: '千手観音っち', childA_2_2: '白虎っち', childA_2_3: '瀬織津姫っち', childA_2_4: '十一面観音っち',
                             childB_1_1: '青龍っち', childB_1_2: '不動明王っち', childB_1_3: '寿老人っち', childB_1_4: '弥勒菩薩っち',
-                            childB_2_1: '朱雀っち', childB_2_2: '大日如来っち', childB_2_3: '須佐之男命っち', childB_2_4: '建御雷神っち',
+                            childB_2_1: '朱雀っち', childB_2_2: '大日如来っち', childB_2_3: '須佐之男命っち', childB_2_4: '武甕槌大神っち',
                             childC_1_1: '大黒天っち', childC_1_2: '弁財天っち', childC_1_3: '恵比寿っち', childC_1_4: '経津主神っち',
-                            childC_2_1: '毘沙門天っち', childC_2_2: '布袋尊っち', childC_2_3: '孔雀明王っち', childC_2_4: '木花之佐久夜毘売っち',
+                            childC_2_1: '毘沙門天っち', childC_2_2: '布袋尊っち', childC_2_3: '孔雀明王っち', childC_2_4: '木花咲夜姫っち',
                             ultimate_1: '八大龍王っち',
                             ultimate_2: '天之御中主神っち',
                             ultimate_3: 'バステトっち'
@@ -1273,9 +1273,9 @@
                     'childA_1_1': '天照大御神っち', 'childA_1_2': '玄武っち', 'childA_1_3': '福禄寿っち', 'childA_1_4': '阿弥陀如来っち',
                     'childA_2_1': '千手観音っち', 'childA_2_2': '白虎っち', 'childA_2_3': '瀬織津姫っち', 'childA_2_4': '十一面観音っち',
                     'childB_1_1': '青龍っち', 'childB_1_2': '不動明王っち', 'childB_1_3': '寿老人っち', 'childB_1_4': '弥勒菩薩っち',
-                    'childB_2_1': '朱雀っち', 'childB_2_2': '大日如来っち', 'childB_2_3': '須佐之男命っち', 'childB_2_4': '建御雷神っち',
+                    'childB_2_1': '朱雀っち', 'childB_2_2': '大日如来っち', 'childB_2_3': '須佐之男命っち', 'childB_2_4': '武甕槌大神っち',
                     'childC_1_1': '大黒天っち', 'childC_1_2': '弁財天っち', 'childC_1_3': '恵比寿っち', 'childC_1_4': '経津主神っち',
-                    'childC_2_1': '毘沙門天っち', 'childC_2_2': '布袋尊っち', 'childC_2_3': '孔雀明王っち', 'childC_2_4': '木花之佐久夜毘売っち'
+                    'childC_2_1': '毘沙門天っち', 'childC_2_2': '布袋尊っち', 'childC_2_3': '孔雀明王っち', 'childC_2_4': '木花咲夜姫っち'
                 };
                 newName = names[evolutionType] || `${evolutionType}`;
             } else if(targetStage === 4) {
@@ -1566,9 +1566,9 @@
             childA_1_1: '天照大御神っち', childA_1_2: '玄武っち', childA_1_3: '福禄寿っち', childA_1_4: '阿弥陀如来っち',
             childA_2_1: '千手観音っち', childA_2_2: '白虎っち', childA_2_3: '瀬織津姫っち', childA_2_4: '十一面観音っち',
             childB_1_1: '青龍っち', childB_1_2: '不動明王っち', childB_1_3: '寿老人っち', childB_1_4: '弥勒菩薩っち',
-            childB_2_1: '朱雀っち', childB_2_2: '大日如来っち', childB_2_3: '須佐之男命っち', childB_2_4: '建御雷神っち',
+            childB_2_1: '朱雀っち', childB_2_2: '大日如来っち', childB_2_3: '須佐之男命っち', childB_2_4: '武甕槌大神っち',
             childC_1_1: '大黒天っち', childC_1_2: '弁財天っち', childC_1_3: '恵比寿っち', childC_1_4: '経津主神っち',
-            childC_2_1: '毘沙門天っち', childC_2_2: '布袋尊っち', childC_2_3: '孔雀明王っち', childC_2_4: '木花之佐久夜毘売っち',
+            childC_2_1: '毘沙門天っち', childC_2_2: '布袋尊っち', childC_2_3: '孔雀明王っち', childC_2_4: '木花咲夜姫っち',
             ultimate_1: '八大龍王っち',
             ultimate_2: '天之御中主神っち',
             ultimate_3: 'バステトっち'
@@ -1883,13 +1883,20 @@
             
             OYATSU_WORDS.forEach(w => {
                 let count = wordCounts[w] || 0;
+                let displayWord = w;
+                if (w === 'だんだんよくなる未来はあかるい') displayWord = 'だんだんよくなる<br>未来はあかるい';
+                else if (w === 'このことがダイヤモンドにかわります') displayWord = 'このことがダイヤ<br>モンドにかわります';
+                else if (w === '宇宙の調和に感謝します') displayWord = '宇宙の調和に<br>感謝します';
+                else if (w === 'もっと自分を愛しますもっと自分をゆるします') displayWord = 'もっと自分を愛します<br>もっと自分をゆるします';
+                else if (w === 'どうでもいいどっちでもいいどうせうまくいくから') displayWord = 'どうでもいい<br>どっちでもいい<br>どうせうまくいくから';
+                
                 let row = document.createElement('div');
                 row.className = 'stats-row';
                 row.style.fontSize = '1.6rem';
                 row.style.fontWeight = 'bold';
                 row.style.lineHeight = '1.4';
                 row.style.marginBottom = '8px';
-                row.innerHTML = `<span style="flex:1; padding-right:5px; word-break:normal; white-space:normal;">${w}</span><span style="white-space:nowrap; align-self:flex-start; margin-top:2px;">${count} 回</span>`;
+                row.innerHTML = `<span style="flex:1; padding-right:5px; word-break:normal; white-space:normal;">${displayWord}</span><span style="white-space:nowrap; align-self:flex-start; margin-top:2px;">${count} 回</span>`;
                 oyatsuListEl.appendChild(row);
             });
 
@@ -1910,7 +1917,7 @@
             hintRow.style.marginTop = '10px';
             hintRow.style.fontSize = '1.2rem';
             hintRow.style.color = '#5a5a5a';
-            hintRow.textContent = '※それぞれの言霊を1万回言うと何かが起こる！？';
+            hintRow.innerHTML = '※それぞれの言霊をトータル<br>1万回言うと何かが起こる！？';
             oyatsuListEl.appendChild(hintRow);
         }
 
