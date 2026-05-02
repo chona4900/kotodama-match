@@ -1889,7 +1889,7 @@
                 row.style.fontWeight = 'bold';
                 row.style.lineHeight = '1.4';
                 row.style.marginBottom = '8px';
-                row.innerHTML = `<span style="flex:1; padding-right:5px; word-break:keep-all;">${w}</span><span style="white-space:nowrap; align-self:center;">${count} 回</span>`;
+                row.innerHTML = `<span style="flex:1; padding-right:5px; word-break:normal; white-space:normal;">${w}</span><span style="white-space:nowrap; align-self:flex-start; margin-top:2px;">${count} 回</span>`;
                 oyatsuListEl.appendChild(row);
             });
 
