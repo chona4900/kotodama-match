@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "node build.js",
+    "dev": "npx live-server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^8.3.0"
+    "@capacitor/cli": "^8.3.0",
+    "live-server": "^1.2.2"
   }
 }

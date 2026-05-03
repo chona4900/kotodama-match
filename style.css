@@ -149,10 +149,10 @@
 
         /* プログレスバー */
         .progress-container {
-            border: 2px solid var(--screen-text);
-            height: 14px;
+            border: 3px solid var(--screen-text);
+            height: 28px;
             width: 100%;
-            margin-top: 10px;
+            margin-top: 15px;
             position: relative;
         }
         .progress-bar {
@@ -163,9 +163,11 @@
         }
         .progress-text {
             position: absolute;
-            top: -2px; left: 0; width: 100%;
-            text-align: center; font-size: 0.8rem;
+            top: 50%; left: 0; width: 100%;
+            transform: translateY(-50%);
+            text-align: center; font-size: 1.3rem;
             color: white; mix-blend-mode: difference;
+            line-height: 1;
         }
 
         .stats-overlay {
