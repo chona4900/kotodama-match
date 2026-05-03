@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -51,9 +51,30 @@
                 </div>
 
                 <div class="zukan-overlay" id="zukanOverlay">
-                    <div style="text-align:center; margin-bottom:5px; font-weight:bold;">★言霊っち図鑑★</div>
+                    <div style="text-align:center; margin-bottom:5px; font-weight:bold;">★コトダマっち図鑑★</div>
                     <div id="zukanList" class="zukan-list"></div>
                     <button class="close-stats-btn" onclick="toggleAButton()">とじる</button>
+                </div>
+
+                <!-- Zukan Detail Overlay -->
+                <div class="zukan-detail-overlay" id="zukanDetailOverlay">
+                    <div class="zukan-detail-container">
+                        <button id="closeZukanDetailBtn" class="close-zukan-detail-btn">×</button>
+                        <div class="zukan-detail-top">
+                            <div class="zukan-detail-image-wrapper">
+                                <canvas id="zukanDetailCanvas" width="96" height="96"></canvas>
+                            </div>
+                            <div class="zukan-detail-info">
+                                <div id="zukanDetailName" class="zukan-detail-name">名前</div>
+                                <div id="zukanDetailType" class="zukan-detail-type">タイプ</div>
+                                <div id="zukanDetailStats" class="zukan-detail-stats">ステータス</div>
+                            </div>
+                        </div>
+                        <div class="zukan-detail-divider"></div>
+                        <div id="zukanDetailDesc" class="zukan-detail-desc">
+                            説明文
+                        </div>
+                    </div>
                 </div>
 
                 <!-- PVP モニュー -->

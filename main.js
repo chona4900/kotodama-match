@@ -1545,6 +1545,12 @@
             });
         }
 
+        const ZUKAN_DESCRIPTIONS = { 
+            childA: { 
+                text: '非常にかしこく「国土の隅々まで知り尽くしている存在」別名　少名毘古那神（すくなびこな　一寸帽子)日本神話において「知恵者で多才な小人神」非常に重要な神酒造の神で有名で大国主の命の相棒' 
+            } 
+        };
+
         const ZUKAN_DATA = [
             { stage: '第1段階', keys: ['egg'] },
             { stage: '第2段階', keys: ['childA', 'childB', 'childC'] },
@@ -1615,6 +1621,44 @@
                         
                         const zctx = can.getContext('2d');
                         renderCanvasArt(key, zctx);
+                        
+                        item.addEventListener('click', () => {
+                            const desc = ZUKAN_DESCRIPTIONS[key];
+                            document.getElementById('zukanDetailName').textContent = charNames[key] || key;
+                            
+                            const typeEl = document.getElementById('zukanDetailType');
+                            const statsEl = document.getElementById('zukanDetailStats');
+                            const descEl = document.getElementById('zukanDetailDesc');
+
+                            if (desc) {
+                                if (desc.type) {
+                                    typeEl.style.display = 'block';
+                                    typeEl.textContent = 'タイプ：' + desc.type;
+                                } else {
+                                    typeEl.style.display = 'none';
+                                }
+                                
+                                if (desc.stats) {
+                                    statsEl.style.display = 'block';
+                                    statsEl.textContent = desc.stats;
+                                } else {
+                                    statsEl.style.display = 'none';
+                                }
+                                
+                                descEl.textContent = desc.text;
+                            } else {
+                                typeEl.style.display = 'none';
+                                statsEl.style.display = 'none';
+                                descEl.textContent = '（詳細データはまだありません）';
+                            }
+                            
+                            const detailCan = document.getElementById('zukanDetailCanvas');
+                            const detailCtx = detailCan.getContext('2d');
+                            detailCtx.clearRect(0,0,detailCan.width,detailCan.height);
+                            renderCanvasArt(key, detailCtx);
+                            
+                            document.getElementById('zukanDetailOverlay').classList.add('visible');
+                        });
                     } else {
                         nameEl.textContent = '???';
                         const zctx = can.getContext('2d');
@@ -3100,3 +3144,5 @@
             init();
             checkUrlChallenge();
         };
+
+document.addEventListener('DOMContentLoaded', () => { const btn = document.getElementById('closeZukanDetailBtn'); if(btn) btn.addEventListener('click', () => { document.getElementById('zukanDetailOverlay').classList.remove('visible'); }); });
