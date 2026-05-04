@@ -1,4 +1,4 @@
-﻿:root {
+:root {
             --device-bg: #4A90E2;    /* 遲蝉ｽ薙・濶ｲ繧貞ｰ代＠繧ｯ繝ｼ繝ｫ縺ｫ螟画峩 */
             --screen-bg: #B5C6A9;    /* 閭梧勹繝吶・繧ｹ繧貞ｰ代＠譏弱ｋ縺・ｷ代↓ */
             --screen-text: #0f380f;
@@ -30,6 +30,7 @@
             background: var(--device-bg);
             border-radius: 50px 50px 70px 70px;
             padding: 40px 30px;
+            box-sizing: border-box;
             box-shadow: 
                 inset -5px -5px 15px rgba(0,0,0,0.2),
                 inset 5px 5px 15px rgba(255,255,255,0.4),
@@ -763,7 +764,15 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
 
 /* Final spacing adjustments */
 @media (max-width: 600px) {
-    .device { justify-content: flex-start !important; padding-top: 110px !important; padding-bottom: 80px !important; height: 100vh !important; max-height: 100vh !important; overflow: hidden !important; }
+    .device { 
+        justify-content: flex-start !important; 
+        padding-top: max(80px, env(safe-area-inset-top) + 20px) !important; 
+        padding-bottom: max(60px, env(safe-area-inset-bottom) + 30px) !important; 
+        height: 100vh !important; 
+        height: 100dvh !important; 
+        max-height: 100dvh !important; 
+        overflow: hidden !important; 
+    }
     .screen-container { flex: 1 !important; margin-top: 0 !important; margin-bottom: 25px !important; display: flex; flex-direction: column; min-height: 0 !important; }
     .screen { flex: 1 !important; height: auto !important; min-height: 0 !important; }
     .controls { margin-top: 0 !important; margin-bottom: 10px !important; }
