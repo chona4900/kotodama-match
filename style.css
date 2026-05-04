@@ -772,6 +772,8 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
         height: 100dvh !important; 
         max-height: 100dvh !important; 
         overflow: hidden !important; 
+        border-radius: 0 !important;
+        box-shadow: none !important;
     }
     .screen-container { flex: 1 !important; margin-top: 0 !important; margin-bottom: 25px !important; display: flex; flex-direction: column; min-height: 0 !important; }
     .screen { flex: 1 !important; height: auto !important; min-height: 0 !important; }
