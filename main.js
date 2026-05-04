@@ -2472,6 +2472,14 @@
             }
         }
 
+        function playFightSound() {
+            if (!audioCtx) initAudio();
+            const now = audioCtx.currentTime;
+            for (let i = 0; i < 6; i++) {
+                playOscillator(1760, now + i * 0.08, 0.05, 0.05, 'square');
+            }
+        }
+
         function playGogogogoSound() {
             if (!audioCtx) initAudio();
             const now = audioCtx.currentTime;
@@ -2629,6 +2637,8 @@
                 battleMessageEl.textContent = 'FIGHT!!';
                 battleMessageEl.style.color = '#ff2a00';
                 battleMessageEl.style.display = 'block';
+                
+                playFightSound();
                 
                 // バトルBGM再生開始
                 startBattleBgm();
