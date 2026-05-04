@@ -1961,6 +1961,7 @@
             hintRow.style.marginTop = '10px';
             hintRow.style.fontSize = '1.2rem';
             hintRow.style.color = '#5a5a5a';
+            hintRow.style.fontWeight = 'bold';
             hintRow.innerHTML = '※トータル1万回言うと<br>　何かが起こる！？';
             oyatsuListEl.appendChild(hintRow);
         }

@@ -145,7 +145,7 @@
             left: 12px;
             font-size: 1.15rem; /* 邏・.5蛟阪€懷€崎ｿ代￥縺ｫ諡｡螟ｧ縺励※隕冶ｪ肴€ｧ繧｢繝・・ */
             line-height: 1.5;
-            color: var(--screen-shadow);
+            color: var(--screen-text);
             z-index: 10;
             font-family: 'DotGothic16', sans-serif;
             text-shadow: none;
@@ -173,6 +173,7 @@
             text-align: center; font-size: 1.3rem;
             color: white; mix-blend-mode: difference;
             line-height: 1;
+            font-weight: bold;
         }
 
         .stats-overlay {
