@@ -7,7 +7,7 @@
 
         body {
             font-family: 'DotGothic16', sans-serif;
-            background: #e6f0ff;
+            background: var(--device-bg);
             display: flex;
             flex-direction: column;
             align-items: center;
