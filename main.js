@@ -1510,7 +1510,7 @@
         const zukanListEl = document.getElementById('zukanList');
 
         function toggleAButton() {
-            playToggleSound();
+            playButtonSound();
             if (overlayState === 0) {
                 overlayState = 1;
                 statsOverlayEl.classList.add('visible');
@@ -1931,7 +1931,7 @@
                 if (w === 'だんだんよくなる未来はあかるい') displayWord = 'だんだんよくなる<br>未来はあかるい';
                 else if (w === 'このことがダイヤモンドにかわります') displayWord = 'このことがダイヤ<br>モンドにかわります';
                 else if (w === '宇宙の調和に感謝します') displayWord = '宇宙の調和に<br>感謝します';
-                else if (w === 'もっと自分を愛しますもっと自分をゆるします') displayWord = 'もっと自分を愛します<br>もっと自分をゆるします';
+                else if (w === 'もっと自分を愛しますもっと自分をゆるします') displayWord = '<span style=\'font-size: 1.35rem;\'>もっと自分を愛します<br>もっと自分をゆるします</span>';
                 else if (w === 'どうでもいいどっちでもいいどうせうまくいくから') displayWord = 'どうでもいい<br>どっちでもいい<br>どうせうまくいくから';
                 
                 let row = document.createElement('div');
@@ -2557,6 +2557,13 @@
             playOscillator(50, now + 0.1, 0.4, 0.4, 'square');
         }
 
+        function playButtonSound() {
+            if (!audioCtx) initAudio();
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            playOscillator(880, now, 0.05, 0.05, 'square');
+        }
+
         function playWordPopSound() {
             if (!audioCtx) initAudio();
             if (!audioCtx) return; // AudioContextが許可されていない場合は鳴らさない
@@ -2981,6 +2988,7 @@
 
         // --- URL通信対戦ロジック ---
         function openPvpMenu() {
+            playButtonSound();
             document.getElementById('pvpMenuOverlay').classList.add('visible');
             document.getElementById('pvpMainMenu').style.display = 'flex';
             document.getElementById('urlContainer').style.display = 'none';
@@ -3090,6 +3098,7 @@
 
         // --- 陰徳システム ---
         function openIntokuModal() {
+            playButtonSound();
             const overlay = document.getElementById('intokuOverlay');
             if (overlay) overlay.classList.add('visible');
         }
