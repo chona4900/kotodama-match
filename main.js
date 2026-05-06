@@ -1968,6 +1968,7 @@
         }
 
         function resetGame() {
+            playButtonSound();
             if(confirm("データをリセットしてタマゴからやりなおしますか？")){
                 currentStage = 0;
                 currentForm = 'egg';
@@ -2182,6 +2183,7 @@
         }
 
         async function toggleMic() {
+            playButtonSound();
             if (!useNativeSpeech && !webRecognition) return alert('この環境は音声認識に非対応です');
             if(isListening) {
                 stopMic();
@@ -2558,11 +2560,18 @@
             playOscillator(50, now + 0.1, 0.4, 0.4, 'square');
         }
 
-        function playButtonSound() {
-            if (!audioCtx) initAudio();
+        async function playButtonSound() {
+            if (typeof initAudio === 'function') initAudio();
+            if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') {
+                try { await audioCtx.resume(); } catch(e){}
+            }
             if (!audioCtx) return;
-            const now = audioCtx.currentTime;
-            playOscillator(880, now, 0.05, 0.05, 'square');
+            
+            // 少しだけ待機して確実に鳴らす
+            setTimeout(() => {
+                const now = audioCtx.currentTime;
+                playOscillator(880, now, 0.08, 0.1, 'square'); // 少し長め・大きめに調整
+            }, 20);
         }
 
         function playWordPopSound() {
