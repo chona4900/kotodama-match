@@ -1657,6 +1657,7 @@
                             detailCtx.clearRect(0,0,detailCan.width,detailCan.height);
                             renderCanvasArt(key, detailCtx);
                             
+                            playButtonSound();
                             document.getElementById('zukanDetailOverlay').classList.add('visible');
                         });
                     } else {
@@ -1931,8 +1932,8 @@
                 if (w === 'だんだんよくなる未来はあかるい') displayWord = 'だんだんよくなる<br>未来はあかるい';
                 else if (w === 'このことがダイヤモンドにかわります') displayWord = 'このことがダイヤ<br>モンドにかわります';
                 else if (w === '宇宙の調和に感謝します') displayWord = '宇宙の調和に<br>感謝します';
-                else if (w === 'もっと自分を愛しますもっと自分をゆるします') displayWord = '<span style=\'font-size: 1.2rem; white-space: nowrap;\'>もっと自分を愛します<br>もっと自分をゆるします</span>';
-                else if (w === 'どうでもいいどっちでもいいどうせうまくいくから') displayWord = '<span style=\'font-size: 1.2rem; white-space: nowrap;\'>どうでもいい<br>どっちでもいい<br>どうせうまくいくから</span>';
+                else if (w === 'もっと自分を愛しますもっと自分をゆるします') displayWord = '<span style=\'font-size: 1.6rem; display: inline-block; transform: scale(0.75); transform-origin: left center; white-space: nowrap;\'>もっと自分を愛します<br>もっと自分をゆるします</span>';
+                else if (w === 'どうでもいいどっちでもいいどうせうまくいくから') displayWord = '<span style=\'font-size: 1.6rem; display: inline-block; transform: scale(0.75); transform-origin: left center; white-space: nowrap;\'>どうでもいい<br>どっちでもいい<br>どうせうまくいくから</span>';
                 
                 let row = document.createElement('div');
                 row.className = 'stats-row';
@@ -3165,4 +3166,4 @@
             checkUrlChallenge();
         };
 
-document.addEventListener('DOMContentLoaded', () => { const btn = document.getElementById('closeZukanDetailBtn'); if(btn) btn.addEventListener('click', () => { document.getElementById('zukanDetailOverlay').classList.remove('visible'); }); });
+document.addEventListener('DOMContentLoaded', () => { const btn = document.getElementById('closeZukanDetailBtn'); if(btn) btn.addEventListener('click', () => { playButtonSound(); document.getElementById('zukanDetailOverlay').classList.remove('visible'); }); });
