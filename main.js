@@ -1878,13 +1878,6 @@
             }
             fall();
         }
-                conf.style.top = (progress * 300) + 'px';
-                conf.style.left = (parseFloat(conf.style.left) + horizontalVel * 0.1) + '%';
-                requestAnimationFrame(fall);
-            }
-            requestAnimationFrame(fall);
-        }
-
         // --- アイテム獲得ポップアップ処理 ---
         const itemOverlayEl = document.getElementById('itemOverlay');
         const itemPopupNameEl = document.getElementById('itemPopupName');
