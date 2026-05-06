@@ -1769,6 +1769,7 @@
         }
 
         function hideCelebration() {
+            playButtonSound();
             celebrationOverlayEl.classList.remove('visible');
         }
 
@@ -1905,6 +1906,7 @@
         }
 
         function hideItemPopup() {
+            playButtonSound();
             itemOverlayEl.classList.remove('visible');
         }
 
@@ -3008,6 +3010,7 @@
         }
 
         function closePvpMenu() {
+            playButtonSound();
             document.getElementById('pvpMenuOverlay').classList.remove('visible');
         }
 
@@ -3032,6 +3035,7 @@
         }
 
         function backToPvpMenu() {
+            playButtonSound();
             document.getElementById('urlContainer').style.display = 'none';
             document.getElementById('pvpMainMenu').style.display = 'flex';
         }
@@ -3100,11 +3104,13 @@
         }
 
         function acceptChallenge() {
+            playButtonSound();
             document.getElementById('pvpChallengeOverlay').classList.remove('visible');
             startBattle(false, pendingChallengerData);
         }
 
         function rejectChallenge() {
+            playButtonSound();
             document.getElementById('pvpChallengeOverlay').classList.remove('visible');
             pendingChallengerData = null;
         }
@@ -3117,6 +3123,7 @@
         }
 
         function closeIntokuModal() {
+            playButtonSound();
             const overlay = document.getElementById('intokuOverlay');
             if (overlay) overlay.classList.remove('visible');
         }
