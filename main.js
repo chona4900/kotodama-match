@@ -1767,9 +1767,22 @@
             playCelebrateSound(); // テスト音源の再生
 
             // 紙吹雪エフェクト (ドット風)
-            for(let i=0; i<30; i++) {
-                createConfetti();
+            // もっと派手な紙吹雪エフェクト (ドット風)
+            for(let i=0; i<80; i++) {
+                setTimeout(createConfetti, Math.random() * 500);
             }
+            
+            // 花火エフェクトをランダムな位置に時間差で打ち上げる
+            for(let i=0; i<5; i++) {
+                setTimeout(() => {
+                    const x = 20 + Math.random() * 60; // 20%〜80%
+                    const y = 20 + Math.random() * 40; // 20%〜60%
+                    createPixelFirework(x, y);
+                }, i * 300 + Math.random() * 200);
+            }
+            // skip old createConfetti block
+
+
         }
 
         function hideCelebration() {
@@ -1777,32 +1790,94 @@
             celebrationOverlayEl.classList.remove('visible');
         }
 
+        function createPixelFirework(xPos, yPos) {
+            const container = document.getElementById('celebrationOverlay');
+            if(!container) return;
+            const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff69b4', '#fff'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const particleCount = 20 + Math.floor(Math.random() * 15);
+            
+            for(let i=0; i<particleCount; i++) {
+                const p = document.createElement('div');
+                p.style.position = 'absolute';
+                p.style.width = '6px';
+                p.style.height = '6px';
+                p.style.background = (Math.random() > 0.5) ? color : '#fff';
+                p.style.left = xPos + '%';
+                p.style.top = yPos + '%';
+                p.style.pointerEvents = 'none';
+                p.style.zIndex = '90';
+                
+                container.appendChild(p);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                const vx = Math.cos(angle) * speed;
+                let vy = Math.sin(angle) * speed;
+                
+                let opacity = 1.0;
+                
+                function animate() {
+                    opacity -= 0.02 + Math.random() * 0.02;
+                    vy += 0.15; // 重力
+                    
+                    const currentLeft = parseFloat(p.style.left);
+                    const currentTop = parseFloat(p.style.top);
+                    
+                    p.style.left = (currentLeft + vx * 0.2) + '%';
+                    p.style.top = (currentTop + vy * 0.2) + '%';
+                    p.style.opacity = opacity;
+                    
+                    if(opacity <= 0) {
+                        p.remove();
+                    } else {
+                        requestAnimationFrame(animate);
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+        }
+
         function createConfetti() {
-            const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#f39c12'];
+            const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff69b4', '#f1c40f'];
             const conf = document.createElement('div');
             conf.className = 'confetti';
             conf.style.background = colors[Math.floor(Math.random() * colors.length)];
             conf.style.left = Math.random() * 100 + '%';
-            conf.style.top = '-10px';
-            // サイズをバラバラにする
-            const size = Math.floor(Math.random() * 5) + 4; 
+            conf.style.top = '-5%';
+            // より派手なサイズ感
+            const size = Math.floor(Math.random() * 8) + 6; 
             conf.style.width = size + 'px';
             conf.style.height = size + 'px';
+            conf.style.zIndex = '95';
             
             const container = document.getElementById('celebrationOverlay');
-            container.appendChild(conf);
+            if(container) container.appendChild(conf);
 
             const startTime = Date.now();
-            const duration = 2000;
-            const horizontalVel = (Math.random() - 0.5) * 4;
+            const duration = 2500 + Math.random() * 1500;
+            const horizontalVel = (Math.random() - 0.5) * 5;
+            const rotateSpeed = (Math.random() - 0.5) * 10;
+            let currentRot = 0;
 
             function fall() {
                 const elapsed = Date.now() - startTime;
                 const progress = elapsed / duration;
                 if (progress >= 1) {
-                    conf.remove();
+                    if(conf.parentNode) conf.remove();
                     return;
                 }
+                
+                currentRot += rotateSpeed;
+                const yPos = -5 + (progress * 110); 
+                
+                conf.style.top = yPos + '%';
+                conf.style.left = (parseFloat(conf.style.left) + horizontalVel * 0.05) + '%';
+                conf.style.transform = `rotate(${currentRot}deg)`;
+                requestAnimationFrame(fall);
+            }
+            fall();
+        }
                 conf.style.top = (progress * 300) + 'px';
                 conf.style.left = (parseFloat(conf.style.left) + horizontalVel * 0.1) + '%';
                 requestAnimationFrame(fall);
