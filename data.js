@@ -219,8 +219,8 @@
             "今日一日自分に優しく<br>人に優しくでいこう♪"
         ];
         
-        let currentStage = 3; // 最終 Stage
-        let currentForm = 'childA_2_2'; // テスト用に白虎っちを表示
+        let currentStage = 2; // 第3段階
+        let currentForm = 'childA_1'; // 白蛇っち
         let isSick = false;
         let sickRecoveryCount = 0;
         let lastInteractionTimestamp = Date.now();

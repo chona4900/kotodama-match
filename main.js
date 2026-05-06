@@ -37,7 +37,8 @@
 
         let wordCounts = {};
         allWords.forEach(w => wordCounts[w] = 0);
-        let totalCount = 0;
+        wordCounts['愛してます'] = 2980; // テスト用
+        let totalCount = 2980; // テスト用
         let intokuPower = 0;
         let battleWins = 0;
         let battleLosses = 0;
@@ -1971,16 +1972,17 @@
 
         function resetGame() {
             playButtonSound();
-            if(confirm("データをリセットしてタマゴからやりなおしますか？")){
-                currentStage = 0;
-                currentForm = 'egg';
-                totalCount = 0;
+            if(confirm("データをリセットして第3段階（進化20回前）からテストしますか？")){
+                currentStage = 2; // 第3段階
+                currentForm = 'childA_1'; // 白蛇っち
+                totalCount = 2980;
                 allWords.forEach(w => wordCounts[w] = 0);
+                wordCounts['愛してます'] = 2980; // テスト用
                 isSick = false;
                 sickRecoveryCount = 0;
                 canvas.classList.remove('bouncing');
                 statusTextEl.textContent = "マイクをオンにしてね";
-                renderCanvasArt('egg', ctx);
+                renderCanvasArt(currentForm, ctx);
                 updateUI();
                 closeOverlays();
             }
