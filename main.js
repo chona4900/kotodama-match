@@ -1450,8 +1450,11 @@
             }
 
 
-            // 100回ごとの区切りでお祝いを表示
-            if (Math.floor(totalCount / 100) > Math.floor(oldCount / 100)) {
+            // 進化のタイミングと被るかどうか判定
+            const isEvolutionMilestone = [STAGE1_GOAL, STAGE2_GOAL, STAGE3_GOAL, STAGE4_GOAL].some(goal => oldCount < goal && totalCount >= goal);
+
+            // 100回ごとの区切りでお祝いを表示（進化と被る場合は非表示）
+            if (!isEvolutionMilestone && Math.floor(totalCount / 100) > Math.floor(oldCount / 100)) {
                 showCelebration(Math.floor(totalCount / 100) * 100);
             }
             
