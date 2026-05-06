@@ -1931,8 +1931,8 @@
                 if (w === 'だんだんよくなる未来はあかるい') displayWord = 'だんだんよくなる<br>未来はあかるい';
                 else if (w === 'このことがダイヤモンドにかわります') displayWord = 'このことがダイヤ<br>モンドにかわります';
                 else if (w === '宇宙の調和に感謝します') displayWord = '宇宙の調和に<br>感謝します';
-                else if (w === 'もっと自分を愛しますもっと自分をゆるします') displayWord = '<span style=\'font-size: 1.35rem;\'>もっと自分を愛します<br>もっと自分をゆるします</span>';
-                else if (w === 'どうでもいいどっちでもいいどうせうまくいくから') displayWord = 'どうでもいい<br>どっちでもいい<br>どうせうまくいくから';
+                else if (w === 'もっと自分を愛しますもっと自分をゆるします') displayWord = '<span style=\'font-size: 1.2rem; white-space: nowrap;\'>もっと自分を愛します<br>もっと自分をゆるします</span>';
+                else if (w === 'どうでもいいどっちでもいいどうせうまくいくから') displayWord = '<span style=\'font-size: 1.2rem; white-space: nowrap;\'>どうでもいい<br>どっちでもいい<br>どうせうまくいくから</span>';
                 
                 let row = document.createElement('div');
                 row.className = 'stats-row';
