@@ -799,3 +799,93 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
 .zukan-detail-desc::-webkit-scrollbar { width: 8px; background-color: rgba(142, 98, 77, 0.2); }
 .zukan-detail-desc::-webkit-scrollbar-thumb { background-color: #8e624d; border-radius: 4px; }
 
+
+/* --- Intense Battle Animations --- */
+@keyframes hitAnimIntense {
+    0%, 100% { transform: translateX(0) translateY(0); filter: invert(0); }
+    10% { transform: translateX(-20px) translateY(10px) rotate(-15deg); filter: invert(1); }
+    30% { transform: translateX(25px) translateY(-15px) rotate(15deg); filter: invert(0); }
+    50% { transform: translateX(-30px) translateY(20px) rotate(-20deg); filter: invert(1); }
+    70% { transform: translateX(20px) translateY(-10px) rotate(10deg); filter: invert(0); }
+    90% { transform: translateX(-10px) translateY(5px) rotate(-5deg); filter: invert(0); }
+}
+.battle-character.hit-intense { animation: hitAnimIntense 0.35s cubic-bezier(.36,.07,.19,.97) both; }
+
+@keyframes attackAnimMineIntense {
+    0% { transform: translate(0, 0) scale(1); }
+    20% { transform: translate(-20px, 20px) scale(0.9); }
+    40% { transform: translate(80px, -80px) scale(1.2); }
+    60% { transform: translate(90px, -90px) scale(1.2); }
+    100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes attackAnimEnemyIntense {
+    0% { transform: translate(0, 0) scale(1); }
+    20% { transform: translate(20px, -20px) scale(0.9); }
+    40% { transform: translate(-80px, 80px) scale(1.2); }
+    60% { transform: translate(-90px, 90px) scale(1.2); }
+    100% { transform: translate(0, 0) scale(1); }
+}
+.battle-character.attack-intense.mine { animation: attackAnimMineIntense 0.45s cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
+.battle-character.attack-intense.enemy { animation: attackAnimEnemyIntense 0.45s cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
+
+@keyframes missAnimIntense {
+    0% { transform: translateY(0) translateX(0) skewX(0); opacity: 1; filter: blur(0); }
+    20% { transform: translateY(-30px) translateX(-40px) skewX(-20deg); opacity: 0.5; filter: blur(2px); }
+    80% { transform: translateY(-30px) translateX(-40px) skewX(0); opacity: 0.8; filter: blur(0); }
+    100% { transform: translateY(0) translateX(0); opacity: 1; }
+}
+@keyframes missAnimIntenseEnemy {
+    0% { transform: translateY(0) translateX(0) skewX(0); opacity: 1; filter: blur(0); }
+    20% { transform: translateY(-30px) translateX(40px) skewX(20deg); opacity: 0.5; filter: blur(2px); }
+    80% { transform: translateY(-30px) translateX(40px) skewX(0); opacity: 0.8; filter: blur(0); }
+    100% { transform: translateY(0) translateX(0); opacity: 1; }
+}
+.battle-character.miss-intense.mine { animation: missAnimIntense 0.6s ease-out forwards; }
+.battle-character.miss-intense.enemy { animation: missAnimIntenseEnemy 0.6s ease-out forwards; }
+
+.miss-popup-text {
+    position: absolute;
+    color: #bdc3c7;
+    font-size: 2.0rem;
+    font-weight: bold;
+    font-family: 'DotGothic16', sans-serif;
+    text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+    z-index: 250;
+    pointer-events: none;
+    opacity: 0;
+    animation: missTextAnim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes missTextAnim {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+    80% { transform: translateY(-40px) scale(1); opacity: 1; }
+    100% { transform: translateY(-60px) scale(1); opacity: 0; }
+}
+
+.hit-spark {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: transparent;
+    z-index: 250;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+.hit-spark::before, .hit-spark::after {
+    content: '';
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 0 10px #f1c40f, 0 0 20px #e74c3c;
+}
+.hit-spark::before { width: 100%; height: 12px; top: 24px; left: 0; animation: sparkScaleX 0.25s ease-out forwards; }
+.hit-spark::after { height: 100%; width: 12px; left: 24px; top: 0; animation: sparkScaleY 0.25s ease-out forwards; }
+
+@keyframes sparkScaleX { 0% { transform: scaleX(0); opacity: 1; } 40% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes sparkScaleY { 0% { transform: scaleY(0); opacity: 1; } 40% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(0); opacity: 0; } }
+
+.battle-darken-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7); z-index: 200; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+}
+.battle-darken-bg.active { opacity: 1; }
