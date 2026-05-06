@@ -2560,18 +2560,19 @@
             playOscillator(50, now + 0.1, 0.4, 0.4, 'square');
         }
 
-        async function playButtonSound() {
+        function playButtonSound() {
             if (typeof initAudio === 'function') initAudio();
-            if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') {
-                try { await audioCtx.resume(); } catch(e){}
-            }
             if (!audioCtx) return;
             
-            // 少しだけ待機して確実に鳴らす
-            setTimeout(() => {
-                const now = audioCtx.currentTime;
-                playOscillator(880, now, 0.08, 0.1, 'square'); // 少し長め・大きめに調整
-            }, 20);
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            // WebKitの同期的な再生許可を得るため、setTimeoutやasyncは使わずに少し未来にスケジュール
+            const offset = (audioCtx.state === 'suspended' || audioCtx.currentTime < 0.1) ? 0.05 : 0;
+            const now = audioCtx.currentTime + offset;
+            
+            playOscillator(880, now, 0.08, 0.1, 'square');
         }
 
         function playWordPopSound() {
@@ -2636,7 +2637,9 @@
             
             // ピコピコVS音
             initAudio();
-            const now = audioCtx ? audioCtx.currentTime : 0;
+            if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }
+            const offset = (audioCtx && (audioCtx.state === 'suspended' || audioCtx.currentTime < 0.1)) ? 0.05 : 0;
+            const now = audioCtx ? audioCtx.currentTime + offset : 0;
             for(let i=0; i<6; i++) {
                 if(i%2===0) playOscillator(880, now + (i*0.1), 0.1, 0.1, 'square');
                 else playOscillator(1760, now + (i*0.1), 0.1, 0.1, 'square');
@@ -3120,7 +3123,9 @@
 
         function playIntokuSound() {
             if (!audioCtx) return;
-            const t = audioCtx.currentTime;
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+            const offset = (audioCtx.state === 'suspended' || audioCtx.currentTime < 0.1) ? 0.05 : 0;
+            const t = audioCtx.currentTime + offset;
             
             // 少し神秘的な和音のチャイム（ポワァン...）
             const freqs = [880, 1108.73, 1318.51, 1760]; // A5, C#6, E6, A6 (A major chord)
