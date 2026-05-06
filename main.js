@@ -2230,6 +2230,7 @@
         }
 
         // 共通の認識文字列処理
+        let lastWordMatchTime = {};
         function processTranscript(rawTranscript, isFinal, interimMatchCounts) {
             let transcript = rawTranscript.replace(/[\s　、。！？,!?]/g, '');
             const sortedWords = [...allWords].sort((a, b) => b.length - a.length);
@@ -2244,7 +2245,15 @@
                 const previousMatchCount = interimMatchCounts[w] || 0;
                 
                 if (currentMatchCount > previousMatchCount) {
-                    addWordLog(w, currentMatchCount - previousMatchCount);
+                    let now = Date.now();
+                    const isOyatsu = OYATSU_WORDS.includes(w);
+                    // 魂のおやつは4秒、通常の言霊は0.5秒の連続検知防止（二重カウント防止策）
+                    const cooldown = isOyatsu ? 4000 : 500;
+                    
+                    if (!lastWordMatchTime[w] || (now - lastWordMatchTime[w] > cooldown)) {
+                        addWordLog(w, currentMatchCount - previousMatchCount);
+                        lastWordMatchTime[w] = now;
+                    }
                     interimMatchCounts[w] = currentMatchCount;
                 }
                 
