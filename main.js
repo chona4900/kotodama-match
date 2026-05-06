@@ -2661,11 +2661,7 @@
 
         function createHitFx(x, y) {
             const fx = document.createElement('div');
-            fx.className = 'hit-spark';
-            let darkenBg = document.createElement('div');
-            darkenBg.className = 'battle-darken-bg active';
-            battleArenaEl.appendChild(darkenBg);
-            setTimeout(() => { if (darkenBg.parentNode) darkenBg.remove(); }, 200);
+            fx.className = 'hit-fx';
             fx.style.left = x + 'px';
             fx.style.top = y + 'px';
             battleArenaEl.appendChild(fx);
@@ -2741,14 +2737,13 @@
                 let isMyTurn = Math.random() > 0.5;
                 let attackerEl = isMyTurn ? myCharEl : enemyCharEl;
                 let defenderEl = isMyTurn ? enemyCharEl : myCharEl;
-                let atkClass = isMyTurn ? 'attack-intense' : 'attack-intense';
-                let atkSideClass = isMyTurn ? 'mine' : 'enemy';
+                let atkClass = isMyTurn ? 'attack-mine' : 'attack-enemy';
                 
                 let attackerStats = isMyTurn ? myStats : enemyStats;
                 let defenderStats = isMyTurn ? enemyStats : myStats;
                 
                 setTimeout(() => {
-                    attackerEl.classList.add(atkClass, atkSideClass);
+                    attackerEl.classList.add(atkClass);
                     
                     initAudio();
                     const now = audioCtx ? audioCtx.currentTime : 0;
@@ -2794,7 +2789,7 @@
                         // ダメージとUI更新のクロージャ
                         const applyDamageAndNextTurn = () => {
                             if (hit) {
-                                defenderEl.classList.add('hit-intense');
+                                defenderEl.classList.add('hit');
                                 let arenaRect = battleArenaEl.getBoundingClientRect();
                                 createHitFx(arenaRect.width / 2, arenaRect.height / 2);
                                 
@@ -2814,14 +2809,13 @@
                                 myHpBarEl.style.width = (myHp / myMaxHp * 100) + '%';
                                 enemyHpBarEl.style.width = (enemyHp / enemyMaxHp * 100) + '%';
                                 
-                                setTimeout(() => defenderEl.classList.remove('hit-intense'), 400);
+                                setTimeout(() => defenderEl.classList.remove('hit'), 400);
                             } else {
                                 if (!triggeredItem) {
-                                    let missClass = !isMyTurn ? 'mine' : 'enemy';
-                                    defenderEl.classList.add('miss-intense', missClass);
+                                    defenderEl.classList.add('miss');
                                     createPopupText('回避！', !isMyTurn, false);
                                     playOscillator(800, audioCtx ? audioCtx.currentTime : 0, 0.2, 0.1, 'sine');
-                                    setTimeout(() => defenderEl.classList.remove('miss-intense', missClass), 600);
+                                    setTimeout(() => defenderEl.classList.remove('miss'), 500);
                                 }
                             }
                             
@@ -2829,22 +2823,20 @@
                             if (healAmount > 0) {
                                 myHp = Math.min(myMaxHp, myHp + healAmount);
                                 myHpBarEl.style.width = (myHp / myMaxHp * 100) + '%';
-                                let missClassH = !isMyTurn ? 'mine' : 'enemy';
-                                defenderEl.classList.add('miss-intense', missClassH); // 攻撃を回避したかのように扱う
-                                setTimeout(() => defenderEl.classList.remove('miss-intense', missClassH), 600);
+                                defenderEl.classList.add('miss'); // 攻撃を回避したかのように扱う
+                                setTimeout(() => defenderEl.classList.remove('miss'), 500);
                             }
                             if (reflectItem) {
                                 // 自分(defenderEl)が反射、敵(enemyCharEl)にダメージ
                                 enemyHp = Math.max(0, enemyHp - dmg);
                                 enemyHpBarEl.style.width = (enemyHp / enemyMaxHp * 100) + '%';
-                                enemyCharEl.classList.add('hit-intense');
-                                setTimeout(() => enemyCharEl.classList.remove('hit-intense'), 400);
-                                let missClassR = !isMyTurn ? 'mine' : 'enemy';
-                                defenderEl.classList.add('miss-intense', missClassR); // 自分のダメージは0
-                                setTimeout(() => defenderEl.classList.remove('miss-intense', missClassR), 600);
+                                enemyCharEl.classList.add('hit');
+                                setTimeout(() => enemyCharEl.classList.remove('hit'), 400);
+                                defenderEl.classList.add('miss'); // 自分のダメージは0
+                                setTimeout(() => defenderEl.classList.remove('miss'), 500);
                             }
                             
-                            setTimeout(() => attackerEl.classList.remove(atkClass, atkSideClass), 400);
+                            setTimeout(() => attackerEl.classList.remove(atkClass), 300);
 
                             // 次のターンの呼び出し
                             setTimeout(executeTurn, 2500);
