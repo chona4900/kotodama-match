@@ -56,9 +56,9 @@
                 ]
             },
             // Aルート（愛情・許し）：多邇具久っち（たにぐく）- 高解像度スプライトシート版
-            childA: { type: 'image', src: '多邇具久.jpg', frames: 3, speed: 800, trim: 0.05, trimY: 0.05 },
+            childA: { type: 'image', src: '多邇具久.jpg', frames: 3, speed: 800, trim: 0.05, trimY: 0.01 },
             // Aルート：多邇具久っち（病気状態）
-            childA_sick: { type: 'image', src: '多邇具久（病気）.jpg', frames: 3, speed: 1000, trim: 0.05, trimY: 0.05 },
+            childA_sick: { type: 'image', src: '多邇具久（病気）.jpg', frames: 3, speed: 1000, trim: 0.05, trimY: 0.01 },
             // Bルート（喜び・快活）：狛犬っち（こまいぬ）- 高解像度スプライトシート版
             childB: { type: 'image', src: '狛犬っち.jpg', frames: 3, speed: 800, trim: 0.02 },
             // Bルート：狛犬っち（病気状態）
