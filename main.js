@@ -1182,7 +1182,7 @@
                 overlay.classList.add('flashing');
                 playEvolutionSound(); // ドキドキパルス音＋ファンファーレ開始
                 
-                // 3.0秒経過したとき（真っ黒のタイミング）で姿を切り替える
+                // 6.0秒経過したとき（真っ黒のタイミング）で姿を切り替える
                 setTimeout(() => {
                     callback();
                     
@@ -1190,7 +1190,7 @@
                     setTimeout(() => {
                         overlay.classList.remove('flashing');
                     }, 1000);
-                }, 3000);
+                }, 6000);
             }
         }
 
