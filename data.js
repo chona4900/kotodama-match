@@ -70,20 +70,37 @@
             initAudio();
             const now = audioCtx.currentTime;
 
-            // 暗転（黒になる）タイミングリスト（CSSでのopacity:1の秒数）
-            const flashTimes = [0.45, 1.05, 1.50, 1.86, 2.16, 2.40, 2.61, 2.76, 2.85, 2.94, 3.00];
+            // 1. 背景のチャージ音（常に鳴っているBGM要素）
+            // 低音から徐々に高音へ、音量も上がっていく
+            const chargeOsc = audioCtx.createOscillator();
+            const chargeGain = audioCtx.createGain();
+            chargeOsc.type = 'sawtooth';
+            chargeOsc.frequency.setValueAtTime(50, now);
+            chargeOsc.frequency.exponentialRampToValueAtTime(300, now + 6.0);
+            
+            chargeGain.gain.setValueAtTime(0.01, now);
+            chargeGain.gain.linearRampToValueAtTime(0.2, now + 6.0);
+            chargeGain.gain.linearRampToValueAtTime(0.01, now + 6.5);
+            
+            chargeOsc.connect(chargeGain);
+            chargeGain.connect(audioCtx.destination);
+            chargeOsc.start(now);
+            chargeOsc.stop(now + 6.5);
+
+            // 2. 鼓動音（CSSの新しい20ステップ点滅に完全に同期）
+            const flashTimes = [0.48, 1.20, 1.86, 2.46, 3.00, 3.36, 3.78, 4.08, 4.38, 4.56, 4.80, 4.98, 5.10, 5.28, 5.40, 5.58, 5.70, 5.79, 5.88, 6.00];
 
             flashTimes.forEach((t, i) => {
                 // ドクンという鼓動音 (triangle は丸みのある音)
-                const freq = 120 + (i * 15); 
-                const duration = Math.max(0.05, 0.2 - (i * 0.015)); 
-                playOscillator(freq, now + t, duration, 0.2, 'triangle'); 
-                // ピッという短い電子パルス音
+                const freq = 120 + (i * 10); 
+                const duration = Math.max(0.05, 0.2 - (i * 0.005)); 
+                playOscillator(freq, now + t, duration, 0.25, 'triangle'); 
+                // ピッという短いパルス
                 playOscillator(freq * 1.5, now + t, duration, 0.05, 'square');
             });
 
-            // 3.0秒で完全に黒。4.0秒のタイミングでフェードアウトが始まる（進化完了）
-            const revealTime = now + 4.0;
+            // 3. ファンファーレ（進化完了、6.0秒で真っ黒、7.0秒で光る）
+            const revealTime = now + 7.0;
             
             // パッ！と明るくなる瞬間の進化完了ファンファーレ
             playOscillator(523.25, revealTime, 0.1, 0.15); // C5

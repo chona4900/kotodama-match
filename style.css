@@ -259,24 +259,42 @@
         }
         @keyframes evolutionPulsate {
             0%   { opacity: 0; }
-            15%  { opacity: 1; }
+            8%   { opacity: 1; }
+            10%  { opacity: 0; }
+            20%  { opacity: 1; }
             22%  { opacity: 0; }
-            35%  { opacity: 1; }
-            40%  { opacity: 0; }
+            31%  { opacity: 1; }
+            33%  { opacity: 0; }
+            41%  { opacity: 1; }
+            43%  { opacity: 0; }
             50%  { opacity: 1; }
-            54%  { opacity: 0; }
-            62%  { opacity: 1; }
+            52%  { opacity: 0; }
+            56%  { opacity: 1; }
+            58%  { opacity: 0; }
+            63%  { opacity: 1; }
             65%  { opacity: 0; }
-            72%  { opacity: 1; }
-            74%  { opacity: 0; }
+            68%  { opacity: 1; }
+            70%  { opacity: 0; }
+            73%  { opacity: 1; }
+            75%  { opacity: 0; }
+            76%  { opacity: 1; }
+            78%  { opacity: 0; }
             80%  { opacity: 1; }
             82%  { opacity: 0; }
-            87%  { opacity: 1; }
-            88%  { opacity: 0; }
-            92%  { opacity: 1; }
-            93%  { opacity: 0; }
+            83%  { opacity: 1; }
+            84%  { opacity: 0; }
+            85%  { opacity: 1; }
+            86%  { opacity: 0; }
+            88%  { opacity: 1; }
+            89%  { opacity: 0; }
+            90%  { opacity: 1; }
+            91%  { opacity: 0; }
+            93%  { opacity: 1; }
+            94%  { opacity: 0; }
             95%  { opacity: 1; }
             96%  { opacity: 0; }
+            96.5% { opacity: 1; }
+            97%  { opacity: 0; }
             98%  { opacity: 1; }
             99%  { opacity: 0; }
             100% { opacity: 1; }
