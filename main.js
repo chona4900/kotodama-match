@@ -778,9 +778,9 @@
                     totalCount = (state.totalCount !== undefined) ? Number(state.totalCount) : 0;
                     intokuPower = (state.intokuPower !== undefined) ? Number(state.intokuPower) : 0;
                     battleWins = (state.battleWins !== undefined) ? Number(state.battleWins) : 0;
-                    // テスト用：オーラ確認のため、最低でも10勝からスタートさせる
-                    if (battleWins < 10) {
-                        battleWins = 10;
+                    // テスト用：オーラ確認のため、最低でも50勝からスタートさせる
+                    if (battleWins < 50) {
+                        battleWins = 50;
                     }
                     battleLosses = (state.battleLosses !== undefined) ? Number(state.battleLosses) : 0;
                     isSick = !!state.isSick;
@@ -3357,14 +3357,28 @@
             // 効果音
             playIntokuSound();
             
-            // 軽い演出（キャラクターを少し光らせる）
-            const canvas = document.getElementById('pixelCanvas');
-            if (canvas) {
-                canvas.style.transition = 'filter 0.5s';
-                canvas.style.filter = 'drop-shadow(0 0 15px #f1c40f) brightness(1.2)';
+            // 軽い演出（画面全体を白く光らせる）
+            const screen = document.querySelector('.screen');
+            if (screen) {
+                const flash = document.createElement('div');
+                flash.style.position = 'absolute';
+                flash.style.top = '0';
+                flash.style.left = '0';
+                flash.style.width = '100%';
+                flash.style.height = '100%';
+                flash.style.background = 'rgba(255, 255, 255, 0.8)';
+                flash.style.zIndex = '100';
+                flash.style.pointerEvents = 'none';
+                flash.style.transition = 'opacity 1.0s ease-out';
+                screen.appendChild(flash);
+                
+                // 強制リフロー
+                flash.offsetHeight;
+                
+                flash.style.opacity = '0';
                 setTimeout(() => {
-                    canvas.style.filter = 'drop-shadow(2px 2px 0px rgba(15, 56, 15, 0.4))';
-                }, 1500);
+                    if (flash.parentNode) flash.parentNode.removeChild(flash);
+                }, 1000);
             }
         }
 
