@@ -78,9 +78,9 @@
             chargeOsc.frequency.setValueAtTime(50, now);
             chargeOsc.frequency.exponentialRampToValueAtTime(300, now + 6.0);
             
-            chargeGain.gain.setValueAtTime(0.01, now);
-            chargeGain.gain.linearRampToValueAtTime(0.2, now + 6.0);
-            chargeGain.gain.linearRampToValueAtTime(0.01, now + 6.5);
+            chargeGain.gain.setValueAtTime(0.005, now);
+            chargeGain.gain.linearRampToValueAtTime(0.08, now + 6.0);
+            chargeGain.gain.linearRampToValueAtTime(0.005, now + 6.5);
             
             chargeOsc.connect(chargeGain);
             chargeGain.connect(audioCtx.destination);
