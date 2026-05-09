@@ -69,7 +69,10 @@ jobs:
       - name: Build and Archive iOS App
         run: |
           cd ios/App
-          # If using CocoaPods natively, pod install might be needed. Cap sync handles it usually.
+          # Clear Swift Package Manager cache to prevent SPM "already exists" errors
+          rm -rf ~/Library/Caches/org.swift.swiftpm
+          rm -rf ~/Library/org.swift.swiftpm
+          
           # Build Archive
           xcodebuild archive \
             -project App.xcodeproj \
