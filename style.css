@@ -817,3 +817,30 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
 .zukan-detail-desc::-webkit-scrollbar { width: 8px; background-color: rgba(142, 98, 77, 0.2); }
 .zukan-detail-desc::-webkit-scrollbar-thumb { background-color: #8e624d; border-radius: 4px; }
 
+/* Aura Effects for PvP Wins */
+.aura-level-1 {
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.7));
+    animation: auraPulse1 2s infinite alternate;
+}
+@keyframes auraPulse1 {
+    0% { filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.4)); }
+    100% { filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.9)); }
+}
+
+.aura-level-2 {
+    filter: drop-shadow(0 0 15px rgba(255, 69, 0, 0.8));
+    animation: auraPulse2 1.5s infinite alternate;
+}
+@keyframes auraPulse2 {
+    0% { filter: drop-shadow(0 0 10px rgba(255, 69, 0, 0.6)); }
+    100% { filter: drop-shadow(0 0 25px rgba(255, 69, 0, 1)); }
+}
+
+.aura-level-3 {
+    filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.8)) drop-shadow(0 0 30px rgba(255, 0, 255, 0.5));
+    animation: auraPulse3 1s infinite alternate;
+}
+@keyframes auraPulse3 {
+    0% { filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.6)) drop-shadow(0 0 25px rgba(255, 0, 255, 0.4)); }
+    100% { filter: drop-shadow(0 0 30px rgba(0, 255, 255, 1)) drop-shadow(0 0 45px rgba(255, 0, 255, 0.8)); }
+}
