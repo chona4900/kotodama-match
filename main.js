@@ -778,6 +778,10 @@
                     totalCount = (state.totalCount !== undefined) ? Number(state.totalCount) : 0;
                     intokuPower = (state.intokuPower !== undefined) ? Number(state.intokuPower) : 0;
                     battleWins = (state.battleWins !== undefined) ? Number(state.battleWins) : 0;
+                    // テスト用：オーラ確認のため、最低でも10勝からスタートさせる
+                    if (battleWins < 10) {
+                        battleWins = 10;
+                    }
                     battleLosses = (state.battleLosses !== undefined) ? Number(state.battleLosses) : 0;
                     isSick = !!state.isSick;
                     sickRecoveryCount = (state.sickRecoveryCount !== undefined) ? Number(state.sickRecoveryCount) : 0;
@@ -871,7 +875,24 @@
             renderCanvasArt(currentForm, ctx);
             updateUI();
             createTestButtons();
-            renderPreviewGallery(); // ギャラリーの描画
+            renderPreviewGallery(); // 図鑑の描画
+            updateAuraEffect(); // 勝数に応じたオーラエフェクト適用
+        }
+
+        function updateAuraEffect() {
+            const canvas = document.getElementById('pixelCanvas');
+            if (!canvas) return;
+            
+            // Remove old aura classes
+            canvas.classList.remove('aura-level-1', 'aura-level-2', 'aura-level-3');
+            
+            if (battleWins >= 100) {
+                canvas.classList.add('aura-level-3');
+            } else if (battleWins >= 50) {
+                canvas.classList.add('aura-level-2');
+            } else if (battleWins >= 10) {
+                canvas.classList.add('aura-level-1');
+            }
         }
 
         function renderCanvasArt(key, targetCtx) {
@@ -1163,7 +1184,16 @@
 
             const battleRecordDisplay = document.getElementById('battleRecordDisplay');
             if (battleRecordDisplay) {
-                battleRecordDisplay.innerHTML = `戦歴<br>${battleWins}勝<br>${battleLosses}敗`;
+                let trophyHtml = '';
+                if (battleWins >= 10) {
+                    let color = battleWins >= 100 ? '#81ecec' : (battleWins >= 50 ? '#fab1a0' : '#f1c40f');
+                    trophyHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" style="vertical-align: text-bottom; margin-right: 3px; display: inline-block;">
+<path fill="#2f3640" d="M4 1h8v1H4zM2 2h2v1H2zM12 2h2v1h-2zM1 3h2v2H1zM13 3h2v2h-2zM2 5h2v1H2zM12 5h2v1h-2zM3 6h2v1H3zM11 6h2v1h-2zM4 7h2v1H4zM10 7h2v1h-2zM6 8h4v1H6zM7 9h2v1H7zM6 10h4v1H6zM5 11h6v1H5zM4 12h8v2H4z"/>
+<path fill="${color}" d="M4 2h8v1H4zM3 3h1v2H3zM4 3h8v3H4zM12 3h1v2h-1zM5 6h6v1H5zM6 7h4v1H6zM7 8h2v2H7zM6 10h4v1H6zM5 11h6v1H5z"/>
+<path fill="rgba(255,255,255,0.8)" d="M5 3h1v2H5zM6 3h1v1H6z"/>
+</svg>`;
+                }
+                battleRecordDisplay.innerHTML = `戦歴<br>${trophyHtml}${battleWins}勝<br>${battleLosses}敗`;
             }
 
             if(totalCount >= STAGE4_GOAL && currentStage < 4) {
@@ -2416,6 +2446,56 @@
             };
             div2.appendChild(evolveBtn);
 
+            // オーラ確認用の勝数セットボタン
+            const setWins10Btn = document.createElement('button');
+            setWins10Btn.className = 'test-btn';
+            setWins10Btn.style.background = '#ffeaa7';
+            setWins10Btn.textContent = '10勝(Lv1)';
+            setWins10Btn.onclick = () => {
+                battleWins = 10;
+                updateAuraEffect();
+                saveData();
+                updateUI();
+            };
+            div2.appendChild(setWins10Btn);
+
+            const setWins50Btn = document.createElement('button');
+            setWins50Btn.className = 'test-btn';
+            setWins50Btn.style.background = '#fab1a0';
+            setWins50Btn.textContent = '50勝(Lv2)';
+            setWins50Btn.onclick = () => {
+                battleWins = 50;
+                updateAuraEffect();
+                saveData();
+                updateUI();
+            };
+            div2.appendChild(setWins50Btn);
+
+            const setWins100Btn = document.createElement('button');
+            setWins100Btn.className = 'test-btn';
+            setWins100Btn.style.background = '#81ecec';
+            setWins100Btn.textContent = '100勝(Lv3)';
+            setWins100Btn.onclick = () => {
+                battleWins = 100;
+                updateAuraEffect();
+                saveData();
+                updateUI();
+            };
+            div2.appendChild(setWins100Btn);
+
+            const resetWinsBtn = document.createElement('button');
+            resetWinsBtn.className = 'test-btn';
+            resetWinsBtn.style.background = '#dfe6e9';
+            resetWinsBtn.textContent = '勝数リセット';
+            resetWinsBtn.onclick = () => {
+                battleWins = 0;
+                updateAuraEffect();
+                saveData();
+                updateUI();
+            };
+            div2.appendChild(resetWinsBtn);
+
+
             const test100Btn = document.createElement('button');
             test100Btn.className = 'test-btn';
             test100Btn.style.background = '#e1f5fe';
@@ -3068,6 +3148,7 @@
             
             if (isWin) {
                 battleWins++;
+                updateAuraEffect(); // 勝数が増えたらオーラ更新
                 myCharEl.classList.add('win');
                 enemyCharEl.classList.add('lose');
                 playCelebrateSound(); // 勝利のファンファーレ
