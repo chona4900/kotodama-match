@@ -118,6 +118,16 @@
                     </div>
                 </div>
 
+                <!-- 図鑑詳細ポップアップ (安全な独立レイヤー) -->
+                <div class="zukan-detail-overlay" id="zukanDetailOverlay">
+                    <button class="close-detail-btn" onclick="hideZukanDetail()">✕ とじる</button>
+                    <div class="zukan-detail-content">
+                        <canvas id="zukanDetailCanvas" width="96" height="96"></canvas>
+                        <div class="zukan-detail-name" id="zukanDetailName">名前</div>
+                        <div class="zukan-detail-desc" id="zukanDetailDesc">説明文</div>
+                    </div>
+                </div>
+
                 <!-- 秘密のアイテム獲得ポップアップ -->
                 <div class="celebration-overlay" id="itemOverlay">
                     <div class="rare-item-content">
