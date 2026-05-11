@@ -1,4 +1,4 @@
-name: iOS Build
+﻿name: iOS Build
 
 on:
   push:
@@ -94,6 +94,7 @@ jobs:
             -allowProvisioningUpdates
 
       - name: Upload IPA artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: app-ipa
@@ -123,6 +124,7 @@ jobs:
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
           rm -f ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision
+
 
 
 
