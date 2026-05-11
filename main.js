@@ -7,45 +7,21 @@
 
         // 音声認識のゆらぎ吸収用（漢字変換や送り仮名の違いをカバー）
         const WORD_ALIASES = {
-            '愛してます': ['愛しています', 'あいしています', 'あいしてます', '愛します', 'アイシテマス'],
-            'ゆるします': ['許します', '赦します', 'ユルシマス'],
-            'ありがとう': ['有難う', '有り難う', '有難うございます', 'ありがとうございます', 'ありがと', 'アリガトウ'],
-            'うれしい': ['嬉しい', 'ウレシイ'],
-            '楽しい': ['たのしい', '楽し', 'タノシイ'],
+            '愛してます': ['愛しています', 'あいしています', 'あいしてます', '愛します'],
+            'ゆるします': ['許します', '赦します'],
+            'ありがとう': ['有難う', '有難うございます', 'ありがとうございます', 'ありがと'],
+            'うれしい': ['嬉しい'],
+            '楽しい': ['たのしい', '楽し'],
             '感謝してます': ['感謝しています', '感謝', 'かんしゃしてます'],
-            'しあわせ': ['幸せ', '仕合わせ', 'シアワセ', '幸せです'],
-            'ツイてる': ['ついてる', '付いてる', '就いてる', '憑いてる', 'ツキがある', 'ツイテル', 'ついている'],
+            'しあわせ': ['幸せ', '仕合わせ'],
+            'ツイてる': ['ついてる', '付いてる', 'ツキがある'],
             
             // 魂のおやつ（長い言霊）のゆらぎ吸収
-            'このことがダイヤモンドにかわります': [
-                'この事がダイヤモンドに変わります', 
-                'このことがダイヤモンドに変わります', 
-                'この事がダイヤモンドにかわります',
-                'この事がダイアモンドに変わります',
-                'このことがダイアモンドに変わります',
-                'この事がダイアモンドにかわります',
-                'このことがダイアモンドにかわります'
-            ],
-            'だんだんよくなる未来はあかるい': [
-                'だんだん良くなる未来は明るい', 
-                '段々良くなる未来は明るい', 
-                'だんだんよくなる未来は明るい',
-                '段々よくなる未来は明るい'
-            ],
-            '宇宙の調和に感謝します': [
-                '宇宙の調和に感謝しています',
-                '宇宙の調和に感謝',
-                '宇宙の平和に感謝します'
-            ],
-            '自分はすごいんだ': ['自分は凄いんだ', 'じぶんはすごいんだ', '自分はすごい'],
-            'もっと自分を愛しますもっと自分をゆるします': [
-                'もっと自分を愛しますもっと自分を許します', 
-                'もっと自分を愛しますもっと自分を赦します'
-            ],
-            'どうでもいいどっちでもいいどうせうまくいくから': [
-                'どうでもいいどっちでもいいどうせ上手くいくから', 
-                'どうでもいいどっちでもいいどうせ上手く行くから'
-            ]
+            'このことがダイヤモンドにかわります': ['この事がダイヤモンドに変わります', 'このことがダイヤモンドに変わります', 'この事がダイヤモンドにかわります'],
+            'だんだんよくなる未来はあかるい': ['だんだん良くなる未来は明るい', '段々良くなる未来は明るい', 'だんだんよくなる未来は明るい'],
+            '自分はすごいんだ': ['自分は凄いんだ'],
+            'もっと自分を愛しますもっと自分をゆるします': ['もっと自分を愛しますもっと自分を許します', 'もっと自分を愛しますもっと自分を赦します'],
+            'どうでもいいどっちでもいいどうせうまくいくから': ['どうでもいいどっちでもいいどうせ上手くいくから', 'どうでもいいどっちでもいいどうせ上手く行くから']
         };
 
         const OYATSU_WORDS = [
@@ -61,8 +37,7 @@
 
         let wordCounts = {};
         allWords.forEach(w => wordCounts[w] = 0);
-        wordCounts['愛してます'] = 2980; // テスト用
-        let totalCount = 2980; // テスト用
+        let totalCount = 0;
         let intokuPower = 0;
         let battleWins = 0;
         let battleLosses = 0;
@@ -81,9 +56,9 @@
                 ]
             },
             // Aルート（愛情・許し）：多邇具久っち（たにぐく）- 高解像度スプライトシート版
-            childA: { type: 'image', src: '多邇具久.jpg', frames: 3, speed: 800, trim: 0.05, trimY: 0.01 },
+            childA: { type: 'image', src: '多邇具久.jpg', frames: 3, speed: 800, trim: 0.05, trimY: 0.05 },
             // Aルート：多邇具久っち（病気状態）
-            childA_sick: { type: 'image', src: '多邇具久（病気）.jpg', frames: 3, speed: 1000, trim: 0.05, trimY: 0.01 },
+            childA_sick: { type: 'image', src: '多邇具久（病気）.jpg', frames: 3, speed: 1000, trim: 0.05, trimY: 0.05 },
             // Bルート（喜び・快活）：狛犬っち（こまいぬ）- 高解像度スプライトシート版
             childB: { type: 'image', src: '狛犬っち.jpg', frames: 3, speed: 800, trim: 0.02 },
             // Bルート：狛犬っち（病気状態）
@@ -397,9 +372,9 @@
                     { sx: 1071, sy: 3, sWidth: 510, sHeight: 510 }
                 ]
             },
-            // B-2-4：武甕槌大神っち - 高解像度スプライトシート版 (1600x529)
+            // B-2-4：建御雷神っち - 高解像度スプライトシート版 (1600x529)
             childB_2_4: { 
-                type: 'image', src: '武甕槌大神っち.jpg', frames: 3, speed: 800, 
+                type: 'image', src: '建御雷神っち.jpg', frames: 3, speed: 800, 
                 sqSize: 533,
                 customFrames: [
                     { sx: 18, sy: 8, sWidth: 500, sHeight: 510 },
@@ -407,9 +382,9 @@
                     { sx: 1084, sy: 8, sWidth: 500, sHeight: 510 }
                 ]
             },
-            // B-2-4：武甕槌大神っち（病気状態） (1024x339)
+            // B-2-4：建御雷神っち（病気状態） (1024x339)
             childB_2_4_sick: { 
-                type: 'image', src: '武甕槌大神っち（病気）.jpg', frames: 3, speed: 1000, 
+                type: 'image', src: '建御雷神っち（病気）.jpg', frames: 3, speed: 1000, 
                 sqSize: 341,
                 customFrames: [
                     { sx: 8, sy: 2, sWidth: 320, sHeight: 320 },
@@ -557,9 +532,9 @@
                     { sx: 1083, sy: 14, sWidth: 500, sHeight: 500 }
                 ]
             },
-            // C-2-4：木花咲夜姫っち
+            // C-2-4：木花之佐久夜毘売っち
             childC_2_4: { 
-                type: 'image', src: '木花咲夜姫っち.jpg', frames: 3, speed: 800, 
+                type: 'image', src: '木花之佐久夜毘売っち.jpg', frames: 3, speed: 800, 
                 sqSize: 533,
                 customFrames: [
                     { sx: 18, sy: 8, sWidth: 500, sHeight: 510 },
@@ -567,9 +542,9 @@
                     { sx: 1084, sy: 8, sWidth: 500, sHeight: 510 }
                 ]
             },
-            // C-2-4：木花咲夜姫っち（病気状態）
+            // C-2-4：木花之佐久夜毘売っち（病気状態）
             childC_2_4_sick: { 
-                type: 'image', src: '木花咲夜姫っち（病気）.jpg', frames: 3, speed: 1000, 
+                type: 'image', src: '木花之佐久夜毘売っち（病気）.jpg', frames: 3, speed: 1000, 
                 sqSize: 533,
                 customFrames: [
                     { sx: 18, sy: 8, sWidth: 500, sHeight: 510 },
@@ -643,35 +618,6 @@
         // --- DOM ---
         const canvas = document.getElementById('pixelCanvas');
         const ctx = canvas.getContext('2d');
-
-        // --- フィルター関数 (iOSでのSVG filter非対応対策) ---
-        function applyPixelFilter(targetCtx, width, height, filterType) {
-            if (filterType === 'none' || !filterType) return;
-            try {
-                const imgData = targetCtx.getImageData(0, 0, width, height);
-                const data = imgData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    if (data[i+3] === 0) continue;
-                    const r = data[i]/255, g = data[i+1]/255, b = data[i+2]/255;
-                    const sum = r + g + b;
-                    let a_out = 1.0;
-                    
-                    if (filterType === 'remove-white') {
-                        a_out = -sum + 2.5;
-                    } else if (filterType === 'remove-black') {
-                        a_out = sum - 0.5;
-                    }
-                    
-                    data[i] = 15;
-                    data[i+1] = 56;
-                    data[i+2] = 15;
-                    data[i+3] = Math.max(0, Math.min(255, a_out * 255));
-                }
-                targetCtx.putImageData(imgData, 0, 0);
-            } catch(e) {
-                console.warn("applyPixelFilter failed:", e);
-            }
-        }
         const progressBarEl = document.getElementById('progressBar');
         const progressTextEl = document.getElementById('progressText');
         const statusTextEl = document.getElementById('statusText');
@@ -778,10 +724,6 @@
                     totalCount = (state.totalCount !== undefined) ? Number(state.totalCount) : 0;
                     intokuPower = (state.intokuPower !== undefined) ? Number(state.intokuPower) : 0;
                     battleWins = (state.battleWins !== undefined) ? Number(state.battleWins) : 0;
-                    // テスト用：オーラ確認のため、最低でも50勝からスタートさせる
-                    if (battleWins < 50) {
-                        battleWins = 50;
-                    }
                     battleLosses = (state.battleLosses !== undefined) ? Number(state.battleLosses) : 0;
                     isSick = !!state.isSick;
                     sickRecoveryCount = (state.sickRecoveryCount !== undefined) ? Number(state.sickRecoveryCount) : 0;
@@ -875,24 +817,7 @@
             renderCanvasArt(currentForm, ctx);
             updateUI();
             createTestButtons();
-            renderPreviewGallery(); // 図鑑の描画
-            updateAuraEffect(); // 勝数に応じたオーラエフェクト適用
-        }
-
-        function updateAuraEffect() {
-            const canvas = document.getElementById('pixelCanvas');
-            if (!canvas) return;
-            
-            // Remove old aura classes
-            canvas.classList.remove('aura-level-1', 'aura-level-2', 'aura-level-3');
-            
-            if (battleWins >= 100) {
-                canvas.classList.add('aura-level-3');
-            } else if (battleWins >= 50) {
-                canvas.classList.add('aura-level-2');
-            } else if (battleWins >= 10) {
-                canvas.classList.add('aura-level-1');
-            }
+            renderPreviewGallery(); // ギャラリーの描画
         }
 
         function renderCanvasArt(key, targetCtx) {
@@ -980,20 +905,20 @@
 
                         // Canvas Contextのfilterを使って背景を透過し、緑色に着色 (ChromeのローカルファイルCORSエラー回避)
                         // Canvas Contextのfilterを使って背景を透過し、緑色に着色 (ChromeのローカルファイルCORSエラー回避)
-                        // Canvas Contextのfilterを使って背景を透過し、緑色に着色 (ChromeのローカルファイルCORSエラー回避)
-                        let pixelFilterType = "none";
+                        let baseFilter = "none";
                         if (artData.filter === 'black' || artData.filter === 'remove-black') {
-                            pixelFilterType = "remove-black";
+                            baseFilter = "url(#remove-black)";
                         } else if (artData.filter !== 'none') {
-                            pixelFilterType = "remove-white";
+                            baseFilter = "url(#remove-white)";
                         }
                         
-                        targetCtx.filter = artData.brightness ? `brightness(${artData.brightness})` : "none";
+                        if (artData.brightness) {
+                            baseFilter = (baseFilter === "none" ? "" : baseFilter + " ") + `brightness(${artData.brightness})`;
+                        }
+                        
+                        targetCtx.filter = baseFilter || "none";
                         targetCtx.drawImage(img, sx, sy, sWidth, sHeight, offX, offY, drawW, drawH);
                         targetCtx.filter = "none"; // 元に戻す
-                        
-                        // 代わりにJSでピクセル操作（iOS CanvasでのSVG filterバグ対策）
-                        applyPixelFilter(targetCtx, 192, 192, pixelFilterType);
                     };
 
                     // 最初のフレームを描画
@@ -1111,9 +1036,9 @@
                             childA_1_1: '天照大御神っち', childA_1_2: '玄武っち', childA_1_3: '福禄寿っち', childA_1_4: '阿弥陀如来っち',
                             childA_2_1: '千手観音っち', childA_2_2: '白虎っち', childA_2_3: '瀬織津姫っち', childA_2_4: '十一面観音っち',
                             childB_1_1: '青龍っち', childB_1_2: '不動明王っち', childB_1_3: '寿老人っち', childB_1_4: '弥勒菩薩っち',
-                            childB_2_1: '朱雀っち', childB_2_2: '大日如来っち', childB_2_3: '須佐之男命っち', childB_2_4: '武甕槌大神っち',
+                            childB_2_1: '朱雀っち', childB_2_2: '大日如来っち', childB_2_3: '須佐之男命っち', childB_2_4: '建御雷神っち',
                             childC_1_1: '大黒天っち', childC_1_2: '弁財天っち', childC_1_3: '恵比寿っち', childC_1_4: '経津主神っち',
-                            childC_2_1: '毘沙門天っち', childC_2_2: '布袋尊っち', childC_2_3: '孔雀明王っち', childC_2_4: '木花咲夜姫っち',
+                            childC_2_1: '毘沙門天っち', childC_2_2: '布袋尊っち', childC_2_3: '孔雀明王っち', childC_2_4: '木花之佐久夜毘売っち',
                             ultimate_1: '八大龍王っち',
                             ultimate_2: '天之御中主神っち',
                             ultimate_3: 'バステトっち'
@@ -1174,26 +1099,17 @@
             const mainStatsDisplay = document.getElementById('mainStatsDisplay');
             if (mainStatsDisplay) {
                 mainStatsDisplay.innerHTML = `
-                    HP:${currentStats.hp}<br>
-                    攻:${currentStats.attack}<br>
-                    避:${Math.floor(currentStats.evasionRate)}%<br>
-                    会:${Math.floor(currentStats.criticalRate)}%<br>
-                    陰徳:${intokuPower}
+                    HP: ${currentStats.hp}<br>
+                    攻: ${currentStats.attack}<br>
+                    避: ${Math.floor(currentStats.evasionRate)}%<br>
+                    会: ${Math.floor(currentStats.criticalRate)}%<br>
+                    陰徳: ${intokuPower}
                 `;
             }
 
             const battleRecordDisplay = document.getElementById('battleRecordDisplay');
             if (battleRecordDisplay) {
-                let trophyHtml = '';
-                if (battleWins >= 10) {
-                    let color = battleWins >= 100 ? '#81ecec' : (battleWins >= 50 ? '#fab1a0' : '#f1c40f');
-                    trophyHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" style="vertical-align: text-bottom; margin-right: 3px; display: inline-block;">
-<path fill="#2f3640" d="M4 1h8v1H4zM2 2h2v1H2zM12 2h2v1h-2zM1 3h2v2H1zM13 3h2v2h-2zM2 5h2v1H2zM12 5h2v1h-2zM3 6h2v1H3zM11 6h2v1h-2zM4 7h2v1H4zM10 7h2v1h-2zM6 8h4v1H6zM7 9h2v1H7zM6 10h4v1H6zM5 11h6v1H5zM4 12h8v2H4z"/>
-<path fill="${color}" d="M4 2h8v1H4zM3 3h1v2H3zM4 3h8v3H4zM12 3h1v2h-1zM5 6h6v1H5zM6 7h4v1H6zM7 8h2v2H7zM6 10h4v1H6zM5 11h6v1H5z"/>
-<path fill="rgba(255,255,255,0.8)" d="M5 3h1v2H5zM6 3h1v1H6z"/>
-</svg>`;
-                }
-                battleRecordDisplay.innerHTML = `戦歴<br>${trophyHtml}${battleWins}勝<br>${battleLosses}敗`;
+                battleRecordDisplay.innerHTML = `戦歴<br>${battleWins}勝<br>${battleLosses}敗`;
             }
 
             if(totalCount >= STAGE4_GOAL && currentStage < 4) {
@@ -1209,6 +1125,25 @@
                 if(totalCount > 300) statusTextEl.textContent = "うごきはじめた...";
                 if(totalCount > 500) statusTextEl.textContent = "おおきくなってきた！";
                 if(totalCount > 800) statusTextEl.textContent = "もうすぐうまれる...！";
+            }
+
+            updateAuraEffect();
+        }
+
+        // 勝利数に応じたオーラエフェクトの更新
+        function updateAuraEffect() {
+            const auraEl = document.getElementById('auraEffect');
+            if (!auraEl) return;
+            
+            // クラスを一旦リセット
+            auraEl.className = 'aura-effect';
+
+            if (battleWins >= 100) {
+                auraEl.classList.add('aura-100');
+            } else if (battleWins >= 50) {
+                auraEl.classList.add('aura-50');
+            } else if (battleWins >= 10) {
+                auraEl.classList.add('aura-10');
             }
         }
 
@@ -1236,7 +1171,7 @@
                 overlay.classList.add('flashing');
                 playEvolutionSound(); // ドキドキパルス音＋ファンファーレ開始
                 
-                // 6.0秒経過したとき（真っ黒のタイミング）で姿を切り替える
+                // 3.0秒経過したとき（真っ黒のタイミング）で姿を切り替える
                 setTimeout(() => {
                     callback();
                     
@@ -1244,7 +1179,7 @@
                     setTimeout(() => {
                         overlay.classList.remove('flashing');
                     }, 1000);
-                }, 6000);
+                }, 3000);
             }
         }
 
@@ -1328,9 +1263,9 @@
                     'childA_1_1': '天照大御神っち', 'childA_1_2': '玄武っち', 'childA_1_3': '福禄寿っち', 'childA_1_4': '阿弥陀如来っち',
                     'childA_2_1': '千手観音っち', 'childA_2_2': '白虎っち', 'childA_2_3': '瀬織津姫っち', 'childA_2_4': '十一面観音っち',
                     'childB_1_1': '青龍っち', 'childB_1_2': '不動明王っち', 'childB_1_3': '寿老人っち', 'childB_1_4': '弥勒菩薩っち',
-                    'childB_2_1': '朱雀っち', 'childB_2_2': '大日如来っち', 'childB_2_3': '須佐之男命っち', 'childB_2_4': '武甕槌大神っち',
+                    'childB_2_1': '朱雀っち', 'childB_2_2': '大日如来っち', 'childB_2_3': '須佐之男命っち', 'childB_2_4': '建御雷神っち',
                     'childC_1_1': '大黒天っち', 'childC_1_2': '弁財天っち', 'childC_1_3': '恵比寿っち', 'childC_1_4': '経津主神っち',
-                    'childC_2_1': '毘沙門天っち', 'childC_2_2': '布袋尊っち', 'childC_2_3': '孔雀明王っち', 'childC_2_4': '木花咲夜姫っち'
+                    'childC_2_1': '毘沙門天っち', 'childC_2_2': '布袋尊っち', 'childC_2_3': '孔雀明王っち', 'childC_2_4': '木花之佐久夜毘売っち'
                 };
                 newName = names[evolutionType] || `${evolutionType}`;
             } else if(targetStage === 4) {
@@ -1504,11 +1439,8 @@
             }
 
 
-            // 進化のタイミングと被るかどうか判定
-            const isEvolutionMilestone = [STAGE1_GOAL, STAGE2_GOAL, STAGE3_GOAL, STAGE4_GOAL].some(goal => oldCount < goal && totalCount >= goal);
-
-            // 100回ごとの区切りでお祝いを表示（進化と被る場合は非表示）
-            if (!isEvolutionMilestone && Math.floor(totalCount / 100) > Math.floor(oldCount / 100)) {
+            // 100回ごとの区切りでお祝いを表示
+            if (Math.floor(totalCount / 100) > Math.floor(oldCount / 100)) {
                 showCelebration(Math.floor(totalCount / 100) * 100);
             }
             
@@ -1568,7 +1500,6 @@
         const zukanListEl = document.getElementById('zukanList');
 
         function toggleAButton() {
-            playButtonSound();
             if (overlayState === 0) {
                 overlayState = 1;
                 statsOverlayEl.classList.add('visible');
@@ -1603,12 +1534,6 @@
             });
         }
 
-        const ZUKAN_DESCRIPTIONS = { 
-            childA: { 
-                text: '非常にかしこく「国土の隅々まで知り尽くしている存在」別名　少名毘古那神（すくなびこな　一寸帽子)日本神話において「知恵者で多才な小人神」非常に重要な神酒造の神で有名で大国主の命の相棒' 
-            } 
-        };
-
         const ZUKAN_DATA = [
             { stage: '第1段階', keys: ['egg'] },
             { stage: '第2段階', keys: ['childA', 'childB', 'childC'] },
@@ -1630,9 +1555,9 @@
             childA_1_1: '天照大御神っち', childA_1_2: '玄武っち', childA_1_3: '福禄寿っち', childA_1_4: '阿弥陀如来っち',
             childA_2_1: '千手観音っち', childA_2_2: '白虎っち', childA_2_3: '瀬織津姫っち', childA_2_4: '十一面観音っち',
             childB_1_1: '青龍っち', childB_1_2: '不動明王っち', childB_1_3: '寿老人っち', childB_1_4: '弥勒菩薩っち',
-            childB_2_1: '朱雀っち', childB_2_2: '大日如来っち', childB_2_3: '須佐之男命っち', childB_2_4: '武甕槌大神っち',
+            childB_2_1: '朱雀っち', childB_2_2: '大日如来っち', childB_2_3: '須佐之男命っち', childB_2_4: '建御雷神っち',
             childC_1_1: '大黒天っち', childC_1_2: '弁財天っち', childC_1_3: '恵比寿っち', childC_1_4: '経津主神っち',
-            childC_2_1: '毘沙門天っち', childC_2_2: '布袋尊っち', childC_2_3: '孔雀明王っち', childC_2_4: '木花咲夜姫っち',
+            childC_2_1: '毘沙門天っち', childC_2_2: '布袋尊っち', childC_2_3: '孔雀明王っち', childC_2_4: '木花之佐久夜毘売っち',
             ultimate_1: '八大龍王っち',
             ultimate_2: '天之御中主神っち',
             ultimate_3: 'バステトっち'
@@ -1679,45 +1604,6 @@
                         
                         const zctx = can.getContext('2d');
                         renderCanvasArt(key, zctx);
-                        
-                        item.addEventListener('click', () => {
-                            const desc = ZUKAN_DESCRIPTIONS[key];
-                            document.getElementById('zukanDetailName').textContent = charNames[key] || key;
-                            
-                            const typeEl = document.getElementById('zukanDetailType');
-                            const statsEl = document.getElementById('zukanDetailStats');
-                            const descEl = document.getElementById('zukanDetailDesc');
-
-                            if (desc) {
-                                if (desc.type) {
-                                    typeEl.style.display = 'block';
-                                    typeEl.textContent = 'タイプ：' + desc.type;
-                                } else {
-                                    typeEl.style.display = 'none';
-                                }
-                                
-                                if (desc.stats) {
-                                    statsEl.style.display = 'block';
-                                    statsEl.textContent = desc.stats;
-                                } else {
-                                    statsEl.style.display = 'none';
-                                }
-                                
-                                descEl.textContent = desc.text;
-                            } else {
-                                typeEl.style.display = 'none';
-                                statsEl.style.display = 'none';
-                                descEl.textContent = '（詳細データはまだありません）';
-                            }
-                            
-                            const detailCan = document.getElementById('zukanDetailCanvas');
-                            const detailCtx = detailCan.getContext('2d');
-                            detailCtx.clearRect(0,0,detailCan.width,detailCan.height);
-                            renderCanvasArt(key, detailCtx);
-                            
-                            playButtonSound();
-                            document.getElementById('zukanDetailOverlay').classList.add('visible');
-                        });
                     } else {
                         nameEl.textContent = '???';
                         const zctx = can.getContext('2d');
@@ -1775,7 +1661,7 @@
                             can.width = 192;
                             can.height = 192;
                             can.style.imageRendering = 'auto'; // 高画質画像を滑らかに縮小
-                            zctx.filter = "none";
+                            zctx.filter = "url(#remove-white)";
                             
                             const t = itemData.trim || 0;
                             const sx = img.width * t;
@@ -1784,7 +1670,6 @@
                             const sH = img.height * (1 - t * 2);
                             
                             zctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
-                            applyPixelFilter(zctx, 192, 192, 'remove-white');
                         };
                     }
                 } else {
@@ -1821,117 +1706,48 @@
             playCelebrateSound(); // テスト音源の再生
 
             // 紙吹雪エフェクト (ドット風)
-            // もっと派手な紙吹雪エフェクト (ドット風)
-            for(let i=0; i<80; i++) {
-                setTimeout(createConfetti, Math.random() * 500);
+            for(let i=0; i<30; i++) {
+                createConfetti();
             }
-            
-            // 花火エフェクトをランダムな位置に時間差で打ち上げる
-            for(let i=0; i<5; i++) {
-                setTimeout(() => {
-                    const x = 20 + Math.random() * 60; // 20%〜80%
-                    const y = 20 + Math.random() * 40; // 20%〜60%
-                    createPixelFirework(x, y);
-                }, i * 300 + Math.random() * 200);
-            }
-            // skip old createConfetti block
-
-
         }
 
         function hideCelebration() {
-            playButtonSound();
             celebrationOverlayEl.classList.remove('visible');
         }
 
-        function createPixelFirework(xPos, yPos) {
-            const container = document.getElementById('celebrationOverlay');
-            if(!container) return;
-            const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff69b4', '#fff'];
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            const particleCount = 20 + Math.floor(Math.random() * 15);
-            
-            for(let i=0; i<particleCount; i++) {
-                const p = document.createElement('div');
-                p.style.position = 'absolute';
-                p.style.width = '6px';
-                p.style.height = '6px';
-                p.style.background = (Math.random() > 0.5) ? color : '#fff';
-                p.style.left = xPos + '%';
-                p.style.top = yPos + '%';
-                p.style.pointerEvents = 'none';
-                p.style.zIndex = '90';
-                
-                container.appendChild(p);
-                
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 2 + Math.random() * 4;
-                const vx = Math.cos(angle) * speed;
-                let vy = Math.sin(angle) * speed;
-                
-                let opacity = 1.0;
-                
-                function animate() {
-                    opacity -= 0.02 + Math.random() * 0.02;
-                    vy += 0.15; // 重力
-                    
-                    const currentLeft = parseFloat(p.style.left);
-                    const currentTop = parseFloat(p.style.top);
-                    
-                    p.style.left = (currentLeft + vx * 0.2) + '%';
-                    p.style.top = (currentTop + vy * 0.2) + '%';
-                    p.style.opacity = opacity;
-                    
-                    if(opacity <= 0) {
-                        p.remove();
-                    } else {
-                        requestAnimationFrame(animate);
-                    }
-                }
-                requestAnimationFrame(animate);
-            }
-        }
-
         function createConfetti() {
-            const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff69b4', '#f1c40f'];
+            const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#f39c12'];
             const conf = document.createElement('div');
             conf.className = 'confetti';
             conf.style.background = colors[Math.floor(Math.random() * colors.length)];
             conf.style.left = Math.random() * 100 + '%';
-            conf.style.top = '-5%';
-            // より派手なサイズ感
-            const size = Math.floor(Math.random() * 8) + 6; 
+            conf.style.top = '-10px';
+            // サイズをバラバラにする
+            const size = Math.floor(Math.random() * 5) + 4; 
             conf.style.width = size + 'px';
             conf.style.height = size + 'px';
-            conf.style.zIndex = '95';
             
             const container = document.getElementById('celebrationOverlay');
-            if(container) container.appendChild(conf);
+            container.appendChild(conf);
 
             const startTime = Date.now();
-            const duration = 2500 + Math.random() * 1500;
-            const horizontalVel = (Math.random() - 0.5) * 5;
-            const rotateSpeed = (Math.random() - 0.5) * 10;
-            let currentRot = 0;
+            const duration = 2000;
+            const horizontalVel = (Math.random() - 0.5) * 4;
 
             function fall() {
                 const elapsed = Date.now() - startTime;
                 const progress = elapsed / duration;
                 if (progress >= 1) {
-                    if(conf.parentNode) conf.remove();
+                    conf.remove();
                     return;
                 }
-                
-                currentRot += rotateSpeed;
-                const yPos = -5 + (progress * 110); 
-                
-                conf.style.top = yPos + '%';
-                conf.style.left = (parseFloat(conf.style.left) + horizontalVel * 0.05) + '%';
-                conf.style.transform = `rotate(${currentRot}deg)`;
+                conf.style.top = (progress * 300) + 'px';
+                conf.style.left = (parseFloat(conf.style.left) + horizontalVel * 0.1) + '%';
                 requestAnimationFrame(fall);
             }
-            fall();
+            requestAnimationFrame(fall);
         }
+
         // --- アイテム獲得ポップアップ処理 ---
         const itemOverlayEl = document.getElementById('itemOverlay');
         const itemPopupNameEl = document.getElementById('itemPopupName');
@@ -2017,7 +1833,7 @@
                     itemPopupCanvas.width = 192;
                     itemPopupCanvas.height = 192;
                     itemPopupCanvas.style.imageRendering = 'auto'; // 滑らかに縮小
-                    ictx.filter = "none";
+                    ictx.filter = "url(#remove-white)";
                     
                     const t = itemObj.trim || 0;
                     const sx = img.width * t;
@@ -2026,13 +1842,11 @@
                     const sH = img.height * (1 - t * 2);
                     
                     ictx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
-                    applyPixelFilter(ictx, 192, 192, 'remove-white');
                 };
             }
         }
 
         function hideItemPopup() {
-            playButtonSound();
             itemOverlayEl.classList.remove('visible');
         }
 
@@ -2045,7 +1859,7 @@
                 let count = wordCounts[w];
                 let row = document.createElement('div');
                 row.className = 'stats-row';
-                row.innerHTML = `<span style="font-size:1.8rem; font-weight:bold;">${w}</span><span style="font-size:1.8rem; font-weight:bold;">${count} 回</span>`;
+                row.innerHTML = `<span>${w}</span><span>${count} 回</span>`;
                 statsListEl.appendChild(row);
             });
         }
@@ -2056,20 +1870,12 @@
             
             OYATSU_WORDS.forEach(w => {
                 let count = wordCounts[w] || 0;
-                let displayWord = w;
-                if (w === 'だんだんよくなる未来はあかるい') displayWord = 'だんだんよくなる<br>未来はあかるい';
-                else if (w === 'このことがダイヤモンドにかわります') displayWord = 'このことがダイヤ<br>モンドにかわります';
-                else if (w === '宇宙の調和に感謝します') displayWord = '宇宙の調和に<br>感謝します';
-                else if (w === 'もっと自分を愛しますもっと自分をゆるします') displayWord = '<span style=\'font-size: 1.25rem; white-space: nowrap; -webkit-text-stroke: 0.3px;\'>もっと自分を愛します<br>もっと自分をゆるします</span>';
-                else if (w === 'どうでもいいどっちでもいいどうせうまくいくから') displayWord = '<span style=\'font-size: 1.25rem; white-space: nowrap; -webkit-text-stroke: 0.3px;\'>どうでもいい<br>どっちでもいい<br>どうせうまくいくから</span>';
-                
                 let row = document.createElement('div');
                 row.className = 'stats-row';
-                row.style.fontSize = '1.6rem';
-                row.style.fontWeight = 'bold';
-                row.style.lineHeight = '1.4';
+                row.style.fontSize = '0.75rem'; // 文字が長いので少し小さめに
+                row.style.lineHeight = '1.2';
                 row.style.marginBottom = '8px';
-                row.innerHTML = `<span style="flex:1; padding-right:5px; word-break:normal; white-space:normal;">${displayWord}</span><span style="white-space:nowrap; align-self:flex-start; margin-top:2px;">${count} 回</span>`;
+                row.innerHTML = `<span style="flex:1; padding-right:5px; word-break:keep-all;">${w}</span><span style="white-space:nowrap; align-self:center;">${count} 回</span>`;
                 oyatsuListEl.appendChild(row);
             });
 
@@ -2080,7 +1886,6 @@
             totalRow.style.borderTop = '1px dashed var(--screen-shadow)';
             totalRow.style.paddingTop = '10px';
             totalRow.style.fontWeight = 'bold';
-            totalRow.style.fontSize = '2.0rem';
             totalRow.textContent = `トータル: ${totalOyatsu} 回`;
             oyatsuListEl.appendChild(totalRow);
 
@@ -2088,26 +1893,23 @@
             let hintRow = document.createElement('div');
             hintRow.style.textAlign = 'center';
             hintRow.style.marginTop = '10px';
-            hintRow.style.fontSize = '1.2rem';
+            hintRow.style.fontSize = '0.65rem';
             hintRow.style.color = '#5a5a5a';
-            hintRow.style.fontWeight = 'bold';
-            hintRow.innerHTML = '※トータル1万回言うと<br>　何かが起こる！？';
+            hintRow.textContent = '※それぞれの言霊を1万回言うと何かが起こる！？';
             oyatsuListEl.appendChild(hintRow);
         }
 
         function resetGame() {
-            playButtonSound();
-            if(confirm("データをリセットして第3段階（進化20回前）からテストしますか？")){
-                currentStage = 2; // 第3段階
-                currentForm = 'childA_1'; // 白蛇っち
-                totalCount = 2980;
+            if(confirm("データをリセットしてタマゴからやりなおしますか？")){
+                currentStage = 0;
+                currentForm = 'egg';
+                totalCount = 0;
                 allWords.forEach(w => wordCounts[w] = 0);
-                wordCounts['愛してます'] = 2980; // テスト用
                 isSick = false;
                 sickRecoveryCount = 0;
                 canvas.classList.remove('bouncing');
                 statusTextEl.textContent = "マイクをオンにしてね";
-                renderCanvasArt(currentForm, ctx);
+                renderCanvasArt('egg', ctx);
                 updateUI();
                 closeOverlays();
             }
@@ -2244,38 +2046,77 @@
 
         // --- 音声認識 ---
         let isListening = false;
-        const WebSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let webRecognition = null;
-        let useNativeSpeech = window.Capacitor && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins.SpeechRecognition;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
 
-        if (!useNativeSpeech && WebSpeechRecognition) {
-            webRecognition = new WebSpeechRecognition();
-            webRecognition.lang = 'ja-JP';
-            webRecognition.continuous = true;
-            webRecognition.interimResults = true;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'ja-JP';
+            recognition.continuous = true;
+            recognition.continuous = true;
+            recognition.interimResults = true; // 途中結果を取得してリアルタイムに反応させる
 
             let lastResultIndex = -1;
             let interimMatchCounts = {};
 
-            webRecognition.onstart = () => {
+            recognition.onstart = () => {
                 isListening = true;
                 micBtnEl.classList.add('mic-active');
+                // if(currentStage < 3) statusTextEl.textContent = "ききんちゅう...";
             };
 
-            webRecognition.onresult = (event) => {
+            recognition.onresult = (event) => {
+                // 新しい文の認識が始まったらカウント状態をリセット
                 if (event.resultIndex !== lastResultIndex) {
                     interimMatchCounts = {};
                     lastResultIndex = event.resultIndex;
                 }
+
                 const currentResult = event.results[event.resultIndex];
-                let transcript = currentResult[0].transcript;
-                processTranscript(transcript, currentResult.isFinal, interimMatchCounts);
+                // 認識結果から空白や句読点を取り除き、長い言霊もマッチしやすくする
+                let transcript = currentResult[0].transcript.replace(/[\s　、。！？,!?]/g, '');
+                
+                // 長いフレーズ順に判定を行う（「もっと自分をゆるします」が先、「ゆるします」が後）
+                const sortedWords = [...allWords].sort((a, b) => b.length - a.length);
+
+                sortedWords.forEach(w => {
+                    let pattern = w;
+                    if (WORD_ALIASES[w]) {
+                        pattern = `(?:${w}|${WORD_ALIASES[w].join('|')})`;
+                    }
+                    const regex = new RegExp(pattern, 'g');
+                    const matches = transcript.match(regex);
+                    
+                    const currentMatchCount = matches ? matches.length : 0;
+                    const previousMatchCount = interimMatchCounts[w] || 0;
+                    
+                    // 前回よりマッチ数が増えていたら、その差分だけを新しく「言った」と判定する
+                    if (currentMatchCount > previousMatchCount) {
+                        addWordLog(w, currentMatchCount - previousMatchCount);
+                        interimMatchCounts[w] = currentMatchCount;
+                    }
+                    
+                    // マッチした文字列部分を消去（別の短い言霊として多重カウントされるのを完全に防ぐ）
+                    if (matches) {
+                        transcript = transcript.replace(regex, '');
+                    }
+                });
+
+                // 文章が確定(isFinal)したのに一つもマッチしなかった時だけメッセージを表示
+                const isFinal = currentResult.isFinal;
+                const hasAnyMatchInSentence = Object.values(interimMatchCounts).some(v => v > 0);
+                if (isFinal && !hasAnyMatchInSentence && currentStage < 3) {
+                    statusTextEl.textContent = "おしい";
+                }
             };
 
-            webRecognition.onerror = (e) => { stopMic(); };
-            webRecognition.onend = () => {
+            recognition.onerror = (e) => {
+                stopMic();
+            };
+
+            recognition.onend = () => {
                 if (isListening) {
-                    try { webRecognition.start(); } catch(e) {}
+                    try { recognition.start(); } catch(e) {}
                 } else {
                     micBtnEl.classList.remove('mic-active');
                     if(currentStage < 3) statusTextEl.textContent = "マイクがオフです";
@@ -2283,106 +2124,16 @@
             };
         }
 
-        // 共通の認識文字列処理
-        let lastWordMatchTime = {};
-        function processTranscript(rawTranscript, isFinal, interimMatchCounts) {
-            let transcript = rawTranscript.replace(/[\s　、。！？,!?]/g, '');
-            const sortedWords = [...allWords].sort((a, b) => b.length - a.length);
-
-            sortedWords.forEach(w => {
-                let pattern = w;
-                if (WORD_ALIASES[w]) pattern = `(?:${w}|${WORD_ALIASES[w].join('|')})`;
-                const regex = new RegExp(pattern, 'g');
-                const matches = transcript.match(regex);
-                
-                const currentMatchCount = matches ? matches.length : 0;
-                const previousMatchCount = interimMatchCounts[w] || 0;
-                
-                if (currentMatchCount > previousMatchCount) {
-                    let now = Date.now();
-                    const isOyatsu = OYATSU_WORDS.includes(w);
-                    // 魂のおやつは4秒、通常の言霊は0.5秒の連続検知防止（二重カウント防止策）
-                    const cooldown = isOyatsu ? 4000 : 500;
-                    
-                    if (!lastWordMatchTime[w] || (now - lastWordMatchTime[w] > cooldown)) {
-                        addWordLog(w, currentMatchCount - previousMatchCount);
-                        lastWordMatchTime[w] = now;
-                    }
-                    interimMatchCounts[w] = currentMatchCount;
-                }
-                
-                if (matches) transcript = transcript.replace(regex, '');
-            });
-
-            const hasAnyMatchInSentence = Object.values(interimMatchCounts).some(v => v > 0);
-            if (isFinal && !hasAnyMatchInSentence && currentStage < 3) {
-                statusTextEl.textContent = "おしい";
-            }
-        }
-
-        async function toggleMic() {
-            playButtonSound();
-            if (!useNativeSpeech && !webRecognition) return alert('この環境は音声認識に非対応です');
+        function toggleMic() {
+            if(!recognition) return alert('このブラウザは音声認識に非対応です');
             if(isListening) {
                 stopMic();
             } else {
-                if (useNativeSpeech) {
-                    try {
-                        const hasPerm = await window.Capacitor.Plugins.SpeechRecognition.hasPermission();
-                        if (!hasPerm.permission) {
-                            await window.Capacitor.Plugins.SpeechRecognition.requestPermission();
-                        }
-                    } catch (e) {
-                        console.error('Permission request failed', e);
-                    }
-                }
                 startMic();
             }
         }
-
-        let nativeInterimMatchCounts = {};
-        
-        async function startMic(){ 
-            if (useNativeSpeech) {
-                isListening = true;
-                micBtnEl.classList.add('mic-active');
-                nativeInterimMatchCounts = {};
-                
-                window.Capacitor.Plugins.SpeechRecognition.addListener('partialResults', (data) => {
-                    if (data && data.matches && data.matches.length > 0) {
-                        processTranscript(data.matches[0], false, nativeInterimMatchCounts);
-                    }
-                });
-
-                try {
-                    await window.Capacitor.Plugins.SpeechRecognition.start({
-                        language: "ja-JP",
-                        maxResults: 1,
-                        prompt: "言霊を唱えてください",
-                        partialResults: true,
-                        popup: false
-                    });
-                } catch(e) {
-                    console.error('Speech recognition failed to start', e);
-                    stopMic();
-                }
-            } else if (webRecognition) {
-                try{ webRecognition.start(); }catch(e){} 
-            }
-        }
-
-        async function stopMic(){ 
-            isListening = false; 
-            if (useNativeSpeech) {
-                micBtnEl.classList.remove('mic-active');
-                try {
-                    await window.Capacitor.Plugins.SpeechRecognition.stop();
-                    await window.Capacitor.Plugins.SpeechRecognition.removeAllListeners();
-                } catch(e){}
-            } else if (webRecognition) {
-                webRecognition.stop(); 
-            }
-        }
+        function startMic(){ try{ recognition.start(); }catch(e){} }
+        function stopMic(){ isListening = false; if(recognition) recognition.stop(); }
 
         // --- UI用 ---
         function createTestButtons() {
@@ -2445,56 +2196,6 @@
                 evolve(currentStage + 1);
             };
             div2.appendChild(evolveBtn);
-
-            // オーラ確認用の勝数セットボタン
-            const setWins10Btn = document.createElement('button');
-            setWins10Btn.className = 'test-btn';
-            setWins10Btn.style.background = '#ffeaa7';
-            setWins10Btn.textContent = '10勝(Lv1)';
-            setWins10Btn.onclick = () => {
-                battleWins = 10;
-                updateAuraEffect();
-                saveData();
-                updateUI();
-            };
-            div2.appendChild(setWins10Btn);
-
-            const setWins50Btn = document.createElement('button');
-            setWins50Btn.className = 'test-btn';
-            setWins50Btn.style.background = '#fab1a0';
-            setWins50Btn.textContent = '50勝(Lv2)';
-            setWins50Btn.onclick = () => {
-                battleWins = 50;
-                updateAuraEffect();
-                saveData();
-                updateUI();
-            };
-            div2.appendChild(setWins50Btn);
-
-            const setWins100Btn = document.createElement('button');
-            setWins100Btn.className = 'test-btn';
-            setWins100Btn.style.background = '#81ecec';
-            setWins100Btn.textContent = '100勝(Lv3)';
-            setWins100Btn.onclick = () => {
-                battleWins = 100;
-                updateAuraEffect();
-                saveData();
-                updateUI();
-            };
-            div2.appendChild(setWins100Btn);
-
-            const resetWinsBtn = document.createElement('button');
-            resetWinsBtn.className = 'test-btn';
-            resetWinsBtn.style.background = '#dfe6e9';
-            resetWinsBtn.textContent = '勝数リセット';
-            resetWinsBtn.onclick = () => {
-                battleWins = 0;
-                updateAuraEffect();
-                saveData();
-                updateUI();
-            };
-            div2.appendChild(resetWinsBtn);
-
 
             const test100Btn = document.createElement('button');
             test100Btn.className = 'test-btn';
@@ -2663,14 +2364,6 @@
             }
         }
 
-        function playFightSound() {
-            if (!audioCtx) initAudio();
-            const now = audioCtx.currentTime;
-            for (let i = 0; i < 6; i++) {
-                playOscillator(1760, now + i * 0.08, 0.05, 0.05, 'square');
-            }
-        }
-
         function playGogogogoSound() {
             if (!audioCtx) initAudio();
             const now = audioCtx.currentTime;
@@ -2748,21 +2441,6 @@
             playOscillator(50, now + 0.1, 0.4, 0.4, 'square');
         }
 
-        function playButtonSound() {
-            if (typeof initAudio === 'function') initAudio();
-            if (!audioCtx) return;
-            
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            
-            // WebKitの同期的な再生許可を得るため、setTimeoutやasyncは使わずに少し未来にスケジュール
-            const offset = (audioCtx.state === 'suspended' || audioCtx.currentTime < 0.1) ? 0.05 : 0;
-            const now = audioCtx.currentTime + offset;
-            
-            playOscillator(880, now, 0.08, 0.1, 'square');
-        }
-
         function playWordPopSound() {
             if (!audioCtx) initAudio();
             if (!audioCtx) return; // AudioContextが許可されていない場合は鳴らさない
@@ -2825,9 +2503,7 @@
             
             // ピコピコVS音
             initAudio();
-            if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }
-            const offset = (audioCtx && (audioCtx.state === 'suspended' || audioCtx.currentTime < 0.1)) ? 0.05 : 0;
-            const now = audioCtx ? audioCtx.currentTime + offset : 0;
+            const now = audioCtx ? audioCtx.currentTime : 0;
             for(let i=0; i<6; i++) {
                 if(i%2===0) playOscillator(880, now + (i*0.1), 0.1, 0.1, 'square');
                 else playOscillator(1760, now + (i*0.1), 0.1, 0.1, 'square');
@@ -2845,8 +2521,6 @@
                 battleMessageEl.textContent = 'FIGHT!!';
                 battleMessageEl.style.color = '#ff2a00';
                 battleMessageEl.style.display = 'block';
-                
-                playFightSound();
                 
                 // バトルBGM再生開始
                 startBattleBgm();
@@ -3062,14 +2736,13 @@
                                 img.src = itemData.src;
                                 img.onload = () => {
                                     cctx.clearRect(0,0,192,192);
-                                    cctx.filter = "none";
+                                    cctx.filter = "url(#remove-white)";
                                     const t = itemData.trim || 0;
                                     const sx = img.width * t;
                                     const sy = img.height * t;
                                     const sW = img.width * (1 - t * 2);
                                     const sH = img.height * (1 - t * 2);
                                     cctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
-                                    applyPixelFilter(cctx, 192, 192, 'remove-white');
                                 };
                             }
 
@@ -3148,7 +2821,6 @@
             
             if (isWin) {
                 battleWins++;
-                updateAuraEffect(); // 勝数が増えたらオーラ更新
                 myCharEl.classList.add('win');
                 enemyCharEl.classList.add('lose');
                 playCelebrateSound(); // 勝利のファンファーレ
@@ -3190,14 +2862,12 @@
 
         // --- URL通信対戦ロジック ---
         function openPvpMenu() {
-            playButtonSound();
             document.getElementById('pvpMenuOverlay').classList.add('visible');
             document.getElementById('pvpMainMenu').style.display = 'flex';
             document.getElementById('urlContainer').style.display = 'none';
         }
 
         function closePvpMenu() {
-            playButtonSound();
             document.getElementById('pvpMenuOverlay').classList.remove('visible');
         }
 
@@ -3222,7 +2892,6 @@
         }
 
         function backToPvpMenu() {
-            playButtonSound();
             document.getElementById('urlContainer').style.display = 'none';
             document.getElementById('pvpMainMenu').style.display = 'flex';
         }
@@ -3291,35 +2960,29 @@
         }
 
         function acceptChallenge() {
-            playButtonSound();
             document.getElementById('pvpChallengeOverlay').classList.remove('visible');
             startBattle(false, pendingChallengerData);
         }
 
         function rejectChallenge() {
-            playButtonSound();
             document.getElementById('pvpChallengeOverlay').classList.remove('visible');
             pendingChallengerData = null;
         }
 
         // --- 陰徳システム ---
         function openIntokuModal() {
-            playButtonSound();
             const overlay = document.getElementById('intokuOverlay');
             if (overlay) overlay.classList.add('visible');
         }
 
         function closeIntokuModal() {
-            playButtonSound();
             const overlay = document.getElementById('intokuOverlay');
             if (overlay) overlay.classList.remove('visible');
         }
 
         function playIntokuSound() {
             if (!audioCtx) return;
-            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
-            const offset = (audioCtx.state === 'suspended' || audioCtx.currentTime < 0.1) ? 0.05 : 0;
-            const t = audioCtx.currentTime + offset;
+            const t = audioCtx.currentTime;
             
             // 少し神秘的な和音のチャイム（ポワァン...）
             const freqs = [880, 1108.73, 1318.51, 1760]; // A5, C#6, E6, A6 (A major chord)
@@ -3357,28 +3020,14 @@
             // 効果音
             playIntokuSound();
             
-            // 軽い演出（画面全体を白く光らせる）
-            const screen = document.querySelector('.screen');
-            if (screen) {
-                const flash = document.createElement('div');
-                flash.style.position = 'absolute';
-                flash.style.top = '0';
-                flash.style.left = '0';
-                flash.style.width = '100%';
-                flash.style.height = '100%';
-                flash.style.background = 'rgba(255, 255, 255, 0.8)';
-                flash.style.zIndex = '100';
-                flash.style.pointerEvents = 'none';
-                flash.style.transition = 'opacity 1.0s ease-out';
-                screen.appendChild(flash);
-                
-                // 強制リフロー
-                flash.offsetHeight;
-                
-                flash.style.opacity = '0';
+            // 軽い演出（キャラクターを少し光らせる）
+            const canvas = document.getElementById('pixelCanvas');
+            if (canvas) {
+                canvas.style.transition = 'filter 0.5s';
+                canvas.style.filter = 'drop-shadow(0 0 15px #f1c40f) brightness(1.2)';
                 setTimeout(() => {
-                    if (flash.parentNode) flash.parentNode.removeChild(flash);
-                }, 1000);
+                    canvas.style.filter = 'drop-shadow(2px 2px 0px rgba(15, 56, 15, 0.4))';
+                }, 1500);
             }
         }
 
@@ -3387,5 +3036,3 @@
             init();
             checkUrlChallenge();
         };
-
-document.addEventListener('DOMContentLoaded', () => { const btn = document.getElementById('closeZukanDetailBtn'); if(btn) btn.addEventListener('click', () => { playButtonSound(); document.getElementById('zukanDetailOverlay').classList.remove('visible'); }); });

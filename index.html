@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>コトダマっち</title>
+    <title>言霊たまごっち v2</title>
     <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=18">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="device">
-        <h2 class="device-title">コトダマっち</h2>
+        <h2 class="device-title">言霊っち</h2>
         
         <div class="screen-container">
             <div class="screen">
@@ -24,11 +24,13 @@
                     会: 5%<br>
                     陰徳: 0
                 </div>
-                <div class="battle-record-display" id="battleRecordDisplay" style="position: absolute; top: 30px; right: 12px; font-size: 1.15rem; line-height: 1.5; color: #0f380f; z-index: 10; font-family: 'DotGothic16', sans-serif; font-weight: bold; text-align: right;">
+                <div class="battle-record-display" id="battleRecordDisplay" style="position: absolute; top: 30px; right: 12px; font-size: 1.15rem; line-height: 1.5; color: #0f380f; z-index: 10; font-family: 'DotGothic16', sans-serif; text-align: right;">
                     戦歴<br>0勝<br>0敗
                 </div>
                 
                 <div class="art-container" id="artContainer">
+                    <!-- オーラエフェクト用コンテナ -->
+                    <div id="auraEffect" class="aura-effect"></div>
                     <!-- 24x24 px のドット絵を描画するキャンバス -->
                     <canvas id="pixelCanvas" width="24" height="24"></canvas>
                 </div>
@@ -39,18 +41,21 @@
                 </div>
 
                 <div class="stats-overlay" id="statsOverlay">
-                    <div style="text-align:center; margin-bottom:5px; font-weight:bold; font-size:1.2rem;">★心のごはん★</div>
+                    <div style="text-align:center; margin-bottom:5px;">★心のごはん★</div>
                     <div id="statsList"></div>
+                    <button class="close-stats-btn" onclick="toggleAButton()">つぎへ</button>
                 </div>
 
                 <div class="stats-overlay" id="oyatsuOverlay">
-                    <div style="text-align:center; margin-bottom:5px; font-weight:bold; font-size:1.2rem;">★魂のおやつ★</div>
+                    <div style="text-align:center; margin-bottom:5px;">★魂のおやつ★</div>
                     <div id="oyatsuList"></div>
+                    <button class="close-stats-btn" onclick="toggleAButton()">つぎへ</button>
                 </div>
 
                 <div class="zukan-overlay" id="zukanOverlay">
-                    <div style="text-align:center; margin-bottom:5px; font-weight:bold;">★コトダマっち図鑑★</div>
+                    <div style="text-align:center; margin-bottom:5px; font-weight:bold;">★言霊っち図鑑★</div>
                     <div id="zukanList" class="zukan-list"></div>
+                    <button class="close-stats-btn" onclick="toggleAButton()">とじる</button>
                 </div>
 
                 <!-- PVP モニュー -->
@@ -78,18 +83,17 @@
 
                 <!-- 陰徳ダイアログ -->
                 <div class="pvp-challenge-overlay" id="intokuOverlay">
-                    <div style="font-size:1.5rem; margin-bottom:8px; font-weight:bold; color:#c0392b; animation:blink 1.5s infinite alternate;">✨ 徳ボタン ✨</div>
-                    <div style="font-size:1.5rem; line-height:1.4; text-align:left; margin-bottom:12px; color:var(--screen-text); width:95%; max-height: 60vh; overflow-y: auto; padding-right: 5px;">
-                        この徳ボタンは自己申告制です。<br>
+                    <div style="font-size:1.1rem; margin-bottom:8px; font-weight:bold; color:#f39c12; animation:blink 1.5s infinite alternate;">✨ 陰徳ボタン ✨</div>
+                    <div style="font-size:0.75rem; line-height:1.4; text-align:left; margin-bottom:12px; color:var(--screen-text); width:95%;">
+                        この陰徳ボタンは自己申告制です。<br>
                         ① ゴミ拾いをした時<br>
                         ② 知らない人に笑顔で挨拶した時<br>
                         ③ お店でお金を払う時に「ありがとう」と言った時<br>
-                        ④ 毎日12時に「宇宙の調和に感謝します」を1分間言い続ける<br>
-                        このどれかをやった時に、徳がたまります。いずれかの行動をした時にこのボタンを押して、徳パワーを貯めていきましょう！<br>
-                        <span style="display:inline-block; margin-top:5px; color:#d84315; font-weight:bold; font-size:1.4rem;">※徳パワーが貯まると特別な進化ルートが…</span>
+                        このいずれかをやった時に、陰徳が貯まります。いずれかの行動をした時にこのボタンを押して、陰徳パワーを貯めていきましょう。<br>
+                        <span style="display:inline-block; margin-top:5px; color:#d84315; font-weight:bold; font-size:0.7rem;">※陰徳パワーが貯まると特別な進化ルートが…</span>
                     </div>
                     <div style="display: flex; gap: 10px; width: 95%; justify-content: center;">
-                        <button class="pvp-btn" style="border-color:#f39c12; color:#d35400; font-weight:bold; font-size: 0.85rem; padding: 8px; flex:1; margin: 0;" onclick="confirmIntoku()">徳を積む</button>
+                        <button class="pvp-btn" style="border-color:#f39c12; color:#d35400; font-weight:bold; font-size: 0.85rem; padding: 8px; flex:1; margin: 0;" onclick="confirmIntoku()">いんとくを積む</button>
                         <button class="pvp-btn" style="font-size: 0.85rem; padding: 8px; flex:1; margin: 0;" onclick="closeIntokuModal()">もどる</button>
                     </div>
                 </div>
@@ -106,11 +110,11 @@
 
                 <!-- 1000回達成お祝い -->
                 <div class="celebration-overlay" id="celebrationOverlay">
-                    <div class="celebration-content" style="padding: 30px; max-width: 90%;">
-                        <div style="font-size: 0.9rem; letter-spacing: 2px; color: #888; margin-bottom: 8px; font-weight: bold;">CONGRATULATIONS!</div>
-                        <div id="celebrationTitle" style="font-size: 1.8rem; font-weight: bold; color: #d05c5c; border-bottom: 3px solid #eee; padding-bottom: 12px; margin-bottom: 15px;">1000回達成！</div>
-                        <div id="celebrationMessage" style="font-size: 1.1rem; color: #333; line-height: 1.6; min-height: 2.8em; font-weight: bold;">素晴らしい習慣です！<br>この調子で続けましょう。</div>
-                        <button class="close-stats-btn" style="margin-top: 20px; border-radius: 0; font-weight: bold; font-size: 1.2rem; padding: 10px 30px;" onclick="hideCelebration()">やった！</button>
+                    <div class="celebration-content">
+                        <div style="font-size: 0.7rem; letter-spacing: 1px; color: #888; margin-bottom: 5px;">CONGRATULATIONS!</div>
+                        <div id="celebrationTitle" style="font-size: 1.3rem; font-weight: bold; color: #d05c5c; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">1000回達成！</div>
+                        <div id="celebrationMessage" style="font-size: 0.85rem; color: #5a5a5a; line-height: 1.4; min-height: 2.8em;">素晴らしい習慣です！<br>この調子で続けましょう。</div>
+                        <button class="close-stats-btn" style="margin-top: 15px; border-radius: 0; font-weight: bold;" onclick="hideCelebration()">やった！</button>
                     </div>
                 </div>
 
@@ -192,14 +196,14 @@
                 <div class="btn-label">つうしん</div>
             </div>
             <div>
-                <button class="btn-round" style="background:#f39c12; color:white; font-size:2.0rem;" onclick="openIntokuModal()">徳</button>
-                <div class="btn-label">とく</div>
+                <button class="btn-round" style="background:#f39c12; color:white; font-size:1.0rem;" onclick="openIntokuModal()">陰徳</button>
+                <div class="btn-label">いんとく</div>
             </div>
         </div>
     </div>
 
     <!-- デバッグ用パネル (A/B/Cグループごとに追加しやすく) -->
-    <div class="test-panel" style="display:none;">
+    <div class="test-panel">
         <h3>開発者用テスト (+100回)</h3>
         <p style="font-size:0.8rem; margin:0 0 10px 0;">各グループのボタンを押して進化ルートをテストできます。</p>
         <div class="test-btns" id="testBtns"></div>
@@ -373,7 +377,7 @@
             </div>
             <div style="text-align: center; background: rgba(255,255,255,0.5); padding: 5px; border-radius: 5px;">
                 <canvas id="preview-childB_2_4" width="24" height="24" style="width: 72px; height: 72px; image-rendering: pixelated; background: #B5C6A9; border: 2px solid #5a5a5a; border-radius: 4px; padding: 4px;"></canvas>
-                <div style="font-size: 0.70rem; margin-top: 5px; font-weight: bold;">武甕槌大神っち</div>
+                <div style="font-size: 0.70rem; margin-top: 5px; font-weight: bold;">建御雷神っち</div>
                 <div style="font-size: 0.55rem; color: #444;">「ツイてる」最多</div>
             </div>
         </div>
@@ -419,7 +423,7 @@
 
             <div style="text-align: center; background: rgba(255,255,255,0.5); padding: 5px; border-radius: 5px;">
                 <canvas id="preview-childC_2_4" width="24" height="24" style="width: 72px; height: 72px; image-rendering: pixelated; background: #B5C6A9; border: 2px solid #5a5a5a; border-radius: 4px; padding: 4px;"></canvas>
-                <div style="font-size: 0.70rem; margin-top: 5px; font-weight: bold;">木花咲夜姫っち</div>
+                <div style="font-size: 0.70rem; margin-top: 5px; font-weight: bold;">木花之佐久夜毘売っち</div>
                 <div style="font-size: 0.55rem; color: #444;">「ツイてる」最多</div>
             </div>
         </div>
@@ -469,8 +473,8 @@
         </div>
     </div>
 
-    <script src="data.js?v=21"></script>
-    <script src="main.js?v=21"></script>
+    <script src="data.js"></script>
+    <script src="main.js"></script>
     
     <!-- 画像の白背景を透過し、黒線を液晶緑色にするSVGフィルター -->
     <svg width="0" height="0" style="position:absolute; width:0; height:0;">
@@ -489,27 +493,5 @@
                 1 1 1 0 -0.5" />
         </filter>
     </svg>
-                <!-- Zukan Detail Overlay -->
-                <div class="zukan-detail-overlay" id="zukanDetailOverlay">
-                    <div class="zukan-detail-container">
-                        <button id="closeZukanDetailBtn" class="close-zukan-detail-btn">×</button>
-                        <div class="zukan-detail-top">
-                            <div class="zukan-detail-image-wrapper">
-                                <canvas id="zukanDetailCanvas" width="96" height="96"></canvas>
-                            </div>
-                            <div class="zukan-detail-info">
-                                <div id="zukanDetailName" class="zukan-detail-name">名前</div>
-                                <div id="zukanDetailType" class="zukan-detail-type">タイプ</div>
-                                <div id="zukanDetailStats" class="zukan-detail-stats">ステータス</div>
-                            </div>
-                        </div>
-                        <div class="zukan-detail-divider"></div>
-                        <div id="zukanDetailDesc" class="zukan-detail-desc">
-                            説明文
-                        </div>
-                    </div>
-                </div>
-
-
 </body>
 </html>
