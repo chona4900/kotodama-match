@@ -810,8 +810,8 @@
                 console.error("Failed to load state:", e);
             }
             
-            // --- テスト用：強制的に10勝状態にする ---
-            battleWins = 10;
+            // --- テスト用：強制的に100勝状態にする ---
+            battleWins = 100;
             battleLosses = 0;
         }
 
@@ -2761,6 +2761,24 @@
             // 初期状態リセット
             myCharEl.className = 'battle-character mine';
             enemyCharEl.className = 'battle-character enemy';
+
+            const myAuraEl = document.getElementById('myAuraEffect');
+            const enemyAuraEl = document.getElementById('enemyAuraEffect');
+            if (myAuraEl) myAuraEl.className = 'aura-effect';
+            if (enemyAuraEl) enemyAuraEl.className = 'aura-effect';
+
+            // 自分のオーラ設定
+            if (myAuraEl) {
+                if (battleWins >= 100) myAuraEl.classList.add('aura-100');
+                else if (battleWins >= 50) myAuraEl.classList.add('aura-50');
+                else if (battleWins >= 10) myAuraEl.classList.add('aura-10');
+            }
+            // 敵のオーラ設定
+            if (enemyAuraEl && challengerData && challengerData.w !== undefined) {
+                if (challengerData.w >= 100) enemyAuraEl.classList.add('aura-100');
+                else if (challengerData.w >= 50) enemyAuraEl.classList.add('aura-50');
+                else if (challengerData.w >= 10) enemyAuraEl.classList.add('aura-10');
+            }
             myHpBarEl.style.width = '100%';
             enemyHpBarEl.style.width = '100%';
             
@@ -3160,7 +3178,8 @@
                 a: stats.attack,
                 e: stats.evasionRate,
                 c: stats.criticalRate,
-                f: currentForm
+                f: currentForm,
+                w: battleWins
             };
             const jsonStr = JSON.stringify(payloadObj);
             // btoaでは日本語などのマルチバイトが含まれない前提（今回全てASCII）
