@@ -1163,7 +1163,16 @@
 
             const battleRecordDisplay = document.getElementById('battleRecordDisplay');
             if (battleRecordDisplay) {
-                battleRecordDisplay.innerHTML = `戦歴<br>${battleWins}勝<br>${battleLosses}敗`;
+                let trophyHtml = '';
+                if (battleWins >= 10) {
+                    let color = battleWins >= 100 ? '#81ecec' : (battleWins >= 50 ? '#fab1a0' : '#f1c40f');
+                    trophyHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" style="vertical-align: text-bottom; margin-right: 3px; display: inline-block;">
+  <path fill="#2f3640" d="M4 1h8v1H4zM2 2h2v1H2zM12 2h2v1h-2zM1 3h2v2H1zM13 3h2v2h-2zM2 5h2v1H2zM12 5h2v1h-2zM3 6h2v1H3zM11 6h2v1h-2zM4 7h2v1H4zM10 7h2v1h-2zM6 8h4v1H6zM7 9h2v1H7zM6 10h4v1H6zM5 11h6v1H5zM4 12h8v2H4z"/>
+  <path fill="${color}" d="M4 2h8v1H4zM3 3h1v2H3zM4 3h8v3H4zM12 3h1v2h-1zM5 6h6v1H5zM6 7h4v1H6zM7 8h2v2H7zM6 10h4v1H6zM5 11h6v1H5z"/>
+  <path fill="rgba(255,255,255,0.8)" d="M5 3h1v2H5zM6 3h1v1H6z"/>
+  </svg>`;
+                }
+                battleRecordDisplay.innerHTML = `戦歴<br>${trophyHtml}${battleWins}勝<br>${battleLosses}敗`;
             }
 
             if(totalCount >= STAGE4_GOAL && currentStage < 4) {
@@ -1179,6 +1188,25 @@
                 if(totalCount > 300) statusTextEl.textContent = "うごきはじめた...";
                 if(totalCount > 500) statusTextEl.textContent = "おおきくなってきた！";
                 if(totalCount > 800) statusTextEl.textContent = "もうすぐうまれる...！";
+            }
+            
+            updateAuraEffect();
+        }
+
+        // 勝利数に応じたオーラエフェクトの更新
+        function updateAuraEffect() {
+            const auraEl = document.getElementById('auraEffect');
+            if (!auraEl) return;
+            
+            // クラスを一旦リセット
+            auraEl.className = 'aura-effect';
+
+            if (battleWins >= 100) {
+                auraEl.classList.add('aura-100');
+            } else if (battleWins >= 50) {
+                auraEl.classList.add('aura-50');
+            } else if (battleWins >= 10) {
+                auraEl.classList.add('aura-10');
             }
         }
 
