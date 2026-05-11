@@ -1697,44 +1697,7 @@
                         const zctx = can.getContext('2d');
                         renderCanvasArt(key, zctx);
                         
-                        item.addEventListener('click', () => {
-                            const desc = ZUKAN_DESCRIPTIONS[key];
-                            document.getElementById('zukanDetailName').textContent = charNames[key] || key;
-                            
-                            const typeEl = document.getElementById('zukanDetailType');
-                            const statsEl = document.getElementById('zukanDetailStats');
-                            const descEl = document.getElementById('zukanDetailDesc');
 
-                            if (desc) {
-                                if (desc.type) {
-                                    typeEl.style.display = 'block';
-                                    typeEl.textContent = 'タイプ：' + desc.type;
-                                } else {
-                                    typeEl.style.display = 'none';
-                                }
-                                
-                                if (desc.stats) {
-                                    statsEl.style.display = 'block';
-                                    statsEl.textContent = desc.stats;
-                                } else {
-                                    statsEl.style.display = 'none';
-                                }
-                                
-                                descEl.textContent = desc.text;
-                            } else {
-                                typeEl.style.display = 'none';
-                                statsEl.style.display = 'none';
-                                descEl.textContent = '（詳細データはまだありません）';
-                            }
-                            
-                            const detailCan = document.getElementById('zukanDetailCanvas');
-                            const detailCtx = detailCan.getContext('2d');
-                            detailCtx.clearRect(0,0,detailCan.width,detailCan.height);
-                            renderCanvasArt(key, detailCtx);
-                            
-                            playButtonSound();
-                            document.getElementById('zukanDetailOverlay').classList.add('visible');
-                        });
                     } else {
                         nameEl.textContent = '???';
                         const zctx = can.getContext('2d');
@@ -1853,6 +1816,7 @@
                 renderCanvasArt(key, ctx);
             }
 
+            playButtonSound();
             overlay.classList.add('visible');
         }
 
