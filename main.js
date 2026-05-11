@@ -1794,19 +1794,21 @@
             const canvas = document.getElementById('zukanDetailCanvas');
             const descEl = document.getElementById('zukanDetailDesc');
 
-            nameEl.textContent = charNames[key] || itemNames[key] || key;
+            const secretItem = SECRET_ITEMS_DATA.find(i => i.id === key);
+
+            nameEl.textContent = charNames[key] || (secretItem ? secretItem.name : key);
             descEl.textContent = ZUKAN_DESC[key] || "（まだくわしい説明がないみたい…）";
 
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, 96, 96);
             
             // アイテムかキャラクターかで描画方法を分ける
-            if (itemImages[key]) {
+            if (secretItem && secretItem.src) {
                 const img = new Image();
-                img.src = itemImages[key].src;
+                img.src = secretItem.src;
                 img.onload = () => {
                     canvas.width = 192; canvas.height = 192;
-                    const t = itemImages[key].trim || 0;
+                    const t = secretItem.trim || 0;
                     const sW = img.width * (1 - t * 2);
                     const sH = img.height * (1 - t * 2);
                     ctx.drawImage(img, img.width * t, img.height * t, sW, sH, 0, 0, 192, 192);
