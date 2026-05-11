@@ -794,3 +794,56 @@
             margin: 10px 0; background: #000; padding: 5px; box-sizing: border-box;
             font-family: monospace; resize: none; border: 1px solid #7f8c8d;
         }
+
+        .zukan-detail-desc {
+            font-size: 0.8rem;
+            line-height: 1.6;
+            text-align: left;
+            margin: 10px 0;
+            color: #333;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Scroll Fixes & App Native View */
+        html, body { 
+            max-width: 100vw; 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            overscroll-behavior: none; 
+        }
+        .test-panel { 
+            display: none !important; 
+        }
+
+        @media (max-width: 600px) {
+            .device { 
+                justify-content: flex-start !important; 
+                padding-top: max(80px, env(safe-area-inset-top) + 20px) !important; 
+                padding-bottom: max(60px, env(safe-area-inset-bottom) + 30px) !important; 
+                height: 100vh !important; 
+                height: 100dvh !important; 
+                max-height: 100dvh !important; 
+                overflow: hidden !important; 
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+            .screen-container { flex: 1 !important; margin-top: 0 !important; margin-bottom: 25px !important; display: flex; flex-direction: column; min-height: 0 !important; }
+            .screen { flex: 1 !important; height: auto !important; min-height: 0 !important; }
+            .controls { margin-top: 0 !important; margin-bottom: 10px !important; }
+        }
+
+        /* Allow scrolling in overlays */
+        .stats-overlay, .zukan-overlay, .pvp-menu-overlay, .zukan-detail-overlay { 
+            overflow-y: auto !important; 
+            overflow-x: hidden !important; 
+            -webkit-overflow-scrolling: touch; 
+        }

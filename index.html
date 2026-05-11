@@ -55,7 +55,23 @@
                 <div class="zukan-overlay" id="zukanOverlay">
                     <div style="text-align:center; margin-bottom:5px; font-weight:bold;">★言霊っち図鑑★</div>
                     <div id="zukanList" class="zukan-list"></div>
-                    <button class="close-stats-btn" onclick="toggleAButton()">とじる</button>
+                    <button class="close-btn" onclick="toggleAButton()" style="margin-top:10px;">とじる</button>
+                </div>
+                
+                <div class="zukan-detail-overlay" id="zukanDetailOverlay">
+                    <div class="zukan-detail-container">
+                        <button class="close-zukan-detail-btn" onclick="hideZukanDetail()">×</button>
+                        <div class="zukan-detail-top">
+                            <div class="zukan-detail-image-wrapper">
+                                <canvas id="zukanDetailCanvas" width="24" height="24"></canvas>
+                            </div>
+                        </div>
+                        <div class="zukan-detail-info">
+                            <div id="zukanDetailName" class="zukan-detail-name">キャラ名</div>
+                            <div class="zukan-detail-divider"></div>
+                            <div id="zukanDetailDesc" class="zukan-detail-desc"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- PVP モニュー -->

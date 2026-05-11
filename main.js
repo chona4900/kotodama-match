@@ -820,6 +820,33 @@
             renderPreviewGallery(); // ギャラリーの描画
         }
 
+        function applyManualColorFilter(ctx, width, height, filterType) {
+            if (filterType !== 'remove-white' && filterType !== 'remove-black') return;
+            
+            // CORSエラーが出ないようにローカル環境でも動く前提（Data URI等）
+            try {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+                    if (a === 0) continue;
+                    
+                    let newA = a;
+                    if (filterType === 'remove-white') {
+                        newA = ((-r - g - b) / 255 + 2.5 * (a / 255)) * 255;
+                    } else if (filterType === 'remove-black') {
+                        newA = ((r + g + b) / 255 - 0.5 * (a / 255)) * 255;
+                    }
+                    newA = Math.max(0, Math.min(255, newA));
+                    
+                    data[i] = 15; data[i+1] = 56; data[i+2] = 15; data[i+3] = newA;
+                }
+                ctx.putImageData(imageData, 0, 0);
+            } catch(e) {
+                console.warn("Canvas ImageData access failed:", e);
+            }
+        }
+
         function renderCanvasArt(key, targetCtx) {
             // 病気ステータスなら病気用スプライトを探す（メインキャンバスのみ）
             let searchKey = key;
@@ -904,20 +931,23 @@
                         const offY = Math.round((192 - drawH) / 2);
 
                         // Canvas Contextのfilterを使って背景を透過し、緑色に着色 (ChromeのローカルファイルCORSエラー回避)
-                        // Canvas Contextのfilterを使って背景を透過し、緑色に着色 (ChromeのローカルファイルCORSエラー回避)
                         let baseFilter = "none";
+                        let manualFilterType = null;
                         if (artData.filter === 'black' || artData.filter === 'remove-black') {
-                            baseFilter = "url(#remove-black)";
+                            manualFilterType = "remove-black";
                         } else if (artData.filter !== 'none') {
-                            baseFilter = "url(#remove-white)";
+                            manualFilterType = "remove-white";
                         }
                         
                         if (artData.brightness) {
-                            baseFilter = (baseFilter === "none" ? "" : baseFilter + " ") + `brightness(${artData.brightness})`;
+                            baseFilter = `brightness(${artData.brightness})`;
                         }
                         
                         targetCtx.filter = baseFilter || "none";
                         targetCtx.drawImage(img, sx, sy, sWidth, sHeight, offX, offY, drawW, drawH);
+                        if (manualFilterType) {
+                            applyManualColorFilter(targetCtx, targetCtx.canvas.width, targetCtx.canvas.height, manualFilterType);
+                        }
                         targetCtx.filter = "none"; // 元に戻す
                     };
 
@@ -1563,6 +1593,17 @@
             ultimate_3: 'バステトっち'
         };
 
+        const ZUKAN_DESC = {
+            childB: '狛犬は神社の入り口で\n魂の重たい気を祓う守り神です　口を開けた「阿（あ）」で良いエネルギーを取り入れ、閉じた「吽（うん）」で心と体に落とし込んでくれます\n狛犬と仲良くなるには\n鳥居をくぐって彼らの前に来たら、「いつも神様とこの場所をお守りくださり、ありがとうございます」と心の中で話しかけてみてくださいね',
+            childB_1: '迦楼羅は仏教では「天部（守護する存在）」「人の煩悩（毒）を喰らい尽くす」精神的な浄化の力が強い\n人々を救済する慈悲も持ち合わせている\n古い執着を焼き切る\nエネルギーを一気に上昇させる\n「本来の自分に戻る」',
+            ultimate_2: '「宇宙の中心」にいるひとり神\nかたちもなく古事記にも１回しか登場しない',
+            childC_2_3: '孔雀は、猛毒を持つサソリや蛇を好んで食べても美しい姿でパワフルで性質があります。そこから、「人間の心にある猛毒（煩悩や苦しみ）を喰らい尽くし、清浄な状態に変えてくれる」懐の深い神様',
+            childC_2: '宝船は、日本で昔から伝わる\n幸運・豊かさ・願いが運ばれてくる象徴\n金銀財宝 → お金・豊かさ\n米俵 → 食べ物・安定\n宝物 → チャンス・才能',
+            childB_2_4: '現最強の軍神・雷神であり、剣の神実的な豊かさ＋見えない運の両方 地震は巨大な「大鯰（おおなまず）」が暴れて起こるものと信じられていましたが、タケミカヅチはその鯰を「要石（かなめいし）」で押さえつけて鎮めている神様',
+            childC_1_4: 'たけみかずちの神と兄弟　静かだけどめちゃ強い武神\n「戦う」よりも整えて勝つタイプ\n秩序・ルール・調和を司る　フツフツとひらめきがいただけるかも'
+        };
+
+
         function renderZukan() {
             // 前回のCanvasアニメーションタイマーをクリア
             const oldCanvases = zukanListEl.querySelectorAll('canvas');
@@ -1600,6 +1641,7 @@
                         nameEl.textContent = charNames[key] || key;
                         item.appendChild(can);
                         item.appendChild(nameEl);
+                        item.onclick = () => showZukanDetail(key);
                         grid.appendChild(item);
                         
                         const zctx = can.getContext('2d');
@@ -1661,7 +1703,7 @@
                             can.width = 192;
                             can.height = 192;
                             can.style.imageRendering = 'auto'; // 高画質画像を滑らかに縮小
-                            zctx.filter = "url(#remove-white)";
+                            zctx.filter = "none";
                             
                             const t = itemData.trim || 0;
                             const sx = img.width * t;
@@ -1670,6 +1712,7 @@
                             const sH = img.height * (1 - t * 2);
                             
                             zctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
+                            applyManualColorFilter(zctx, 192, 192, 'remove-white');
                         };
                     }
                 } else {
@@ -1688,6 +1731,26 @@
                 itemGrid.appendChild(item);
             }
             zukanListEl.appendChild(itemGrid);
+        }
+
+        function showZukanDetail(key) {
+            const overlay = document.getElementById('zukanDetailOverlay');
+            const nameEl = document.getElementById('zukanDetailName');
+            const canvas = document.getElementById('zukanDetailCanvas');
+            const descEl = document.getElementById('zukanDetailDesc');
+
+            nameEl.textContent = charNames[key] || key;
+            descEl.textContent = ZUKAN_DESC[key] || "（まだくわしい説明がないみたい…）";
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 24, 24);
+            renderCanvasArt(key, ctx);
+
+            overlay.classList.add('visible');
+        }
+
+        function hideZukanDetail() {
+            document.getElementById('zukanDetailOverlay').classList.remove('visible');
         }
 
         const celebrationOverlayEl = document.getElementById('celebrationOverlay');
@@ -1833,7 +1896,7 @@
                     itemPopupCanvas.width = 192;
                     itemPopupCanvas.height = 192;
                     itemPopupCanvas.style.imageRendering = 'auto'; // 滑らかに縮小
-                    ictx.filter = "url(#remove-white)";
+                    ictx.filter = "none";
                     
                     const t = itemObj.trim || 0;
                     const sx = img.width * t;
@@ -1842,6 +1905,7 @@
                     const sH = img.height * (1 - t * 2);
                     
                     ictx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
+                    applyManualColorFilter(ictx, 192, 192, 'remove-white');
                 };
             }
         }
@@ -2736,13 +2800,14 @@
                                 img.src = itemData.src;
                                 img.onload = () => {
                                     cctx.clearRect(0,0,192,192);
-                                    cctx.filter = "url(#remove-white)";
+                                    cctx.filter = "none";
                                     const t = itemData.trim || 0;
                                     const sx = img.width * t;
                                     const sy = img.height * t;
                                     const sW = img.width * (1 - t * 2);
                                     const sH = img.height * (1 - t * 2);
                                     cctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
+                                    applyManualColorFilter(cctx, 192, 192, 'remove-white');
                                 };
                             }
 
