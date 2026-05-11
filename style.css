@@ -1,6 +1,6 @@
-:root {
-            --device-bg: #4A90E2;    /* 筐体の色を少しクールに変更 */
-            --screen-bg: #B5C6A9;    /* 背景ベースを少し明るい緑に */
+﻿:root {
+            --device-bg: #4A90E2;    /* 遲蝉ｽ薙・濶ｲ繧貞ｰ代＠繧ｯ繝ｼ繝ｫ縺ｫ螟画峩 */
+            --screen-bg: #B5C6A9;    /* 閭梧勹繝吶・繧ｹ繧貞ｰ代＠譏弱ｋ縺・ｷ代↓ */
             --screen-text: #0f380f;
             --screen-shadow: #306230;
         }
@@ -17,7 +17,7 @@
             padding: 20px;
             box-sizing: border-box;
             
-            /* Apple審査対策：Web特有の挙動を無効化 */
+            /* Apple蟇ｩ譟ｻ蟇ｾ遲厄ｼ啗eb迚ｹ譛峨・謖吝虚繧堤┌蜉ｹ蛹・*/
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
@@ -25,7 +25,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 筐体デザイン */
+        /* 遲蝉ｽ薙ョ繧ｶ繧､繝ｳ */
         .device {
             background: var(--device-bg);
             border-radius: 50px 50px 70px 70px;
@@ -51,7 +51,7 @@
             letter-spacing: 2px;
         }
 
-        /* 液晶画面周り */
+        /* 豸ｲ譎ｶ逕ｻ髱｢蜻ｨ繧・*/
         .screen-container {
             background: #e0e0e0;
             padding: 15px;
@@ -65,19 +65,19 @@
         }
 
         .screen {
-            background-color: #B5C6A9; /* ベースの液晶色 */
-            /* ★ 実際のたまごっち風の背景柄（上下ボーダー＋方眼） */
+            background-color: #B5C6A9; /* 繝吶・繧ｹ縺ｮ豸ｲ譎ｶ濶ｲ */
+            /* 笘・螳滄圀縺ｮ縺溘∪縺斐▲縺｡鬚ｨ縺ｮ閭梧勹譟・ｼ井ｸ贋ｸ九・繝ｼ繝繝ｼ・区婿逵ｼ・・*/
             background-image: 
-                /* 1. 薄いドット方眼（ピクセルごとのマス目感） */
+                /* 1. 阮・＞繝峨ャ繝域婿逵ｼ・医ヴ繧ｯ繧ｻ繝ｫ縺斐→縺ｮ繝槭せ逶ｮ諢滂ｼ・*/
                 linear-gradient(rgba(15, 56, 15, 0.05) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(15, 56, 15, 0.05) 1px, transparent 1px),
-                /* 2. 背景の模様（写真のようなピンクや黄色の淡いボーダー） */
+                /* 2. 閭梧勹縺ｮ讓｡讒假ｼ亥・逵溘・繧医≧縺ｪ繝斐Φ繧ｯ繧・ｻ・牡縺ｮ豺｡縺・・繝ｼ繝繝ｼ・・*/
                 linear-gradient(to bottom, 
                     rgba(255, 235, 100, 0.3) 0%, rgba(255, 235, 100, 0.3) 20%, 
                     rgba(150, 190, 220, 0.3) 20%, rgba(150, 190, 220, 0.3) 80%,
                     rgba(255, 235, 100, 0.3) 80%, rgba(255, 235, 100, 0.3) 100%
                 );
-            background-size: 4px 4px, 4px 4px, 100% 100%; /* 方眼のサイズ */
+            background-size: 4px 4px, 4px 4px, 100% 100%; /* 譁ｹ逵ｼ縺ｮ繧ｵ繧､繧ｺ */
             color: var(--screen-text);
             width: 100%;
             height: 280px;
@@ -98,7 +98,7 @@
             margin-bottom: 5px;
         }
 
-        /* ★ 高解像度ドット絵表示用 Canvas ★ */
+        /* 笘・鬮倩ｧ｣蜒丞ｺｦ繝峨ャ繝育ｵｵ陦ｨ遉ｺ逕ｨ Canvas 笘・*/
         .art-container {
             flex: 1;
             display: flex;
@@ -106,36 +106,36 @@
             justify-content: center;
             flex-direction: column;
             position: relative;
-            /* キャンバスの後ろにうっすらと非点灯ドットを見せる */
+            /* 繧ｭ繝｣繝ｳ繝舌せ縺ｮ蠕後ｍ縺ｫ縺・▲縺吶ｉ縺ｨ髱樒せ轣ｯ繝峨ャ繝医ｒ隕九○繧・*/
             background-image: 
                 radial-gradient(rgba(15, 56, 15, 0.1) 1px, transparent 1px);
-            background-size: 8px 8px; /* 192px / 24ドット = 8pxマスのグリッドに合わせる */
+            background-size: 8px 8px; /* 192px / 24繝峨ャ繝・= 8px繝槭せ縺ｮ繧ｰ繝ｪ繝・ラ縺ｫ蜷医ｏ縺帙ｋ */
             background-position: center;
             border-radius: 8px;
         }
 
         #pixelCanvas {
-            width: 192px;  /* 24px * 8倍拡大 */
-            height: 192px; /* 24px * 8倍拡大 */
-            image-rendering: pixelated; /* ドットをくっきり表示 */
+            width: 192px;  /* 24px * 8蛟肴僑螟ｧ */
+            height: 192px; /* 24px * 8蛟肴僑螟ｧ */
+            image-rendering: pixelated; /* 繝峨ャ繝医ｒ縺上▲縺阪ｊ陦ｨ遉ｺ */
             transition: transform 0.2s;
             filter: drop-shadow(2px 2px 0px rgba(15, 56, 15, 0.4));
             position: relative;
-            z-index: 1; /* キャンバスを手前に */
+            z-index: 1; /* 繧ｭ繝｣繝ｳ繝舌せ繧呈焔蜑阪↓ */
         }
 
-        /* --- 勝利数に応じたキラキラオーラエフェクト --- */
+        /* --- 蜍晏茜謨ｰ縺ｫ蠢懊§縺溘く繝ｩ繧ｭ繝ｩ繧ｪ繝ｼ繝ｩ繧ｨ繝輔ぉ繧ｯ繝・--- */
         .aura-effect {
             position: absolute;
             top: 50%;
             left: 50%;
             width: 10px;
             height: 10px;
-            pointer-events: none; /* クリックを妨害しない */
-            z-index: 0; /* キャンバスの奥 */
+            pointer-events: none; /* 繧ｯ繝ｪ繝・け繧貞ｦｨ螳ｳ縺励↑縺・*/
+            z-index: 0; /* 繧ｭ繝｣繝ｳ繝舌せ縺ｮ螂･ */
         }
 
-        /* 10勝: 控えめなキラキラドット */
+        /* 10蜍・ 謗ｧ縺医ａ縺ｪ繧ｭ繝ｩ繧ｭ繝ｩ繝峨ャ繝・*/
         .aura-10::before {
             content: '';
             position: absolute;
@@ -153,7 +153,7 @@
             100% { transform: scale(1.2) rotate(10deg); opacity: 0.8; }
         }
 
-        /* 50勝: 少し派手なキラキラドット */
+        /* 50蜍・ 蟆代＠豢ｾ謇九↑繧ｭ繝ｩ繧ｭ繝ｩ繝峨ャ繝・*/
         .aura-50::before, .aura-50::after {
             content: '';
             position: absolute;
@@ -178,7 +178,7 @@
             100% { transform: scale(1.3) rotate(15deg); opacity: 1; filter: drop-shadow(0 0 5px #ffc107); }
         }
 
-        /* 100勝: 最も派手で豪華なキラキラドット */
+        /* 100蜍・ 譛繧よｴｾ謇九〒雎ｪ闖ｯ縺ｪ繧ｭ繝ｩ繧ｭ繝ｩ繝峨ャ繝・*/
         .aura-100::before, .aura-100::after {
             content: '';
             position: absolute;
@@ -206,7 +206,7 @@
             100% { transform: scale(1.5) rotate(25deg); opacity: 1; filter: drop-shadow(0 0 10px #ffeb3b); }
         }
 
-        /* 揺れアニメーション */
+        /* 謠ｺ繧後い繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ */
         @keyframes shake {
             0% { transform: translateX(0); }
             25% { transform: translateX(-4px) rotate(-5deg); }
@@ -222,16 +222,16 @@
             position: absolute;
             top: 30px;
             left: 12px;
-            font-size: 1.15rem; /* 約1.5倍〜倍近くに拡大して視認性アップ */
+            font-size: 1.15rem; /* 邏・.5蛟阪懷崎ｿ代￥縺ｫ諡｡螟ｧ縺励※隕冶ｪ肴ｧ繧｢繝・・ */
             line-height: 1.5;
             color: var(--screen-shadow);
             z-index: 10;
             font-family: 'DotGothic16', sans-serif;
             text-shadow: none;
-            /* font-weight: bold; ←これを削除してドット感を統一 */
+            /* font-weight: bold; 竊舌％繧後ｒ蜑企勁縺励※繝峨ャ繝域─繧堤ｵｱ荳 */
         }
 
-        /* プログレスバー */
+        /* 繝励Ο繧ｰ繝ｬ繧ｹ繝舌・ */
         .progress-container {
             border: 2px solid var(--screen-text);
             height: 14px;
@@ -254,7 +254,7 @@
 
         .stats-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(181, 198, 169, 0.95); /* screen-bgに合わせた色 */
+            background: rgba(181, 198, 169, 0.95); /* screen-bg縺ｫ蜷医ｏ縺帙◆濶ｲ */
             padding: 10px; box-sizing: border-box;
             display: none; flex-direction: column; overflow-y: auto; z-index: 10;
         }
@@ -272,20 +272,20 @@
         .zukan-canvas { width: 48px; height: 48px; image-rendering: pixelated; background: #B5C6A9; border: 1px solid #5a5a5a; border-radius: 2px; }
         .zukan-name { font-size: 0.55rem; margin-top: 4px; text-align: center; width: 100%; word-break: break-all; line-height: 1.1; font-weight: bold; }
 
-        /* ボタン群 */
+        /* 繝懊ち繝ｳ鄒､ */
         .controls { display: flex; justify-content: space-around; width: 100%; margin-top: 30px; }
         .btn-round { width: 60px; height: 60px; border-radius: 50%; background: #F8B400; border: none; box-shadow: inset -2px -2px 8px rgba(0,0,0,0.3), inset 2px 2px 8px rgba(255,255,255,0.5), 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; color: #C0392B; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; }
         .btn-round.mic-active { background: #E74C3C; color: white; animation: pulse-red 1.5s infinite; }
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
         .btn-label { margin-top: 10px; font-size: 0.8rem; color: white; text-align: center; }
 
-        /* テストパネル */
+        /* 繝・せ繝医ヱ繝阪Ν */
         .test-panel { background: white; padding: 15px; border-radius: 8px; margin-top: 20px; width: 100%; max-width: 380px; font-family: sans-serif; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .test-panel h3 { margin-top: 0; font-size: 1rem; }
         .test-btns { display: flex; flex-wrap: wrap; gap: 5px; }
         .test-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; border-radius: 4px; cursor: pointer; }
 
-        /* お祝いオーバーレイ */
+        /* 縺顔･昴＞繧ｪ繝ｼ繝舌・繝ｬ繧､ */
         .celebration-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.8);
@@ -317,10 +317,10 @@
             z-index: 101; 
         }
 
-        /* 派手なフラッシュ白飛び用 */
+        /* 豢ｾ謇九↑繝輔Λ繝・す繝･逋ｽ鬟帙・逕ｨ */
         @keyframes flashFade { 0% { opacity: 1; } 100% { opacity: 0; } }
 
-        /* ドキドキ進化暗転エフェクト用 */
+        /* 繝峨く繝峨く騾ｲ蛹匁囓霆｢繧ｨ繝輔ぉ繧ｯ繝育畑 */
         .evolution-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -359,26 +359,26 @@
         }
         
         .evolution-overlay.flashing-ultimate {
-            background: #fff; /* デフォルト黒を上書きして白ベースに */
+            background: #fff; /* 繝・ヵ繧ｩ繝ｫ繝磯ｻ偵ｒ荳頑嶌縺阪＠縺ｦ逋ｽ繝吶・繧ｹ縺ｫ */
             animation: ultimatePulsate 9.0s ease-in forwards;
         }
         @keyframes ultimatePulsate {
             0%   { opacity: 0; background: #fff; }
-            /* ゆっくりした点滅 */
+            /* 繧・▲縺上ｊ縺励◆轤ｹ貊・*/
             5%   { opacity: 0.8; background: #f1c40f; }
             10%  { opacity: 0; }
             15%  { opacity: 0.9; background: #fff; }
             20%  { opacity: 0; }
             25%  { opacity: 1; background: #f39c12; }
             30%  { opacity: 0; }
-            /* 少し早くなる点滅 */
+            /* 蟆代＠譌ｩ縺上↑繧狗せ貊・*/
             35%  { opacity: 1; background: #e74c3c; }
             39%  { opacity: 0; }
             43%  { opacity: 1; background: #fff; }
             47%  { opacity: 0; }
             51%  { opacity: 1; background: #f1c40f; }
             55%  { opacity: 0; }
-            /* さらに早くなる点滅 */
+            /* 縺輔ｉ縺ｫ譌ｩ縺上↑繧狗せ貊・*/
             58%  { opacity: 1; background: #e74c3c; }
             61%  { opacity: 0; }
             64%  { opacity: 1; background: #f39c12; }
@@ -387,7 +387,7 @@
             73%  { opacity: 0; }
             75%  { opacity: 1; background: #e74c3c; }
             77%  { opacity: 0; }
-            /* 激しく点滅 (パパパパパッ) */
+            /* 豼縺励￥轤ｹ貊・(繝代ヱ繝代ヱ繝代ャ) */
             79%  { opacity: 1; background: #fff; }
             80%  { opacity: 0; }
             81%  { opacity: 1; background: #f1c40f; }
@@ -400,7 +400,7 @@
             88%  { opacity: 0; }
             89%  { opacity: 1; background: #e74c3c; }
             90%  { opacity: 0; }
-            /* クライマックスの超高速フラッシュ */
+            /* 繧ｯ繝ｩ繧､繝槭ャ繧ｯ繧ｹ縺ｮ雜・ｫ倬溘ヵ繝ｩ繝・す繝･ */
             91%  { opacity: 1; background: #fff; }
             92%  { opacity: 0; background: #e74c3c; }
             93%  { opacity: 1; background: #fff; }
@@ -410,10 +410,10 @@
             97%  { opacity: 1; background: #fff; }
             98%  { opacity: 0; background: #f39c12; }
             99%  { opacity: 1; background: #fff; }
-            100% { opacity: 1; background: #fff; } /* 最後は真っ白 */
+            100% { opacity: 1; background: #fff; } /* 譛蠕後・逵溘▲逋ｽ */
         }
         
-        /* 転生（ゆっくり暗転・ゆっくり明転）エフェクト用 */
+        /* 霆｢逕滂ｼ医ｆ縺｣縺上ｊ證苓ｻ｢繝ｻ繧・▲縺上ｊ譏手ｻ｢・峨お繝輔ぉ繧ｯ繝育畑 */
         .rebirth-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -427,7 +427,7 @@
             opacity: 1;
         }
 
-        /* レアアイテム・ポップアップ */
+        /* 繝ｬ繧｢繧｢繧､繝・Β繝ｻ繝昴ャ繝励い繝・・ */
         .rare-item-content {
             background: linear-gradient(135deg, #fffbeb, #ffebb3);
             border: 5px solid #f1c40f; 
@@ -468,7 +468,7 @@
             width: 70px; height: 70px;
             display: flex; align-items: center; justify-content: center;
         }
-        /* 回転する放射線（サンバースト） */
+        /* 蝗櫁ｻ｢縺吶ｋ謾ｾ蟆・ｷ夲ｼ医し繝ｳ繝舌・繧ｹ繝茨ｼ・*/
         .item-glow-bg::before {
             content: '';
             position: absolute;
@@ -479,7 +479,7 @@
             z-index: 0;
             opacity: 0.6;
         }
-        /* 後光の激しいパルス */
+        /* 蠕悟・縺ｮ豼縺励＞繝代Ν繧ｹ */
         .item-glow-bg::after {
             content: '';
             position: absolute;
@@ -535,13 +535,13 @@
             box-shadow: 0 0 0 #c0392b;
         }
 
-        /* --- バトル用 --- */
+        /* --- 繝舌ヨ繝ｫ逕ｨ --- */
         .battle-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--screen-bg);
             box-shadow: inset 0 0 0 4px var(--screen-text);
             display: none; flex-direction: column; z-index: 200; overflow: hidden;
-            border-radius: 8px; /* 画面の角丸に合わせる */
+            border-radius: 8px; /* 逕ｻ髱｢縺ｮ隗剃ｸｸ縺ｫ蜷医ｏ縺帙ｋ */
         }
         .battle-overlay.visible { display: flex; }
         
@@ -598,17 +598,17 @@
         }
         .battle-character canvas { 
             width: 100%; height: 100%; image-rendering: pixelated; 
-            background-color: var(--screen-bg); /* 背景を透過させない（実機の液晶色） */
+            background-color: var(--screen-bg); /* 閭梧勹繧帝城℃縺輔○縺ｪ縺・ｼ亥ｮ滓ｩ溘・豸ｲ譎ｶ濶ｲ・・*/
             border: 4px solid var(--screen-text);
             border-radius: 4px;
             box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
         } 
         
-        /* 敵は右上から */
+        /* 謨ｵ縺ｯ蜿ｳ荳翫°繧・*/
         .battle-character.enemy { top: 10px; right: 10px; }
-        /* 敵を反転させて自分の方を向かせる */
+        /* 謨ｵ繧貞渚霆｢縺輔○縺ｦ閾ｪ蛻・・譁ｹ繧貞髄縺九○繧・*/
         .battle-character.enemy canvas { transform: scaleX(-1); }
-        /* 自分は左下から */
+        /* 閾ｪ蛻・・蟾ｦ荳九°繧・*/
         .battle-character.mine { bottom: 10px; left: 10px; }
 
         .battle-character.attack-enemy { animation: attackAnimEnemy 0.6s cubic-bezier(0.4, -0.4, 0.2, 1.5); z-index: 205; }
@@ -621,14 +621,14 @@
 
         @keyframes attackAnimMine {
             0% { transform: translate(0, 0); }
-            30% { transform: translate(-10px, 10px); } /* 少し後ろに下がる（チャージ） */
-            60% { transform: translate(50px, -50px); } /* 突進 */
+            30% { transform: translate(-10px, 10px); } /* 蟆代＠蠕後ｍ縺ｫ荳九′繧具ｼ医メ繝｣繝ｼ繧ｸ・・*/
+            60% { transform: translate(50px, -50px); } /* 遯・ｲ */
             100% { transform: translate(0, 0); }
         }
         @keyframes attackAnimEnemy {
             0% { transform: translate(0, 0); }
-            30% { transform: translate(10px, -10px); } /* 少し後ろに下がる（チャージ） */
-            60% { transform: translate(-50px, 50px); } /* 突進 */
+            30% { transform: translate(10px, -10px); } /* 蟆代＠蠕後ｍ縺ｫ荳九′繧具ｼ医メ繝｣繝ｼ繧ｸ・・*/
+            60% { transform: translate(-50px, 50px); } /* 遯・ｲ */
             100% { transform: translate(0, 0); }
         }
         @keyframes hitAnim {
@@ -705,7 +705,7 @@
             text-align: center; display: none; animation: popUp 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
         }
 
-        /* --- 神器カットイン専用 --- */
+        /* --- 逾槫勣繧ｫ繝・ヨ繧､繝ｳ蟆ら畑 --- */
         .miracle-cutin-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: none; justify-content: center; align-items: center; z-index: 300;
@@ -771,7 +771,7 @@
             100% { opacity: 0; }
         }
 
-        /* --- 通信対戦(PvP)メニュー --- */
+        /* --- 騾壻ｿ｡蟇ｾ謌ｦ(PvP)繝｡繝九Η繝ｼ --- */
         .pvp-menu-overlay, .pvp-challenge-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(181, 198, 169, 0.95); z-index: 50; display: none;
@@ -795,19 +795,7 @@
             font-family: monospace; resize: none; border: 1px solid #7f8c8d;
         }
 
-        .zukan-detail-desc {
-            font-size: 0.8rem;
-            line-height: 1.6;
-            text-align: left;
-            margin: 10px 0;
-            color: #333;
-            background: rgba(0, 0, 0, 0.05);
-            padding: 10px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            flex: 1;
-            overflow-y: auto;
-        }
+        
 
         /* Scroll Fixes & App Native View */
         html, body { 
