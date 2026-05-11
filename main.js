@@ -809,6 +809,10 @@
             } catch (e) {
                 console.error("Failed to load state:", e);
             }
+            
+            // --- テスト用：強制的に10勝状態にする ---
+            battleWins = 10;
+            battleLosses = 0;
         }
 
         // --- 転生ロジック ---
