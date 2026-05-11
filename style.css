@@ -1,4 +1,4 @@
-﻿:root {
+:root {
             --device-bg: #4A90E2;    /* 遲蝉ｽ薙・濶ｲ繧貞ｰ代＠繧ｯ繝ｼ繝ｫ縺ｫ螟画峩 */
             --screen-bg: #B5C6A9;    /* 閭梧勹繝吶・繧ｹ繧貞ｰ代＠譏弱ｋ縺・ｷ代↓ */
             --screen-text: #0f380f;
@@ -7,7 +7,7 @@
 
         body {
             font-family: 'DotGothic16', sans-serif;
-            background: #e6f0ff;
+            background: var(--device-bg);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -30,6 +30,7 @@
             background: var(--device-bg);
             border-radius: 50px 50px 70px 70px;
             padding: 40px 30px;
+            box-sizing: border-box;
             box-shadow: 
                 inset -5px -5px 15px rgba(0,0,0,0.2),
                 inset 5px 5px 15px rgba(255,255,255,0.4),
@@ -105,6 +106,7 @@
             align-items: center;
             justify-content: center;
             flex-direction: column;
+            min-height: 0;
             position: relative;
             /* 繧ｭ繝｣繝ｳ繝舌せ縺ｮ蠕後ｍ縺ｫ縺・▲縺吶ｉ縺ｨ髱樒せ轣ｯ繝峨ャ繝医ｒ隕九○繧・*/
             background-image: 
@@ -115,95 +117,14 @@
         }
 
         #pixelCanvas {
-            width: 192px;  /* 24px * 8蛟肴僑螟ｧ */
-            height: 192px; /* 24px * 8蛟肴僑螟ｧ */
+            width: 100%;
+            height: 100%;
+            max-width: 192px;
+            max-height: 192px;
+            object-fit: contain;
             image-rendering: pixelated; /* 繝峨ャ繝医ｒ縺上▲縺阪ｊ陦ｨ遉ｺ */
             transition: transform 0.2s;
             filter: drop-shadow(2px 2px 0px rgba(15, 56, 15, 0.4));
-            position: relative;
-            z-index: 1; /* 繧ｭ繝｣繝ｳ繝舌せ繧呈焔蜑阪↓ */
-        }
-
-        /* --- 蜍晏茜謨ｰ縺ｫ蠢懊§縺溘く繝ｩ繧ｭ繝ｩ繧ｪ繝ｼ繝ｩ繧ｨ繝輔ぉ繧ｯ繝・--- */
-        .aura-effect {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 10px;
-            height: 10px;
-            pointer-events: none; /* 繧ｯ繝ｪ繝・け繧貞ｦｨ螳ｳ縺励↑縺・*/
-            z-index: 0; /* 繧ｭ繝｣繝ｳ繝舌せ縺ｮ螂･ */
-        }
-
-        /* 10蜍・ 謗ｧ縺医ａ縺ｪ繧ｭ繝ｩ繧ｭ繝ｩ繝峨ャ繝・*/
-        .aura-10::before {
-            content: '';
-            position: absolute;
-            width: 4px; height: 4px;
-            top: -2px; left: -2px;
-            box-shadow: 
-                -40px -40px 0 #fff, 40px -30px 0 #ffeb3b,
-                -25px 50px 0 #fff, 30px 40px 0 #ffeb3b,
-                -50px 10px 0 #fff, 50px -10px 0 #ffeb3b,
-                0 -60px 0 #ffeb3b, 0 60px 0 #fff;
-            animation: sparkle-10 3s infinite alternate;
-        }
-        @keyframes sparkle-10 {
-            0% { transform: scale(0.8) rotate(0deg); opacity: 0.3; }
-            100% { transform: scale(1.2) rotate(10deg); opacity: 0.8; }
-        }
-
-        /* 50蜍・ 蟆代＠豢ｾ謇九↑繧ｭ繝ｩ繧ｭ繝ｩ繝峨ャ繝・*/
-        .aura-50::before, .aura-50::after {
-            content: '';
-            position: absolute;
-            width: 6px; height: 6px;
-            top: -3px; left: -3px;
-            box-shadow: 
-                -50px -50px 0 #ffeb3b, 50px -40px 0 #ffc107,
-                -30px 60px 0 #ffeb3b, 40px 50px 0 #ffc107,
-                -60px 20px 0 #ffeb3b, 60px -20px 0 #ffc107,
-                -10px -70px 0 #ffeb3b, 10px 70px 0 #ffc107,
-                -70px -10px 0 #ffc107, 70px 25px 0 #ffeb3b;
-            animation: sparkle-50 2s infinite alternate ease-in-out;
-        }
-        .aura-50::after {
-            width: 4px; height: 4px;
-            top: -2px; left: -2px;
-            transform: rotate(45deg);
-            animation-delay: -1s;
-        }
-        @keyframes sparkle-50 {
-            0% { transform: scale(0.8) rotate(0deg); opacity: 0.5; filter: drop-shadow(0 0 2px #ffc107); }
-            100% { transform: scale(1.3) rotate(15deg); opacity: 1; filter: drop-shadow(0 0 5px #ffc107); }
-        }
-
-        /* 100蜍・ 譛繧よｴｾ謇九〒雎ｪ闖ｯ縺ｪ繧ｭ繝ｩ繧ｭ繝ｩ繝峨ャ繝・*/
-        .aura-100::before, .aura-100::after {
-            content: '';
-            position: absolute;
-            width: 8px; height: 8px;
-            top: -4px; left: -4px;
-            box-shadow: 
-                -60px -60px 0 #ffeb3b, 60px -50px 0 #ff9800,
-                -40px 70px 0 #fff, 50px 60px 0 #ffeb3b,
-                -70px 30px 0 #ff9800, 70px -30px 0 #fff,
-                -15px -80px 0 #ffeb3b, 15px 80px 0 #ff9800,
-                -80px -10px 0 #fff, 80px 35px 0 #ffeb3b,
-                -30px -30px 0 #ff9800, 30px -20px 0 #fff,
-                -50px 0px 0 #ffeb3b, 0px 50px 0 #fff;
-            animation: sparkle-100 1.5s infinite alternate ease-in-out;
-        }
-        .aura-100::after {
-            width: 5px; height: 5px;
-            top: -2px; left: -2px;
-            transform: rotate(30deg);
-            animation-duration: 1s;
-            animation-direction: alternate-reverse;
-        }
-        @keyframes sparkle-100 {
-            0% { transform: scale(0.8) rotate(0deg); opacity: 0.6; filter: drop-shadow(0 0 5px #ff9800); }
-            100% { transform: scale(1.5) rotate(25deg); opacity: 1; filter: drop-shadow(0 0 10px #ffeb3b); }
         }
 
         /* 謠ｺ繧後い繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ */
@@ -222,21 +143,21 @@
             position: absolute;
             top: 30px;
             left: 12px;
-            font-size: 1.15rem; /* 邏・.5蛟阪懷崎ｿ代￥縺ｫ諡｡螟ｧ縺励※隕冶ｪ肴ｧ繧｢繝・・ */
+            font-size: 1.15rem; /* 邏・.5蛟阪€懷€崎ｿ代￥縺ｫ諡｡螟ｧ縺励※隕冶ｪ肴€ｧ繧｢繝・・ */
             line-height: 1.5;
-            color: var(--screen-shadow);
+            color: var(--screen-text);
             z-index: 10;
             font-family: 'DotGothic16', sans-serif;
             text-shadow: none;
-            /* font-weight: bold; 竊舌％繧後ｒ蜑企勁縺励※繝峨ャ繝域─繧堤ｵｱ荳 */
+            font-weight: bold;
         }
 
         /* 繝励Ο繧ｰ繝ｬ繧ｹ繝舌・ */
         .progress-container {
-            border: 2px solid var(--screen-text);
-            height: 14px;
+            border: 3px solid var(--screen-text);
+            height: 28px;
             width: 100%;
-            margin-top: 10px;
+            margin-top: 15px;
             position: relative;
         }
         .progress-bar {
@@ -247,9 +168,12 @@
         }
         .progress-text {
             position: absolute;
-            top: -2px; left: 0; width: 100%;
-            text-align: center; font-size: 0.8rem;
+            top: 50%; left: 0; width: 100%;
+            transform: translateY(-50%);
+            text-align: center; font-size: 1.3rem;
             color: white; mix-blend-mode: difference;
+            line-height: 1;
+            font-weight: bold;
         }
 
         .stats-overlay {
@@ -331,28 +255,46 @@
             transition: opacity 1.0s ease-out;
         }
         .evolution-overlay.flashing {
-            animation: evolutionPulsate 3.0s step-end forwards;
+            animation: evolutionPulsate 6.0s step-end forwards;
         }
         @keyframes evolutionPulsate {
             0%   { opacity: 0; }
-            15%  { opacity: 1; }
+            8%   { opacity: 1; }
+            10%  { opacity: 0; }
+            20%  { opacity: 1; }
             22%  { opacity: 0; }
-            35%  { opacity: 1; }
-            40%  { opacity: 0; }
+            31%  { opacity: 1; }
+            33%  { opacity: 0; }
+            41%  { opacity: 1; }
+            43%  { opacity: 0; }
             50%  { opacity: 1; }
-            54%  { opacity: 0; }
-            62%  { opacity: 1; }
+            52%  { opacity: 0; }
+            56%  { opacity: 1; }
+            58%  { opacity: 0; }
+            63%  { opacity: 1; }
             65%  { opacity: 0; }
-            72%  { opacity: 1; }
-            74%  { opacity: 0; }
+            68%  { opacity: 1; }
+            70%  { opacity: 0; }
+            73%  { opacity: 1; }
+            75%  { opacity: 0; }
+            76%  { opacity: 1; }
+            78%  { opacity: 0; }
             80%  { opacity: 1; }
             82%  { opacity: 0; }
-            87%  { opacity: 1; }
-            88%  { opacity: 0; }
-            92%  { opacity: 1; }
-            93%  { opacity: 0; }
+            83%  { opacity: 1; }
+            84%  { opacity: 0; }
+            85%  { opacity: 1; }
+            86%  { opacity: 0; }
+            88%  { opacity: 1; }
+            89%  { opacity: 0; }
+            90%  { opacity: 1; }
+            91%  { opacity: 0; }
+            93%  { opacity: 1; }
+            94%  { opacity: 0; }
             95%  { opacity: 1; }
             96%  { opacity: 0; }
+            96.5% { opacity: 1; }
+            97%  { opacity: 0; }
             98%  { opacity: 1; }
             99%  { opacity: 0; }
             100% { opacity: 1; }
@@ -786,7 +728,7 @@
             background: var(--screen-bg); border: 2px solid var(--screen-text);
             color: var(--screen-text); padding: 10px; margin: 8px 0;
             font-family: 'DotGothic16', sans-serif; cursor: pointer; border-radius: 4px;
-            width: 85%; font-size: 1rem;
+            width: 85%; font-size: 1rem; font-weight: bold;
         }
         .pvp-btn:active { background: var(--screen-text); color: var(--screen-bg); }
         #challengeUrlText {
@@ -794,44 +736,84 @@
             margin: 10px 0; background: #000; padding: 5px; box-sizing: border-box;
             font-family: monospace; resize: none; border: 1px solid #7f8c8d;
         }
+@media (max-width: 600px) {
+    body { padding: 5px; }
+    .device {
+        max-width: 100%;
+        min-height: calc(100vh - 10px);
+        padding: 30px 15px;
+        justify-content: space-between;
+    }
+    .screen-container {
+        flex: 1;
+        margin: 15px 0;
+    }
+    .btn-round { width: 75px; height: 75px; font-size: 1.1rem; }
+    .btn-label { font-size: 0.95rem; margin-top: 5px; }
+    .device-title { font-size: 1.8rem; margin: 10px 0; }
+}
 
-        
+/* UI Updates */
+body, html { overflow-x: hidden; }
 
-        /* Scroll Fixes & App Native View */
-        html, body { 
-            max-width: 100vw; 
-            width: 100%; 
-            height: 100%; 
-            overflow: hidden; 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            overscroll-behavior: none; 
-        }
-        .test-panel { 
-            display: none !important; 
-        }
+.zukan-overlay::-webkit-scrollbar, .stats-overlay::-webkit-scrollbar, .pvp-menu-overlay::-webkit-scrollbar { width: 12px; background-color: rgba(255, 255, 255, 0.4); border-left: 1px solid rgba(0,0,0,0.1); }
+.zukan-overlay::-webkit-scrollbar-thumb, .stats-overlay::-webkit-scrollbar-thumb, .pvp-menu-overlay::-webkit-scrollbar-thumb { background-color: rgba(0, 0, 0, 0.6); border-radius: 6px; border: 2px solid rgba(255, 255, 255, 0.4); }
 
-        @media (max-width: 600px) {
-            .device { 
-                justify-content: flex-start !important; 
-                padding-top: max(80px, env(safe-area-inset-top) + 20px) !important; 
-                padding-bottom: max(60px, env(safe-area-inset-bottom) + 30px) !important; 
-                height: 100vh !important; 
-                height: 100dvh !important; 
-                max-height: 100dvh !important; 
-                overflow: hidden !important; 
-                border-radius: 0 !important;
-                box-shadow: none !important;
-            }
-            .screen-container { flex: 1 !important; margin-top: 0 !important; margin-bottom: 25px !important; display: flex; flex-direction: column; min-height: 0 !important; }
-            .screen { flex: 1 !important; height: auto !important; min-height: 0 !important; }
-            .controls { margin-top: 0 !important; margin-bottom: 10px !important; }
-        }
+.zukan-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+.zukan-canvas { width: 96px !important; height: 96px !important; }
+.zukan-name { font-size: 1.4rem !important; }
+.zukan-stage-title { font-size: 1.4rem !important; white-space: nowrap !important; }
 
-        /* Allow scrolling in overlays */
-        .stats-overlay, .zukan-overlay, .pvp-menu-overlay, .zukan-detail-overlay { 
-            overflow-y: auto !important; 
-            overflow-x: hidden !important; 
-            -webkit-overflow-scrolling: touch; 
-        }
+.controls { flex-wrap: wrap !important; max-width: 320px !important; gap: 15px 20px !important; margin: 15px auto 0 auto !important; }
+
+
+.controls { justify-content: center !important; }
+
+
+/* Scroll Fixes & Button Pos */
+html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; position: fixed; top: 0; left: 0; overscroll-behavior: none; }
+.stats-overlay, .zukan-overlay, .pvp-menu-overlay { overflow-y: scroll !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 600px) {
+    .device { padding: 10px 15px 15px 15px !important; min-height: 100vh !important; }
+    .screen-container { margin: 15px 0 0 0 !important; }
+    .controls { margin: auto auto 5px auto !important; }
+}
+
+
+/* Final spacing adjustments */
+@media (max-width: 600px) {
+    .device { 
+        justify-content: flex-start !important; 
+        padding-top: max(80px, env(safe-area-inset-top) + 20px) !important; 
+        padding-bottom: max(60px, env(safe-area-inset-bottom) + 30px) !important; 
+        height: 100vh !important; 
+        height: 100dvh !important; 
+        max-height: 100dvh !important; 
+        overflow: hidden !important; 
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+    .screen-container { flex: 1 !important; margin-top: 0 !important; margin-bottom: 25px !important; display: flex; flex-direction: column; min-height: 0 !important; }
+    .screen { flex: 1 !important; height: auto !important; min-height: 0 !important; }
+    .controls { margin-top: 0 !important; margin-bottom: 10px !important; }
+}
+
+
+/* Zukan Detail Popup */
+.zukan-detail-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: rgba(0, 0, 0, 0.85); display: none; z-index: 9999; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; overscroll-behavior: none; }
+.zukan-detail-overlay.visible { display: flex; }
+.zukan-detail-container { position: relative; background-color: #fcebed; border: 4px solid #8e624d; border-radius: 12px; width: 100%; max-width: 360px; max-height: 85vh; max-height: 85dvh; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; color: #333; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+.close-zukan-detail-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 2.0rem; line-height: 1; font-weight: bold; color: #8e624d; cursor: pointer; padding: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+.zukan-detail-top { display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; margin-top: 5px; }
+.zukan-detail-image-wrapper { width: 140px; height: 140px; margin-bottom: 12px; border: 2px solid #8e624d; background-color: #fff; border-radius: 4px; display: flex; justify-content: center; align-items: center; overflow: hidden; padding: 8px; }
+.zukan-detail-image-wrapper canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.zukan-detail-info { width: 100%; padding: 0; display: flex; flex-direction: column; align-items: center; overflow: visible; }
+.zukan-detail-name { font-size: 1.4rem; font-weight: bold; color: #8e624d; margin-bottom: 8px; text-align: center; }
+.zukan-detail-type { font-size: 1.1rem; font-weight: bold; margin-bottom: 4px; text-align: center; }
+.zukan-detail-stats { font-size: 1.0rem; white-space: pre-line; line-height: 1.3; text-align: center; }
+.zukan-detail-divider { border-bottom: 2px dashed #8e624d; margin-bottom: 10px; }
+.zukan-detail-desc { font-size: 1.25rem; line-height: 1.6; text-align: left; white-space: pre-wrap; flex: 1; min-height: 100px; height: auto; overflow-y: auto; padding-right: 5px; }
+.zukan-detail-desc::-webkit-scrollbar { width: 8px; background-color: rgba(142, 98, 77, 0.2); }
+.zukan-detail-desc::-webkit-scrollbar-thumb { background-color: #8e624d; border-radius: 4px; }
+
