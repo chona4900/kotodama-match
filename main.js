@@ -1571,6 +1571,13 @@
 
         function toggleAButton() {
             playButtonSound();
+
+            // 他のメニューを閉じる
+            const pvpOverlay = document.getElementById('pvpMenuOverlay');
+            if(pvpOverlay) pvpOverlay.classList.remove('visible');
+            const intokuOverlay = document.getElementById('intokuOverlay');
+            if(intokuOverlay) intokuOverlay.classList.remove('visible');
+
             if (overlayState === 0) {
                 overlayState = 1;
                 statsOverlayEl.classList.add('visible');
@@ -1595,6 +1602,10 @@
             statsOverlayEl.classList.remove('visible');
             oyatsuOverlayEl.classList.remove('visible');
             zukanOverlayEl.classList.remove('visible');
+            
+            const zukanDetail = document.getElementById('zukanDetailOverlay');
+            if(zukanDetail) zukanDetail.classList.remove('visible');
+
             // 図鑑のCanvasアニメーションループを止める
             const oldCanvases = zukanListEl.querySelectorAll('canvas');
             oldCanvases.forEach(c => {
@@ -3190,6 +3201,12 @@
         // --- URL通信対戦ロジック ---
         function openPvpMenu() {
             playButtonSound();
+
+            // 他のメニューを閉じる
+            closeOverlays();
+            const intokuOverlay = document.getElementById('intokuOverlay');
+            if(intokuOverlay) intokuOverlay.classList.remove('visible');
+
             document.getElementById('pvpMenuOverlay').classList.add('visible');
             document.getElementById('pvpMainMenu').style.display = 'flex';
             document.getElementById('urlContainer').style.display = 'none';
@@ -3305,6 +3322,12 @@
         // --- 陰徳システム ---
         function openIntokuModal() {
             playButtonSound();
+
+            // 他のメニューを閉じる
+            closeOverlays();
+            const pvpOverlay = document.getElementById('pvpMenuOverlay');
+            if(pvpOverlay) pvpOverlay.classList.remove('visible');
+
             const overlay = document.getElementById('intokuOverlay');
             if (overlay) overlay.classList.add('visible');
         }
