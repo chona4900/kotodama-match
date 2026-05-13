@@ -118,18 +118,6 @@
                     </div>
                 </div>
 
-                <!-- 図鑑詳細ポップアップ -->
-                <div class="celebration-overlay" id="zukanDetailOverlay">
-                    <div class="celebration-content" style="max-height: 80vh; display: flex; flex-direction: column; width: 90%; max-width: 300px; padding: 20px; box-sizing: border-box;">
-                        <div id="zukanDetailName" style="font-size: 1.2rem; font-weight: bold; color: #2c3e50; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px;">キャラ名</div>
-                        <div style="display: flex; justify-content: center; margin-bottom: 15px;">
-                            <canvas id="zukanDetailCanvas" width="24" height="24" style="width: 80px; height: 80px; image-rendering: pixelated; background: #B5C6A9; border: 2px solid #5a5a5a; border-radius: 4px; padding: 4px;"></canvas>
-                        </div>
-                        <div id="zukanDetailDesc" style="flex: 1; overflow-y: auto; font-size: 0.85rem; line-height: 1.6; text-align: left; color: #444; background: rgba(0, 0, 0, 0.05); padding: 12px; border-radius: 6px; white-space: pre-wrap; margin-bottom: 15px; min-height: 60px;"></div>
-                        <button class="close-stats-btn" style="margin-top: auto; border-radius: 4px; font-weight: bold; width: 100%;" onclick="hideZukanDetail()">とじる</button>
-                    </div>
-                </div>
-
                 <!-- 秘密のアイテム獲得ポップアップ -->
                 <div class="celebration-overlay" id="itemOverlay">
                     <div class="rare-item-content">
@@ -507,7 +495,26 @@
                 1 1 1 0 -0.5" />
         </filter>
     </svg>
-
+                <!-- Zukan Detail Overlay -->
+                <div class="zukan-detail-overlay" id="zukanDetailOverlay">
+                    <div class="zukan-detail-container">
+                        <button id="closeZukanDetailBtn" class="close-zukan-detail-btn">×</button>
+                        <div class="zukan-detail-top">
+                            <div class="zukan-detail-image-wrapper">
+                                <canvas id="zukanDetailCanvas" width="96" height="96"></canvas>
+                            </div>
+                            <div class="zukan-detail-info">
+                                <div id="zukanDetailName" class="zukan-detail-name">名前</div>
+                                <div id="zukanDetailType" class="zukan-detail-type">タイプ</div>
+                                <div id="zukanDetailStats" class="zukan-detail-stats">ステータス</div>
+                            </div>
+                        </div>
+                        <div class="zukan-detail-divider"></div>
+                        <div id="zukanDetailDesc" class="zukan-detail-desc">
+                            説明文
+                        </div>
+                    </div>
+                </div>
 
 
 </body>

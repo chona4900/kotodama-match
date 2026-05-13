@@ -1640,19 +1640,6 @@
             ultimate_3: 'バステトっち'
         };
 
-        const ZUKAN_DESC = {
-            childB: '狛犬は神社の入り口で\n魂の重たい気を祓う守り神です　口を開けた「阿（あ）」で良いエネルギーを取り入れ、閉じた「吽（うん）」で心と体に落とし込んでくれます\n狛犬と仲良くなるには\n鳥居をくぐって彼らの前に来たら、「いつも神様とこの場所をお守りくださり、ありがとうございます」と心の中で話しかけてみてくださいね',
-            childB_1: '迦楼羅は仏教では「天部（守護する存在）」「人の煩悩（毒）を喰らい尽くす」精神的な浄化の力が強い\n人々を救済する慈悲も持ち合わせている\n古い執着を焼き切る\nエネルギーを一気に上昇させる\n「本来の自分に戻る」',
-            ultimate_2: '「宇宙の中心」にいるひとり神\nかたちもなく古事記にも１回しか登場しない',
-            childC_2_3: '孔雀は、猛毒を持つサソリや蛇を好んで食べても美しい姿でパワフルで性質があります。そこから、「人間の心にある猛毒（煩悩や苦しみ）を喰らい尽くし、清浄な状態に変えてくれる」懐の深い神様',
-            childB_2_4: '現最強の軍神・雷神であり、剣の神実的な豊かさ＋見えない運の両方 地震は巨大な「大鯰（おおなまず）」が暴れて起こるものと信じられていましたが、タケミカヅチはその鯰を「要石（かなめいし）」で押さえつけて鎮めている神様',
-            childC_1_4: 'たけみかずちの神と兄弟　静かだけどめちゃ強い武神\n「戦う」よりも整えて勝つタイプ\n秩序・ルール・調和を司る　フツフツとひらめきがいただけるかも',
-            childB_2: '鳳凰は「魂の完全な解放」と「祝福」のシンボルです\n過去の傷や深刻さを手放し「フワッと軽い心」明るい人のもとへ、圧倒的な幸運を運びます\nものごとを俯瞰できて、愛と豊かさを周りを笑顔にする調和のエネルギーです',
-            childC_1: '猫自体がスピリチュアルな存在です\n右手でお金、左手で人を招く招き猫は、宇宙からの福をキャッチするアンテナです\n「今日もありがとう」と万物に感謝することで、豊かさにあふれるでしょう',
-            ultimate_3: '古代エジプトの女神バステトは、強力な魔除けと守護の力\n闇を見通す直感力と女性性を授け、直感と創造の女神です\n喜びの波動でいることが最大の豊かさを生むことを教えてくれます',
-            childC_2: '宝船は、宇宙の無尽蔵の豊かさがあなたに向かってきているサインです\n睡眠中の潜在意識を浄化し、魂を幸運体質にリセットします\n無理に抗うのではなく、宇宙の大きな「幸運の波に乗る」ことです'
-        };
-
         function renderZukan() {
             // 前回のCanvasアニメーションタイマーをクリア
             const oldCanvases = zukanListEl.querySelectorAll('canvas');
@@ -1688,8 +1675,6 @@
                     
                     if (true || unlockedForms.includes(key)) { // FIXME: テスト確認用に全キャラ表示中
                         nameEl.textContent = charNames[key] || key;
-                        item.onclick = () => showZukanDetail(key);
-                        item.style.cursor = 'pointer';
                         item.appendChild(can);
                         item.appendChild(nameEl);
                         grid.appendChild(item);
@@ -1697,7 +1682,44 @@
                         const zctx = can.getContext('2d');
                         renderCanvasArt(key, zctx);
                         
+                        item.addEventListener('click', () => {
+                            const desc = ZUKAN_DESCRIPTIONS[key];
+                            document.getElementById('zukanDetailName').textContent = charNames[key] || key;
+                            
+                            const typeEl = document.getElementById('zukanDetailType');
+                            const statsEl = document.getElementById('zukanDetailStats');
+                            const descEl = document.getElementById('zukanDetailDesc');
 
+                            if (desc) {
+                                if (desc.type) {
+                                    typeEl.style.display = 'block';
+                                    typeEl.textContent = 'タイプ：' + desc.type;
+                                } else {
+                                    typeEl.style.display = 'none';
+                                }
+                                
+                                if (desc.stats) {
+                                    statsEl.style.display = 'block';
+                                    statsEl.textContent = desc.stats;
+                                } else {
+                                    statsEl.style.display = 'none';
+                                }
+                                
+                                descEl.textContent = desc.text;
+                            } else {
+                                typeEl.style.display = 'none';
+                                statsEl.style.display = 'none';
+                                descEl.textContent = '（詳細データはまだありません）';
+                            }
+                            
+                            const detailCan = document.getElementById('zukanDetailCanvas');
+                            const detailCtx = detailCan.getContext('2d');
+                            detailCtx.clearRect(0,0,detailCan.width,detailCan.height);
+                            renderCanvasArt(key, detailCtx);
+                            
+                            playButtonSound();
+                            document.getElementById('zukanDetailOverlay').classList.add('visible');
+                        });
                     } else {
                         nameEl.textContent = '???';
                         const zctx = can.getContext('2d');
@@ -1709,9 +1731,6 @@
                         zctx.textBaseline = 'middle';
                         zctx.fillText('?', 12, 12);
                         
-                        // スマホのクリック等で情報を見れるようにするならここも調整
-                        item.onclick = () => showZukanDetail(itemId);
-                        item.style.cursor = 'pointer';
                         item.appendChild(can);
                         item.appendChild(nameEl);
                         grid.appendChild(item);
@@ -1786,44 +1805,6 @@
                 itemGrid.appendChild(item);
             }
             zukanListEl.appendChild(itemGrid);
-        }
-
-        function showZukanDetail(key) {
-            const overlay = document.getElementById('zukanDetailOverlay');
-            const nameEl = document.getElementById('zukanDetailName');
-            const canvas = document.getElementById('zukanDetailCanvas');
-            const descEl = document.getElementById('zukanDetailDesc');
-
-            const secretItem = SECRET_ITEMS_DATA.find(i => i.id === key);
-
-            nameEl.textContent = charNames[key] || (secretItem ? secretItem.name : key);
-            descEl.textContent = ZUKAN_DESC[key] || "（まだくわしい説明がないみたい…）";
-
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // アイテムかキャラクターかで描画方法を分ける
-            if (secretItem && secretItem.src) {
-                const img = new Image();
-                img.src = secretItem.src;
-                img.onload = () => {
-                    canvas.width = 192; canvas.height = 192;
-                    const t = secretItem.trim || 0;
-                    const sW = img.width * (1 - t * 2);
-                    const sH = img.height * (1 - t * 2);
-                    ctx.drawImage(img, img.width * t, img.height * t, sW, sH, 0, 0, 192, 192);
-                    applyPixelFilter(ctx, 192, 192, 'remove-white');
-                };
-            } else {
-                renderCanvasArt(key, ctx);
-            }
-
-            playButtonSound();
-            overlay.classList.add('visible');
-        }
-
-        function hideZukanDetail() {
-            document.getElementById('zukanDetailOverlay').classList.remove('visible');
         }
 
         const celebrationOverlayEl = document.getElementById('celebrationOverlay');
