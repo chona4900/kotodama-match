@@ -1800,7 +1800,7 @@
             descEl.textContent = ZUKAN_DESC[key] || "（まだくわしい説明がないみたい…）";
 
             const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 96, 96);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             // アイテムかキャラクターかで描画方法を分ける
             if (secretItem && secretItem.src) {

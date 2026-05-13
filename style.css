@@ -1,4 +1,4 @@
-﻿:root {
+:root {
             --device-bg: #4A90E2;    /* 驕ｲ陜会ｽｽ阮吶・豼ｶ・ｲ郢ｧ雋橸ｽｰ莉｣・郢ｧ・ｯ郢晢ｽｼ郢晢ｽｫ邵ｺ・ｫ陞溽判蟲ｩ */
             --screen-bg: #B5C6A9;    /* 髢ｭ譴ｧ蜍ｹ郢晏生繝ｻ郢ｧ・ｹ郢ｧ雋橸ｽｰ莉｣・隴丞ｼｱ・狗ｸｺ繝ｻ・ｷ莉｣竊・*/
             --screen-text: #0f380f;
@@ -196,30 +196,7 @@
         .zukan-canvas { width: 48px; height: 48px; image-rendering: pixelated; background: #B5C6A9; border: 1px solid #5a5a5a; border-radius: 2px; }
         .zukan-name { font-size: 0.55rem; margin-top: 4px; text-align: center; width: 100%; word-break: break-all; line-height: 1.1; font-weight: bold; }
 
-        /* 螳牙・縺ｪ蝗ｳ髑題ｩｳ邏ｰ繧ｪ繝ｼ繝舌・繝ｬ繧､ (邨ｶ蟇ｾ驟咲ｽｮ縺ｧ繝ｬ繧､繧｢繧ｦ繝亥ｴｩ繧後ｒ髦ｲ縺・ */
-        .zukan-detail-overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%;
-            background: rgba(181, 198, 169, 0.98);
-            display: none; flex-direction: column; align-items: center; justify-content: flex-start;
-            z-index: 300; padding: max(40px, env(safe-area-inset-top) + 20px) 20px 20px 20px; box-sizing: border-box;
-            overflow-y: auto;
-        }
-        .zukan-detail-overlay.visible { display: flex; }
-        .zukan-detail-content {
-            background: #fdfdfd; border: 4px double #5a5a5a; padding: 20px; 
-            width: 90%; max-width: 320px; color: #333; font-family: 'DotGothic16', sans-serif;
-            display: flex; flex-direction: column; align-items: center;
-            box-shadow: 4px 4px 0 rgba(0,0,0,0.1); margin-bottom: 20px;
-        }
-        .close-detail-btn {
-            background: #5a5a5a; color: white; border: none; padding: 8px 20px; border-radius: 20px;
-            font-family: 'DotGothic16', sans-serif; cursor: pointer; margin-bottom: 15px;
-            box-shadow: 0 4px 0 #333; font-weight: bold;
-        }
-        .close-detail-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #333; }
-        .zukan-detail-name { font-size: 1.5rem; font-weight: bold; border-bottom: 2px solid #5a5a5a; width: 100%; text-align: center; margin-bottom: 15px; padding-bottom: 5px; }
-        .zukan-detail-desc { font-size: 1rem; line-height: 1.6; text-align: left; width: 100%; white-space: pre-wrap; word-break: break-all; font-weight: bold; }
-        #zukanDetailCanvas { background: #B5C6A9; border: 2px solid #5a5a5a; border-radius: 4px; margin-bottom: 15px; image-rendering: pixelated; }
+
 
 
 
