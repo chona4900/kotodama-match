@@ -1843,7 +1843,7 @@
             const itemGrid = document.createElement('div');
             itemGrid.className = 'zukan-grid';
 
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < SECRET_ITEMS_DATA.length; i++) {
                 const itemData = SECRET_ITEMS_DATA[i];
                 const item = document.createElement('div');
                 item.className = 'zukan-item';
@@ -1874,7 +1874,7 @@
                         descEl.textContent = itemData.desc || '（詳細データはまだありません）';
                         
                         const zCtxDetail = document.getElementById('zukanDetailCanvas').getContext('2d');
-                        zCtxDetail.clearRect(0,0,192,192);
+                        zCtxDetail.clearRect(0,0,96,96);
                         const imgDetail = new Image();
                         imgDetail.src = itemData.src;
                         imgDetail.onload = () => {
@@ -1883,10 +1883,10 @@
                             const sy = imgDetail.height * t;
                             const sW = imgDetail.width * (1 - t * 2);
                             const sH = imgDetail.height * (1 - t * 2);
-                            zCtxDetail.drawImage(imgDetail, sx, sy, sW, sH, 0, 0, 192, 192);
-                            applyPixelFilter(zCtxDetail, 192, 192, 'remove-white');
+                            zCtxDetail.drawImage(imgDetail, sx, sy, sW, sH, 0, 0, 96, 96);
+                            applyPixelFilter(zCtxDetail, 96, 96, 'remove-white');
                         };
-                        document.getElementById('zukanDetailOverlay').style.display = 'flex';
+                        document.getElementById('zukanDetailOverlay').classList.add('visible');
                     });
 
                     if (itemData.src) {
