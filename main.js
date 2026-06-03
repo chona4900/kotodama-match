@@ -1617,6 +1617,12 @@
         }
 
         const ZUKAN_DESCRIPTIONS = { 
+            childA_1_4: { text: '限りない命を持つことから「無量寿如来」、阿弥陀如来は永遠のいのちをもち、まばゆい光で人々を照らし「無量光如来」とも呼ばれ「南無阿弥陀仏」と唱えるすべての人を、必ず極楽浄土へ導くといわれます。極楽浄土とは、宇宙の西の果てにある阿弥陀如来の住む世界のことで、西方極楽浄土ともいいます。苦しみのない理想の世界、この上なく楽しい世界です' },
+            childA_2_4: { text: '本面（本来の顔）の周囲や頭上に11の顔（または10の顔と最頂部の仏面）を持ちます。これらはすべての方向を見渡すためのものであらゆる方向から人々を見守り、救いの手を差し伸べる仏教の菩薩（観音菩薩の変化身）病気治癒、財福授与、災難除けなどの現世利益があるとされます。' },
+            childB_2_1: { text: '四神で朱雀は南方を守護する神獣です。火の象徴。南方を守護します。。美しい赤い翼を持ち「太陽」「情熱」「発展」「名声」「カリスマ性」を象徴します。大きな翼で災厄を払い、幸運や平安、人気運を引き寄せる強力なエネルギーを持つとされています。' },
+            childB_2_2: { text: '密教では宇宙の根源をなす中心的な仏さまです。偉大な光で闇をてらします密教では二つの世界があります。大日には「おおいなる太陽」唱えることで功徳が得られるとされる「真言」があります。金剛界は何があっても壊れない智慧：ご真言はオン・バサラ・ダトバン　胎蔵界とは事象の根元を内在の世界に宿っている（森羅万象）：オン・アビラウンケン　唱えれパワーみなぎるよ' },
+            childC_2_1: { text: '七福神の一柱です。仏法や人々を悪から守る最強の武神としての力強さから「勝運・開運」、財宝の神ともいわれ「金運・商売繁盛」上杉謙信が信仰していた。四天王の1人として数えられるときは「多聞天（たもんてん）」と呼ばれます。これは、お釈迦様の教えを一番多く聞いていた、という逸話もある' },
+            childB_1_3: { text: '七福神の一柱で、長い杖（つえ）を手にして、長いひげをたくわえた姿の寿老人。延命長寿、家庭円満を授ける神様です。道教の仙人で、南極老人星と呼ばれ星の化身とされています。この星は、南の空の低い場所に現れ、様々な条件がそろった時でないと見えない星です。この星が見えたら長生きするといわれるからさがしてみてね。' },
             childA_1: { text: '無限の豊かさの象徴。脱皮を繰り返す姿が「無限の再生（お金が循環して返ってくる）」を意味します。海千山千のことわざで海で千年、山で千年生きた蛇が龍になる' },
             childA_2: { text: '泥の中でも美しく咲き誇る蓮（笑顔でいる人が美しいという教え）「5つの徳」といわれ①どのように良くない環境であっても、心は健やかに笑顔で明るく②唯一無二の自分自身を大切に③美しい心を育む④一人が悟りに至れば多くの人を幸せに導ける⑤自我やむさぶる欲を無にしてお天道様に心を向けましょう' },
             childC: { text: '大黒天の持ち物で、振ることで欲しいもの願い事を唱えて振ると願いどおりの物があらわれる効果特に財運アップ！商売繁盛が有名ですが、一寸法師が鬼退治で鬼から手に入れた打ち出の小づちで、大きくなることができ、富も手に入れ、お姫様と結ばれた' },
@@ -1856,6 +1862,33 @@
                 
                 if (itemData && (true || unlockedItems.includes(itemData.id))) {
                     nameEl.textContent = itemData.name;
+                    
+                    item.addEventListener('click', () => {
+                        document.getElementById('zukanDetailName').textContent = itemData.name;
+                        const typeEl = document.getElementById('zukanDetailType');
+                        const statsEl = document.getElementById('zukanDetailStats');
+                        const descEl = document.getElementById('zukanDetailDesc');
+                        
+                        typeEl.style.display = 'none';
+                        statsEl.style.display = 'none';
+                        descEl.textContent = itemData.desc || '（詳細データはまだありません）';
+                        
+                        const zCtxDetail = document.getElementById('zukanDetailCanvas').getContext('2d');
+                        zCtxDetail.clearRect(0,0,192,192);
+                        const imgDetail = new Image();
+                        imgDetail.src = itemData.src;
+                        imgDetail.onload = () => {
+                            const t = itemData.trim || 0;
+                            const sx = imgDetail.width * t;
+                            const sy = imgDetail.height * t;
+                            const sW = imgDetail.width * (1 - t * 2);
+                            const sH = imgDetail.height * (1 - t * 2);
+                            zCtxDetail.drawImage(imgDetail, sx, sy, sW, sH, 0, 0, 192, 192);
+                            applyPixelFilter(zCtxDetail, 192, 192, 'remove-white');
+                        };
+                        document.getElementById('zukanDetailOverlay').style.display = 'flex';
+                    });
+
                     if (itemData.src) {
                         const img = new Image();
                         img.src = itemData.src;
