@@ -1873,8 +1873,11 @@
                         statsEl.style.display = 'none';
                         descEl.textContent = itemData.desc || '（詳細データはまだありません）';
                         
-                        const zCtxDetail = document.getElementById('zukanDetailCanvas').getContext('2d');
-                        zCtxDetail.clearRect(0,0,96,96);
+                        const detailCan = document.getElementById('zukanDetailCanvas');
+                        const zCtxDetail = detailCan.getContext('2d');
+                        detailCan.width = 192;
+                        detailCan.height = 192;
+                        zCtxDetail.clearRect(0,0,192,192);
                         const imgDetail = new Image();
                         imgDetail.src = itemData.src;
                         imgDetail.onload = () => {
@@ -1883,8 +1886,10 @@
                             const sy = imgDetail.height * t;
                             const sW = imgDetail.width * (1 - t * 2);
                             const sH = imgDetail.height * (1 - t * 2);
-                            zCtxDetail.drawImage(imgDetail, sx, sy, sW, sH, 0, 0, 96, 96);
-                            applyPixelFilter(zCtxDetail, 96, 96, 'remove-white');
+                            zCtxDetail.drawImage(imgDetail, sx, sy, sW, sH, 0, 0, 192, 192);
+                            if (itemData.filter !== 'none') {
+                                applyPixelFilter(zCtxDetail, 192, 192, 'remove-white');
+                            }
                         };
                         document.getElementById('zukanDetailOverlay').classList.add('visible');
                     });
@@ -1905,7 +1910,9 @@
                             const sH = img.height * (1 - t * 2);
                             
                             zctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
-                            applyPixelFilter(zctx, 192, 192, 'remove-white');
+                            if (itemData.filter !== 'none') {
+                                applyPixelFilter(zctx, 192, 192, 'remove-white');
+                            }
                         };
                     }
                 } else {
@@ -2130,13 +2137,13 @@
 
             // キャンバス描画
             const ictx = itemPopupCanvas.getContext('2d');
-            ictx.clearRect(0, 0, 24, 24);
+            itemPopupCanvas.width = 192;
+            itemPopupCanvas.height = 192;
+            ictx.clearRect(0, 0, 192, 192);
             if (itemObj.src) {
                 const img = new Image();
                 img.src = itemObj.src;
                 img.onload = () => {
-                    itemPopupCanvas.width = 192;
-                    itemPopupCanvas.height = 192;
                     itemPopupCanvas.style.imageRendering = 'auto'; // 滑らかに縮小
                     ictx.filter = "none";
                     
@@ -2147,7 +2154,9 @@
                     const sH = img.height * (1 - t * 2);
                     
                     ictx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
-                    applyPixelFilter(ictx, 192, 192, 'remove-white');
+                    if (itemObj.filter !== 'none') {
+                        applyPixelFilter(ictx, 192, 192, 'remove-white');
+                    }
                 };
             }
         }
