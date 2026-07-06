@@ -658,6 +658,8 @@
                     
                     if (filterType === 'remove-white') {
                         a_out = -sum + 2.5;
+                    } else if (filterType === 'remove-grey') {
+                        a_out = -sum + 1.5;
                     } else if (filterType === 'remove-black') {
                         a_out = sum - 0.5;
                     }
@@ -1888,7 +1890,7 @@
                             const sH = imgDetail.height * (1 - t * 2);
                             zCtxDetail.drawImage(imgDetail, sx, sy, sW, sH, 0, 0, 192, 192);
                             if (itemData.filter !== 'none') {
-                                applyPixelFilter(zCtxDetail, 192, 192, 'remove-white');
+                                applyPixelFilter(zCtxDetail, 192, 192, itemData.filter || 'remove-white');
                             }
                         };
                         document.getElementById('zukanDetailOverlay').classList.add('visible');
@@ -1911,7 +1913,7 @@
                             
                             zctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
                             if (itemData.filter !== 'none') {
-                                applyPixelFilter(zctx, 192, 192, 'remove-white');
+                                applyPixelFilter(zctx, 192, 192, itemData.filter || 'remove-white');
                             }
                         };
                     }
