@@ -236,12 +236,12 @@
             "今日一日自分に優しく<br>人に優しくでいこう♪"
         ];
         
-        let currentStage = 2; // 第3段階
-        let currentForm = 'childA_1'; // 白蛇っち
+        let currentStage = 0;
+        let currentForm = 'egg';
         let isSick = false;
         let sickRecoveryCount = 0;
         let lastInteractionTimestamp = Date.now();
-        let unlockedForms = []; // 図鑑解放リスト
+        let unlockedForms = ['egg']; // 図鑑解放リスト
         let unlockedItems = []; // 獲得済み秘密のアイテムリスト
         let finalEvolutionTimestamp = null; // 最終進化に到達した時刻
         

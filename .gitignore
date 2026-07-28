@@ -17,3 +17,13 @@ Thumbs.db
 # Build outputs
 /www/
 /dist/
+
+# Apple signing materials (never commit private keys or provisioning profiles)
+/ios_distribution.key
+/ios_distribution.p12
+/ios_distribution.cer
+/ios_distribution.csr
+/Kotodama_Match_App_Store.mobileprovision
+/p12_base64.txt
+/pp_base64.txt
+/CertificateSigningRequest.certSigningRequest

@@ -1,9 +1,6 @@
-name: iOS Build
+name: iOS Release Validation
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -39,12 +36,12 @@ jobs:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           # create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(uuidgen)
 
           # import certificate and provisioning profile from secrets
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
@@ -82,7 +79,7 @@ jobs:
             -allowProvisioningUpdates \
             CODE_SIGN_STYLE="Manual" \
             DEVELOPMENT_TEAM="72SZ49GXQU" \
-            PROVISIONING_PROFILE_SPECIFIER="Kotodama Match App Store" \
+            PROVISIONING_PROFILE_SPECIFIER="Kotodama Match App Store 2026" \
             CODE_SIGN_IDENTITY="Apple Distribution"
           
           # Export ipa
@@ -99,25 +96,6 @@ jobs:
         with:
           name: app-ipa
           path: ios/App/build/App.ipa
-
-      - name: Upload app to TestFlight
-        env:
-          API_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys/
-          # Scrub all variables of hidden characters and newlines
-          CLEAN_KEY_ID=$(echo "$KEY_ID" | tr -d ' \t\n\r')
-          CLEAN_ISSUER_ID=$(echo "$ISSUER_ID" | tr -d ' \t\n\r')
-          CLEAN_B64=$(echo "$API_KEY" | sed 's/-----BEGIN PRIVATE KEY-----//g' | sed 's/-----END PRIVATE KEY-----//g' | tr -d ' \t\n\r')
-          
-          # Reconstruct the PEM file with proper 64-character line breaks
-          echo "-----BEGIN PRIVATE KEY-----" > ~/.appstoreconnect/private_keys/AuthKey_${CLEAN_KEY_ID}.p8
-          echo "$CLEAN_B64" | fold -w 64 >> ~/.appstoreconnect/private_keys/AuthKey_${CLEAN_KEY_ID}.p8
-          echo "-----END PRIVATE KEY-----" >> ~/.appstoreconnect/private_keys/AuthKey_${CLEAN_KEY_ID}.p8
-          
-          xcrun altool --upload-app -f ios/App/build/App.ipa -t ios --apiKey "$CLEAN_KEY_ID" --apiIssuer "$CLEAN_ISSUER_ID"
 
       - name: Clean up keychain and provisioning profile
         if: ${{ always() }}

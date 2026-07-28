@@ -9,14 +9,15 @@
   "scripts": {
     "build": "node build.js",
     "dev": "npx live-server",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node scripts/release-preflight.js",
+    "release:preflight": "node scripts/release-preflight.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@capacitor-community/speech-recognition": "^7.0.1",
+    "@kotodama/speech-recognition": "file:plugins/kotodama-speech-recognition",
     "@capacitor/android": "^8.3.0",
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.3.0",

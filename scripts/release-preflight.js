@@ -1,0 +1,69 @@
+const { execFileSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const root = path.resolve(__dirname, '..');
+const errors = [];
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), 'utf8');
+}
+
+function requireText(relativePath, expected) {
+  if (!fs.existsSync(path.join(root, relativePath))) {
+    errors.push(`${relativePath} がありません`);
+    return;
+  }
+  if (expected && !read(relativePath).includes(expected)) {
+    errors.push(`${relativePath} に必要な設定がありません: ${expected}`);
+  }
+}
+
+requireText('index.html', 'privacy.html');
+requireText('privacy.html', 'プライバシーポリシー');
+requireText('support.html', 'コトダマっち サポート');
+requireText('data.js', "let currentStage = 0");
+requireText('data.js', "let currentForm = 'egg'");
+requireText('ios/App/App/Info.plist', 'NSSpeechRecognitionUsageDescription');
+requireText('ios/App/App/Info.plist', 'NSMicrophoneUsageDescription');
+requireText('plugins/kotodama-speech-recognition/Package.swift', 'KotodamaSpeechRecognition');
+
+const main = read('main.js');
+for (const forbidden of ["wordCounts['愛してます'] = 2980", 'battleWins = 100', 'true || unlockedForms', 'generateChallengeUrl']) {
+  if (main.includes(forbidden)) errors.push(`main.js に開発用コードが残っています: ${forbidden}`);
+}
+
+try {
+  execFileSync(process.execPath, ['--check', 'main.js'], { cwd: root, stdio: 'pipe' });
+} catch {
+  errors.push('main.js の構文チェックに失敗しました');
+}
+
+const secretFiles = [
+  'ios_distribution.key',
+  'ios_distribution.p12',
+  'ios_distribution.cer',
+  'ios_distribution.csr',
+  'Kotodama_Match_App_Store.mobileprovision',
+  'p12_base64.txt',
+  'pp_base64.txt',
+  'CertificateSigningRequest.certSigningRequest',
+];
+
+try {
+  const tracked = execFileSync('git', ['ls-files', '--', ...secretFiles], { cwd: root, encoding: 'utf8' })
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean);
+  if (tracked.length) errors.push(`署名情報がGit追跡中です: ${tracked.join(', ')}`);
+} catch {
+  errors.push('Gitの署名情報チェックに失敗しました');
+}
+
+if (errors.length) {
+  console.error('Release preflight failed:');
+  errors.forEach((error) => console.error(`- ${error}`));
+  process.exit(1);
+}
+
+console.log('Release preflight passed.');

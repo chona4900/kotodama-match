@@ -61,8 +61,7 @@
 
         let wordCounts = {};
         allWords.forEach(w => wordCounts[w] = 0);
-        wordCounts['愛してます'] = 2980; // テスト用
-        let totalCount = 2980; // テスト用
+        let totalCount = 0;
         let intokuPower = 0;
         let battleWins = 0;
         let battleLosses = 0;
@@ -812,9 +811,6 @@
                 console.error("Failed to load state:", e);
             }
             
-            // --- テスト用：強制的に100勝状態にする ---
-            battleWins = 100;
-            battleLosses = 0;
         }
 
         // --- 転生ロジック ---
@@ -876,8 +872,15 @@
             }
             renderCanvasArt(currentForm, ctx);
             updateUI();
-            createTestButtons();
-            renderPreviewGallery(); // ギャラリーの描画
+            if (!localStorage.getItem('kotodama_onboarding_seen')) {
+                document.getElementById('onboardingOverlay').classList.add('visible');
+            }
+        }
+
+        function dismissOnboarding() {
+            playButtonSound();
+            localStorage.setItem('kotodama_onboarding_seen', 'true');
+            document.getElementById('onboardingOverlay').classList.remove('visible');
         }
 
         function renderCanvasArt(key, targetCtx) {
@@ -1152,6 +1155,12 @@
                 progressTextEl.textContent = `${totalCount} 回`;
             } else {
                 progressTextEl.textContent = `${totalCount} / ${denominator}`;
+            }
+            const progressContainer = document.getElementById('progressContainer');
+            if (progressContainer) {
+                progressContainer.setAttribute('aria-valuenow', String(totalCount));
+                progressContainer.setAttribute('aria-valuemax', denominator === 'MAX' ? String(totalCount) : String(denominator));
+                progressContainer.setAttribute('aria-valuetext', denominator === 'MAX' ? `${totalCount}回。最大進化済み` : `${totalCount}回。次の進化まで${denominator}回`);
             }
 
             // メイン画面のステータス表示を更新
@@ -1767,7 +1776,7 @@
                     const nameEl = document.createElement('div');
                     nameEl.className = 'zukan-name';
                     
-                    if (true || unlockedForms.includes(key)) { // FIXME: テスト確認用に全キャラ表示中
+                    if (unlockedForms.includes(key)) {
                         nameEl.textContent = charNames[key] || key;
                         item.appendChild(can);
                         item.appendChild(nameEl);
@@ -1833,7 +1842,7 @@
                 zukanListEl.appendChild(grid);
             });
 
-            // --- 秘密のアイテム枠 (テスト用6枠) ---
+            // --- 秘密のアイテム枠 ---
             const itemTitle = document.createElement('div');
             itemTitle.className = 'zukan-stage-title';
             itemTitle.style.marginTop = '15px';
@@ -1862,7 +1871,7 @@
                 
                 const zctx = can.getContext('2d');
                 
-                if (itemData && (true || unlockedItems.includes(itemData.id))) {
+                if (itemData && unlockedItems.includes(itemData.id)) {
                     nameEl.textContent = itemData.name;
                     
                     item.addEventListener('click', () => {
@@ -2229,19 +2238,26 @@
 
         function resetGame() {
             playButtonSound();
-            if(confirm("データをリセットして第3段階（進化20回前）からテストしますか？")){
-                currentStage = 2; // 第3段階
-                currentForm = 'childA_1'; // 白蛇っち
-                totalCount = 2980;
+            if(confirm("すべての育成データを削除して、タマゴからやり直しますか？")){
+                currentStage = 0;
+                currentForm = 'egg';
+                totalCount = 0;
                 allWords.forEach(w => wordCounts[w] = 0);
-                wordCounts['愛してます'] = 2980; // テスト用
+                intokuPower = 0;
+                battleWins = 0;
+                battleLosses = 0;
                 isSick = false;
                 sickRecoveryCount = 0;
+                lastInteractionTimestamp = Date.now();
+                finalEvolutionTimestamp = null;
+                unlockedForms = ['egg'];
+                unlockedItems = [];
                 canvas.classList.remove('bouncing');
                 statusTextEl.textContent = "マイクをオンにしてね";
                 renderCanvasArt(currentForm, ctx);
                 updateUI();
                 closeOverlays();
+                saveState();
             }
         }
 
@@ -2460,12 +2476,19 @@
             } else {
                 if (useNativeSpeech) {
                     try {
-                        const hasPerm = await window.Capacitor.Plugins.SpeechRecognition.hasPermission();
-                        if (!hasPerm.permission) {
-                            await window.Capacitor.Plugins.SpeechRecognition.requestPermission();
+                        const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
+                        const permissions = await speechPlugin.checkPermissions();
+                        if (permissions.speechRecognition !== 'granted') {
+                            const requested = await speechPlugin.requestPermissions();
+                            if (requested.speechRecognition !== 'granted') {
+                                statusTextEl.textContent = 'マイクの許可が必要です';
+                                return;
+                            }
                         }
                     } catch (e) {
                         console.error('Permission request failed', e);
+                        statusTextEl.textContent = 'マイクを使えるように設定してください';
+                        return;
                     }
                 }
                 startMic();
@@ -2476,24 +2499,33 @@
         
         async function startMic(){ 
             if (useNativeSpeech) {
-                isListening = true;
-                micBtnEl.classList.add('mic-active');
                 nativeInterimMatchCounts = {};
-                
-                window.Capacitor.Plugins.SpeechRecognition.addListener('partialResults', (data) => {
+                const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
+                await speechPlugin.removeAllListeners();
+                await speechPlugin.addListener('partialResults', (data) => {
                     if (data && data.matches && data.matches.length > 0) {
                         processTranscript(data.matches[0], false, nativeInterimMatchCounts);
                     }
                 });
+                await speechPlugin.addListener('listeningState', (data) => {
+                    if (data && data.status === 'stopped' && isListening) {
+                        isListening = false;
+                        micBtnEl.classList.remove('mic-active');
+                        if (currentStage < 3) statusTextEl.textContent = 'マイクがオフです';
+                    }
+                });
 
                 try {
-                    await window.Capacitor.Plugins.SpeechRecognition.start({
+                    await speechPlugin.start({
                         language: "ja-JP",
                         maxResults: 1,
                         prompt: "言霊を唱えてください",
                         partialResults: true,
                         popup: false
                     });
+                    isListening = true;
+                    micBtnEl.classList.add('mic-active');
+                    statusTextEl.textContent = 'ききとり中...';
                 } catch(e) {
                     console.error('Speech recognition failed to start', e);
                     stopMic();
@@ -3021,7 +3053,7 @@
             let enemyHp = enemyMaxHp;
             
             let turnCount = 0;
-            const maxTurns = 15;
+            const maxTurns = 8;
             let isBattleOver = false;
 
             function executeTurn() {
@@ -3030,7 +3062,9 @@
                 turnCount++;
                 if (myHp <= 0 || enemyHp <= 0 || turnCount > maxTurns) {
                     isBattleOver = true;
-                    finishBattle(myHp >= enemyHp);
+                    const myHpRatio = myMaxHp > 0 ? myHp / myMaxHp : 0;
+                    const enemyHpRatio = enemyMaxHp > 0 ? enemyHp / enemyMaxHp : 0;
+                    finishBattle(myHpRatio >= enemyHpRatio);
                     return;
                 }
                 
@@ -3139,7 +3173,7 @@
                             setTimeout(() => attackerEl.classList.remove(atkClass), 300);
 
                             // 次のターンの呼び出し
-                            setTimeout(executeTurn, 2500);
+                            setTimeout(executeTurn, 1200);
                         };
 
                         if (triggeredItem) {
@@ -3239,7 +3273,7 @@
             }
 
             // 初回をキック
-            setTimeout(executeTurn, 2500);
+            setTimeout(executeTurn, 1000);
         }
 
         function finishBattle(isWin) {
@@ -3287,7 +3321,7 @@
             battleMessageEl.style.display = 'block';
         }
 
-        // --- URL通信対戦ロジック ---
+        // --- CPU戦メニュー ---
         function openPvpMenu() {
             playButtonSound();
 
@@ -3298,114 +3332,11 @@
 
             document.getElementById('pvpMenuOverlay').classList.add('visible');
             document.getElementById('pvpMainMenu').style.display = 'flex';
-            document.getElementById('urlContainer').style.display = 'none';
         }
 
         function closePvpMenu() {
             playButtonSound();
             document.getElementById('pvpMenuOverlay').classList.remove('visible');
-        }
-
-        function generateChallengeUrl() {
-            const stats = getBattleStats();
-            // {h: 150, a: 20, e: 10.5, c: 5.5, f: 'childA_1'} のように軽量化する
-            const payloadObj = {
-                h: stats.hp,
-                a: stats.attack,
-                e: stats.evasionRate,
-                c: stats.criticalRate,
-                f: currentForm,
-                w: battleWins
-            };
-            const jsonStr = JSON.stringify(payloadObj);
-            // btoaでは日本語などのマルチバイトが含まれない前提（今回全てASCII）
-            const encodedStr = btoa(jsonStr);
-            const url = window.location.origin + window.location.pathname + '?e=' + encodedStr;
-            
-            document.getElementById('challengeUrlText').value = url;
-            document.getElementById('pvpMainMenu').style.display = 'none';
-            document.getElementById('urlContainer').style.display = 'block';
-        }
-
-        function backToPvpMenu() {
-            playButtonSound();
-            document.getElementById('urlContainer').style.display = 'none';
-            document.getElementById('pvpMainMenu').style.display = 'flex';
-        }
-
-        function copyChallengeUrl() {
-            const copyText = document.getElementById("challengeUrlText");
-            copyText.select();
-            copyText.setSelectionRange(0, 99999); /* For mobile devices */
-            try {
-                navigator.clipboard.writeText(copyText.value);
-                alert("対戦URLをクリップボードにコピーしました！\nLINEやSNSで友達に送信してみよう！");
-            } catch (err) {
-                document.execCommand("copy"); // Fallback
-                alert("対戦URLをコピーしました！");
-            }
-        }
-
-        function shareOnLine() {
-            const url = document.getElementById('challengeUrlText').value;
-            const text = encodeURIComponent("言霊っちで通信対戦！私のゴーストを倒せるかな？\n");
-            window.open(`https://line.me/R/msg/text/?${text}${encodeURIComponent(url)}`, '_blank');
-        }
-
-        function shareOnX() {
-            const url = document.getElementById('challengeUrlText').value;
-            const text = encodeURIComponent("【ことだまっち】私の育成したキャラクターと通信対戦しよう！勝負だ！\n#言霊っち #レトロゲーム\n");
-            window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`, '_blank');
-        }
-
-        function checkUrlChallenge() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const enemyCode = urlParams.get('e');
-            if (enemyCode) {
-                try {
-                    const decodedStr = atob(enemyCode);
-                    const eData = JSON.parse(decodedStr);
-                    // 正常なら挑戦状ダイアログを開く
-                    if (eData && eData.h && eData.f) {
-                        pendingChallengerData = eData;
-                        const popup = document.getElementById('pvpChallengeOverlay');
-                        const info = document.getElementById('challengerInfo');
-                        const name = charNames[eData.f] || '謎のことだまっち';
-                        info.innerHTML = `
-                            【${name}】から<br>対戦を申し込まれた！<br>
-                            <br>
-                            <span style="font-size:0.8rem; color:#f1c40f;">
-                            挑戦者の戦力：<br>
-                            HP: ${eData.h} / 攻撃: ${eData.a}<br>
-                            回避: ${Math.floor(eData.e)}% / 会心: ${Math.floor(eData.c)}%
-                            </span>
-                        `;
-                        popup.classList.add('visible');
-                        
-                        // URLパラメータを掃除して、リロード時の無限ループを防ぐ
-                        if (window.history.replaceState) {
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        }
-                    }
-                } catch (err) {
-                    console.error("無効な対戦URLです", err);
-                }
-                
-                // パラメータを消して再読み込み時に2回目が出ないようにクリーンアップする（任意）
-                history.replaceState(null, '', window.location.pathname);
-            }
-        }
-
-        function acceptChallenge() {
-            playButtonSound();
-            document.getElementById('pvpChallengeOverlay').classList.remove('visible');
-            startBattle(false, pendingChallengerData);
-        }
-
-        function rejectChallenge() {
-            playButtonSound();
-            document.getElementById('pvpChallengeOverlay').classList.remove('visible');
-            pendingChallengerData = null;
         }
 
         // --- 陰徳システム ---
@@ -3483,7 +3414,6 @@
         // 初回ロード
         window.onload = () => {
             init();
-            checkUrlChallenge();
         };
 
 document.addEventListener('DOMContentLoaded', () => { const btn = document.getElementById('closeZukanDetailBtn'); if(btn) btn.addEventListener('click', () => { playButtonSound(); document.getElementById('zukanDetailOverlay').classList.remove('visible'); }); });

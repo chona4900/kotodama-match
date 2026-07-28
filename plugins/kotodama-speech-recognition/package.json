@@ -1,0 +1,11 @@
+{
+  "name": "@kotodama/speech-recognition",
+  "version": "1.0.0",
+  "description": "SPM-compatible iOS speech recognition plugin for Kotodama-tchi",
+  "license": "UNLICENSED",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  }
+}
