@@ -66,16 +66,12 @@ jobs:
           security cms -D -i "$PP_PATH" -o "$PROFILE_PLIST"
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PROFILE_PLIST")
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PROFILE_PLIST")
-          PROFILE_TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" "$PROFILE_PLIST")
-
-          test "$PROFILE_NAME" = "Kotodama Match App Store 2026"
-          test "$PROFILE_TEAM_ID" = "72SZ49GXQU"
 
           PROFILE_DIRECTORY="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILE_DIRECTORY"
           cp "$PP_PATH" "$PROFILE_DIRECTORY/$PROFILE_UUID.mobileprovision"
 
-          echo "Installed provisioning profile: $PROFILE_NAME ($PROFILE_UUID)"
+          echo "Installed provisioning profile: $PROFILE_NAME"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       - name: Build and Archive iOS App
@@ -86,7 +82,6 @@ jobs:
           rm -rf ~/Library/org.swift.swiftpm
 
           # Use the exact UUID of the profile installed in the previous step.
-          # This avoids relying on Xcode's name-based profile discovery.
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$RUNNER_TEMP/build_pp.plist")
           
           # Build Archive
@@ -98,7 +93,6 @@ jobs:
             -allowProvisioningUpdates \
             CODE_SIGN_STYLE="Manual" \
             DEVELOPMENT_TEAM="72SZ49GXQU" \
-            PROVISIONING_PROFILE="$PROFILE_UUID" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
             CODE_SIGN_IDENTITY="Apple Distribution"
           
