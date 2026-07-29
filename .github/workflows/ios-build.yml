@@ -2,6 +2,12 @@ name: iOS Release Validation
 
 on:
   workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: 'TestFlightへアップロードする（公開・審査提出は行いません）'
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -94,7 +100,8 @@ jobs:
             CODE_SIGN_STYLE="Manual" \
             DEVELOPMENT_TEAM="72SZ49GXQU" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
-            CODE_SIGN_IDENTITY="Apple Distribution"
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
           
           # Export ipa
           # Note: ExportOptions.plist is required for correct packaging. It can be provided as a secret or committed.
@@ -110,6 +117,35 @@ jobs:
         with:
           name: app-ipa
           path: ios/App/build/App.ipa
+
+      # This step is deliberately opt-in. A normal validation run only builds
+      # and stores the IPA artifact; it does not contact App Store Connect.
+      - name: Upload build to TestFlight
+        if: ${{ inputs.upload_to_testflight }}
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          : "${APPSTORE_ISSUER_ID:?APPSTORE_ISSUER_ID secret is required}"
+          : "${APPSTORE_KEY_ID:?APPSTORE_KEY_ID secret is required}"
+          : "${APPSTORE_PRIVATE_KEY:?APPSTORE_PRIVATE_KEY secret is required}"
+
+          KEY_DIRECTORY="$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$KEY_DIRECTORY/AuthKey_${APPSTORE_KEY_ID}.p8"
+          mkdir -p "$KEY_DIRECTORY"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          trap 'rm -f "$KEY_PATH"' EXIT
+
+          # Uploading creates a TestFlight build only. It never submits the
+          # app for App Review or publishes it on the App Store.
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$GITHUB_WORKSPACE/ios/App/build/App.ipa" \
+            --apiKey "$APPSTORE_KEY_ID" \
+            --apiIssuer "$APPSTORE_ISSUER_ID"
 
       - name: Clean up keychain and provisioning profile
         if: ${{ always() }}
