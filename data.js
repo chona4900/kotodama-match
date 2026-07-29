@@ -4,8 +4,10 @@
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            if (audioCtx.state === 'suspended') {
+            if (soundEnabled && audioCtx.state === 'suspended') {
                 audioCtx.resume();
+            } else if (!soundEnabled && audioCtx.state === 'running') {
+                audioCtx.suspend();
             }
         }
         
@@ -19,7 +21,7 @@
         document.addEventListener('click', unlockAudio, { once: true });
 
         function playOscillator(freq, startTime, duration, vol=0.1, type='square') {
-            if(!audioCtx) return;
+            if(!audioCtx || !soundEnabled) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = type;
@@ -243,6 +245,7 @@
         let isSick = false;
         let sickRecoveryCount = 0;
         let lastInteractionTimestamp = Date.now();
+        let soundEnabled = true;
         let unlockedForms = ['egg']; // 図鑑解放リスト
         let unlockedItems = []; // 獲得済み秘密のアイテムリスト
         let finalEvolutionTimestamp = null; // 最終進化に到達した時刻

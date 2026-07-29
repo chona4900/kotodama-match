@@ -218,6 +218,48 @@
         .info-tab:focus-visible, .info-next-btn:focus-visible {
             outline: 3px solid #fff; outline-offset: 1px;
         }
+        .quick-settings {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+            margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--screen-shadow);
+        }
+        .quick-settings button {
+            min-height: 34px; border: 2px solid var(--screen-text); border-radius: 3px;
+            background: var(--screen-bg); color: var(--screen-text);
+            font-family: inherit; font-weight: bold; cursor: pointer;
+        }
+        .save-protection-status {
+            grid-column: 1 / -1; text-align: center; font-size: 0.65rem; font-weight: bold;
+        }
+
+        .tutorial-coachmark {
+            position: absolute; left: 20px; right: 20px; bottom: 116px; z-index: 500;
+            display: none; padding: 11px; box-sizing: border-box;
+            background: #fff8d5; color: var(--screen-text);
+            border: 3px double var(--screen-text); border-radius: 6px;
+            box-shadow: 5px 5px 0 rgba(15, 56, 15, 0.25);
+            text-align: center;
+        }
+        .tutorial-coachmark.visible { display: block; animation: popUp 0.25s steps(3); }
+        .tutorial-step-label { font-size: 0.65rem; font-weight: bold; }
+        .tutorial-coach-title { margin-top: 2px; font-size: 1rem; font-weight: bold; }
+        .tutorial-coach-text { margin-top: 4px; font-size: 0.76rem; line-height: 1.45; }
+        .tutorial-coach-actions { display: flex; justify-content: center; gap: 7px; margin-top: 8px; }
+        .tutorial-coach-actions button, .tutorial-skip-btn {
+            min-height: 32px; padding: 5px 12px;
+            border: 2px solid var(--screen-text); border-radius: 3px;
+            background: var(--screen-bg); color: var(--screen-text);
+            font-family: inherit; font-weight: bold; cursor: pointer;
+        }
+        .tutorial-skip-btn { width: 85%; margin-top: 2px; background: transparent; }
+        .tutorial-later-button { background: transparent !important; }
+        .tutorial-highlight {
+            position: relative; z-index: 510 !important;
+            animation: tutorialPulse 0.8s infinite alternate !important;
+        }
+        @keyframes tutorialPulse {
+            from { transform: scale(1); box-shadow: 0 0 0 4px rgba(255,255,255,0.65), 0 0 0 8px rgba(248,180,0,0.35); }
+            to { transform: scale(1.12); box-shadow: 0 0 0 7px rgba(255,255,255,0.9), 0 0 0 14px rgba(248,180,0,0.55); }
+        }
 
         /* 繝懊ち繝ｳ鄒､ */
         .controls { display: flex; justify-content: space-around; width: 100%; margin-top: 30px; }

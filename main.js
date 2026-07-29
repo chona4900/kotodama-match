@@ -766,14 +766,41 @@
                 unlockedForms,
                 unlockedItems
             };
-            localStorage.setItem('kotodama_state', JSON.stringify(state));
+            const serializedState = JSON.stringify(state);
+            try {
+                const previousState = localStorage.getItem('kotodama_state');
+                if (previousState && previousState !== serializedState) {
+                    try {
+                        JSON.parse(previousState);
+                        localStorage.setItem('kotodama_state_backup', previousState);
+                    } catch (error) {
+                        console.warn('壊れた保存データは予備保存にコピーしませんでした。', error);
+                    }
+                }
+                localStorage.setItem('kotodama_state', serializedState);
+            } catch (e) {
+                console.error('Failed to save state:', e);
+            }
         }
 
         function loadState() {
             try {
+                soundEnabled = localStorage.getItem('kotodama_sound_enabled') !== 'false';
                 const saved = localStorage.getItem('kotodama_state');
                 if (saved) {
-                    const state = JSON.parse(saved);
+                    let state;
+                    try {
+                        state = JSON.parse(saved);
+                    } catch (primaryError) {
+                        const backup = localStorage.getItem('kotodama_state_backup');
+                        if (!backup) throw primaryError;
+                        state = JSON.parse(backup);
+                        localStorage.setItem('kotodama_state', backup);
+                        console.warn('保存データを予備保存から復旧しました。');
+                    }
+                    if (!state || typeof state !== 'object') {
+                        throw new Error('保存データの形式が不正です');
+                    }
                     currentStage = (state.currentStage !== undefined) ? Number(state.currentStage) : 0;
                     currentForm = state.currentForm || 'egg';
                     totalCount = (state.totalCount !== undefined) ? Number(state.totalCount) : 0;
@@ -871,6 +898,7 @@
                 const remaining = Math.max(0, SICKNESS_RECOVERY_GOAL - sickRecoveryCount);
                 statusTextEl.textContent = `ことだまを あと ${remaining} 回で元気！`;
             }
+            updateSoundSettingUI();
             renderCanvasArt(currentForm, ctx);
             updateUI();
             if (!localStorage.getItem('kotodama_onboarding_seen')) {
@@ -878,10 +906,91 @@
             }
         }
 
-        function dismissOnboarding() {
+        let tutorialStep = 0;
+        const tutorialCoachmarkEl = document.getElementById('tutorialCoachmark');
+        const tutorialStepLabelEl = document.getElementById('tutorialStepLabel');
+        const tutorialCoachTitleEl = document.getElementById('tutorialCoachTitle');
+        const tutorialCoachTextEl = document.getElementById('tutorialCoachText');
+        const tutorialFinishButtonEl = document.getElementById('tutorialFinishButton');
+
+        function clearTutorialHighlights() {
+            micBtnEl.classList.remove('tutorial-highlight');
+            canvas.classList.remove('tutorial-highlight');
+        }
+
+        function showTutorialCoach(step, title, message, canFinish = false) {
+            tutorialStep = step;
+            tutorialStepLabelEl.textContent = `${step} / 3`;
+            tutorialCoachTitleEl.textContent = title;
+            tutorialCoachTextEl.textContent = message;
+            tutorialFinishButtonEl.hidden = !canFinish;
+            tutorialCoachmarkEl.classList.add('visible');
+        }
+
+        function startInteractiveTutorial() {
+            playButtonSound();
+            document.getElementById('onboardingOverlay').classList.remove('visible');
+            clearTutorialHighlights();
+            micBtnEl.classList.add('tutorial-highlight');
+            showTutorialCoach(1, 'MICを押してみよう', 'マイクを許可すると、ことだまを聞き取れるよ。');
+        }
+
+        function onMicrophoneStartedForTutorial() {
+            if (tutorialStep !== 1) return;
+            clearTutorialHighlights();
+            canvas.classList.add('tutorial-highlight');
+            showTutorialCoach(2, '「ありがとう」と言ってみよう', '認識されると、コトダマっちが喜んで回数が増えるよ。');
+        }
+
+        function handleTutorialWordRecognized(word) {
+            if (tutorialStep !== 2) return;
+            stopMic();
+            clearTutorialHighlights();
+            canvas.classList.add('tutorial-highlight');
+            showTutorialCoach(3, 'はじめの一歩、成功！', `「${word}」が届いたよ。次は10回の特別演出を目指そう！`, true);
+        }
+
+        function finishTutorial() {
             playButtonSound();
             localStorage.setItem('kotodama_onboarding_seen', 'true');
+            tutorialStep = 0;
+            tutorialCoachmarkEl.classList.remove('visible');
+            clearTutorialHighlights();
+            statusTextEl.textContent = '次は10回を目指そう！';
+        }
+
+        function skipOnboarding() {
+            localStorage.setItem('kotodama_onboarding_seen', 'true');
+            tutorialStep = 0;
             document.getElementById('onboardingOverlay').classList.remove('visible');
+            tutorialCoachmarkEl.classList.remove('visible');
+            clearTutorialHighlights();
+        }
+
+        function restartTutorial() {
+            closeOverlays();
+            startInteractiveTutorial();
+        }
+
+        function updateSoundSettingUI() {
+            const soundButton = document.getElementById('soundToggleButton');
+            if (!soundButton) return;
+            soundButton.textContent = `音：${soundEnabled ? 'ON' : 'OFF'}`;
+            soundButton.setAttribute('aria-pressed', String(soundEnabled));
+        }
+
+        function toggleSoundSetting() {
+            soundEnabled = !soundEnabled;
+            localStorage.setItem('kotodama_sound_enabled', String(soundEnabled));
+
+            if (soundEnabled) {
+                initAudio();
+                playButtonSound();
+            } else {
+                stopBattleBgm();
+                if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+            }
+            updateSoundSettingUI();
         }
 
         function renderCanvasArt(key, targetCtx) {
@@ -1483,6 +1592,7 @@
             wordCounts[word] += count;
             let oldCount = totalCount;
             totalCount += count;
+            handleTutorialWordRecognized(word);
             
             let crossedTen = Math.floor(totalCount / 10) > Math.floor(oldCount / 10);
             
@@ -1524,6 +1634,16 @@
             // 100回ごとの区切りでお祝いを表示（進化と被る場合は非表示）
             if (!isEvolutionMilestone && Math.floor(totalCount / 100) > Math.floor(oldCount / 100)) {
                 showCelebration(Math.floor(totalCount / 100) * 100);
+            } else if (!isEvolutionMilestone && oldCount < 30 && totalCount >= 30) {
+                showCelebration(30, {
+                    title: '30回達成！',
+                    message: 'タマゴがもっと元気になった！<br>1,000回の進化へ前進中♪'
+                });
+            } else if (!isEvolutionMilestone && oldCount < 10 && totalCount >= 10) {
+                showCelebration(10, {
+                    title: 'はじめの10回！',
+                    message: 'ことだま習慣の第一歩！<br>次は30回を目指そう♪'
+                });
             }
             
             // 病気ステータスの場合の処理
@@ -1977,12 +2097,16 @@
         const celebrationTitleEl = document.getElementById('celebrationTitle');
         const celebrationMessageEl = document.getElementById('celebrationMessage');
 
-        function showCelebration(reachedCount) {
-            celebrationTitleEl.textContent = `${reachedCount}回達成！`;
+        function showCelebration(reachedCount, options = {}) {
+            celebrationTitleEl.textContent = options.title || `${reachedCount}回達成！`;
             
             // ランダムにメッセージを選択
-            const randIdx = Math.floor(Math.random() * CELEBRATION_MESSAGES.length);
-            celebrationMessageEl.innerHTML = CELEBRATION_MESSAGES[randIdx];
+            if (options.message) {
+                celebrationMessageEl.innerHTML = options.message;
+            } else {
+                const randIdx = Math.floor(Math.random() * CELEBRATION_MESSAGES.length);
+                celebrationMessageEl.innerHTML = CELEBRATION_MESSAGES[randIdx];
+            }
 
             celebrationOverlayEl.classList.add('visible');
             
@@ -2437,6 +2561,7 @@
             webRecognition.onstart = () => {
                 isListening = true;
                 micBtnEl.classList.add('mic-active');
+                onMicrophoneStartedForTutorial();
             };
 
             webRecognition.onresult = (event) => {
@@ -2555,6 +2680,7 @@
                     isListening = true;
                     micBtnEl.classList.add('mic-active');
                     statusTextEl.textContent = 'ききとり中...';
+                    onMicrophoneStartedForTutorial();
                 } catch(e) {
                     console.error('Speech recognition failed to start', e);
                     stopMic();
@@ -2790,6 +2916,7 @@
         let currentBgmAudio = null;
 
         function startBattleBgm() {
+            if (!soundEnabled) return;
             let randomBgmFile = bgmFileList[Math.floor(Math.random() * bgmFileList.length)];
             currentBgmAudio = new Audio(randomBgmFile);
             currentBgmAudio.loop = true;
@@ -2892,6 +3019,7 @@
         }
 
         function playButtonSound() {
+            if (!soundEnabled) return;
             if (typeof initAudio === 'function') initAudio();
             if (!audioCtx) return;
             
