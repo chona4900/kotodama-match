@@ -61,6 +61,16 @@
                     <div id="zukanList" class="zukan-list"></div>
                 </div>
 
+                <nav class="info-navigation" id="infoNavigation" aria-label="情報画面の切り替え">
+                    <div class="info-page-indicator" id="infoPageIndicator" aria-live="polite">1 / 3</div>
+                    <div class="info-tab-row" role="tablist" aria-label="情報の種類">
+                        <button type="button" class="info-tab" data-info-page="1" role="tab" onclick="openInfoPage(1)">ごはん</button>
+                        <button type="button" class="info-tab" data-info-page="2" role="tab" onclick="openInfoPage(2)">おやつ</button>
+                        <button type="button" class="info-tab" data-info-page="3" role="tab" onclick="openInfoPage(3)">図鑑</button>
+                    </div>
+                    <button type="button" class="info-next-btn" id="infoNextButton" onclick="showNextInfoPage()">次へ →</button>
+                </nav>
+
                 <div class="pvp-challenge-overlay" id="onboardingOverlay" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
                     <div id="onboardingTitle" style="font-size:1.35rem; margin-bottom:12px; font-weight:bold;">★ はじめよう ★</div>
                     <div style="font-size:0.9rem; line-height:1.65; text-align:left; max-width:300px; margin-bottom:16px;">
@@ -153,6 +163,20 @@
                             <canvas id="myCanvas" width="24" height="24"></canvas>
                         </div>
                         <div class="battle-message" id="battleMessage">BATTLE!</div>
+                        <div class="battle-command-panel" id="battleCommandPanel" role="group" aria-labelledby="battleCommandTitle">
+                            <div class="battle-command-title" id="battleCommandTitle">こうどうを えらぼう！</div>
+                            <div class="battle-command-buttons">
+                                <button type="button" class="battle-command-btn attack" onclick="chooseBattleAction('attack')">
+                                    <span>攻める</span><small>攻撃 +35%</small>
+                                </button>
+                                <button type="button" class="battle-command-btn guard" onclick="chooseBattleAction('guard')">
+                                    <span>守る</span><small>HP +40%・回避 +10%</small>
+                                </button>
+                                <button type="button" class="battle-command-btn pray" onclick="chooseBattleAction('pray')">
+                                    <span>祈る</span><small>会心・神器率アップ</small>
+                                </button>
+                            </div>
+                        </div>
 
                         <!-- 神器カットイン専用演出レイヤー -->
                         <div class="miracle-cutin-overlay" id="miracleCutinOverlay">

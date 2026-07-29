@@ -212,6 +212,8 @@
         const STAGE2_GOAL = 2000;
         const STAGE3_GOAL = 3000;
         const STAGE4_GOAL = 4900;
+        const SICKNESS_DELAY_MS = 72 * 60 * 60 * 1000;
+        const SICKNESS_RECOVERY_GOAL = 10;
         
         const CELEBRATION_MESSAGES = [
             "おめでとう！<br>金運アップしてるよ♪",

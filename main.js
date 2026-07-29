@@ -800,9 +800,9 @@
                         }
                     }
 
-                    // 24時間（86400000ミリ秒）以上経過していたら病気にする
+                    // 72時間以上ことだまが届かなかった場合だけ、病気状態にする
                     const now = Date.now();
-                    if (now - lastInteractionTimestamp > 86400000 && !isSick) {
+                    if (now - lastInteractionTimestamp > SICKNESS_DELAY_MS && !isSick) {
                         isSick = true;
                         sickRecoveryCount = 0;
                     }
@@ -868,7 +868,8 @@
             loadState();
             checkRebirth();
             if (isSick) {
-                statusTextEl.textContent = "具合が悪そうです...";
+                const remaining = Math.max(0, SICKNESS_RECOVERY_GOAL - sickRecoveryCount);
+                statusTextEl.textContent = `ことだまを あと ${remaining} 回で元気！`;
             }
             renderCanvasArt(currentForm, ctx);
             updateUI();
@@ -1527,13 +1528,13 @@
             
             // 病気ステータスの場合の処理
             if (isSick) {
-                sickRecoveryCount += count;
-                if (sickRecoveryCount >= 100) {
+                sickRecoveryCount = Math.min(SICKNESS_RECOVERY_GOAL, sickRecoveryCount + count);
+                if (sickRecoveryCount >= SICKNESS_RECOVERY_GOAL) {
                     recoverFromSick();
                 } else {
                     lastInteractionTimestamp = Date.now();
                     saveState();
-                    statusTextEl.textContent = `かいふくまで あと ${100 - sickRecoveryCount} 回...`;
+                    statusTextEl.textContent = `かいふくまで あと ${SICKNESS_RECOVERY_GOAL - sickRecoveryCount} 回...`;
                 }
             } else {
                 lastInteractionTimestamp = Date.now();
@@ -1579,30 +1580,57 @@
         let overlayState = 0; // 0: closed, 1: stats, 2: oyatsu, 3: zukan
         const zukanOverlayEl = document.getElementById('zukanOverlay');
         const zukanListEl = document.getElementById('zukanList');
+        const infoNavigationEl = document.getElementById('infoNavigation');
+        const infoPageIndicatorEl = document.getElementById('infoPageIndicator');
+        const infoNextButtonEl = document.getElementById('infoNextButton');
+
+        function setInfoPage(page) {
+            const nextPage = Math.max(1, Math.min(3, Number(page) || 1));
+
+            const pvpOverlay = document.getElementById('pvpMenuOverlay');
+            if (pvpOverlay) pvpOverlay.classList.remove('visible');
+            const intokuOverlay = document.getElementById('intokuOverlay');
+            if (intokuOverlay) intokuOverlay.classList.remove('visible');
+
+            overlayState = nextPage;
+            statsOverlayEl.classList.toggle('visible', nextPage === 1);
+            oyatsuOverlayEl.classList.toggle('visible', nextPage === 2);
+            zukanOverlayEl.classList.toggle('visible', nextPage === 3);
+            infoNavigationEl.classList.add('visible');
+            infoPageIndicatorEl.textContent = `${nextPage} / 3`;
+            infoNextButtonEl.textContent = nextPage === 3 ? '閉じる' : '次へ →';
+
+            infoNavigationEl.querySelectorAll('[data-info-page]').forEach((tab) => {
+                const isSelected = Number(tab.dataset.infoPage) === nextPage;
+                tab.setAttribute('aria-selected', String(isSelected));
+                tab.tabIndex = isSelected ? 0 : -1;
+            });
+
+            if (nextPage === 1) updateStatsList();
+            if (nextPage === 2) updateOyatsuList();
+            if (nextPage === 3) renderZukan();
+        }
+
+        function openInfoPage(page) {
+            playButtonSound();
+            setInfoPage(page);
+        }
+
+        function showNextInfoPage() {
+            playButtonSound();
+            if (overlayState === 0) {
+                setInfoPage(1);
+            } else if (overlayState < 3) {
+                setInfoPage(overlayState + 1);
+            } else {
+                closeOverlays();
+            }
+        }
 
         function toggleAButton() {
             playButtonSound();
-
-            // 他のメニューを閉じる
-            const pvpOverlay = document.getElementById('pvpMenuOverlay');
-            if(pvpOverlay) pvpOverlay.classList.remove('visible');
-            const intokuOverlay = document.getElementById('intokuOverlay');
-            if(intokuOverlay) intokuOverlay.classList.remove('visible');
-
-            if (overlayState === 0) {
-                overlayState = 1;
-                statsOverlayEl.classList.add('visible');
-                updateStatsList();
-            } else if (overlayState === 1) {
-                overlayState = 2;
-                statsOverlayEl.classList.remove('visible');
-                oyatsuOverlayEl.classList.add('visible');
-                updateOyatsuList();
-            } else if (overlayState === 2) {
-                overlayState = 3;
-                oyatsuOverlayEl.classList.remove('visible');
-                zukanOverlayEl.classList.add('visible');
-                renderZukan();
+            if (overlayState < 3) {
+                setInfoPage(overlayState + 1);
             } else {
                 closeOverlays();
             }
@@ -1613,6 +1641,7 @@
             statsOverlayEl.classList.remove('visible');
             oyatsuOverlayEl.classList.remove('visible');
             zukanOverlayEl.classList.remove('visible');
+            infoNavigationEl.classList.remove('visible');
             
             const zukanDetail = document.getElementById('zukanDetailOverlay');
             if(zukanDetail) zukanDetail.classList.remove('visible');
@@ -2630,9 +2659,9 @@
             const sickBtn = document.createElement('button');
             sickBtn.className = 'test-btn';
             sickBtn.style.background = '#ffb3b3';
-            sickBtn.textContent = '24H放置(病気)';
+            sickBtn.textContent = '72H放置(病気)';
             sickBtn.onclick = () => {
-                lastInteractionTimestamp -= 86400000 + 1000;
+                lastInteractionTimestamp -= SICKNESS_DELAY_MS + 1000;
                 saveState();
                 location.reload();
             };
@@ -2644,7 +2673,7 @@
             recoverBtn.textContent = '回復エフェクト(テスト)';
             recoverBtn.onclick = () => {
                 if (!isSick) isSick = true; // 強制的に病気扱いにする
-                sickRecoveryCount = 100;
+                sickRecoveryCount = SICKNESS_RECOVERY_GOAL;
                 recoverFromSick();
             };
             div2.appendChild(recoverBtn);
@@ -2905,9 +2934,21 @@
         ];
 
         let pendingChallengerData = null;
+        let selectedBattleAction = null;
+        let pendingBattleOptions = null;
+
+        const BATTLE_ACTIONS = {
+            attack: { label: '攻める！', message: '攻撃力が 35% アップ！' },
+            guard: { label: '守る！', message: 'HPと回避率が アップ！' },
+            pray: { label: '祈る！', message: '会心と神器の力が アップ！' }
+        };
 
         function startBattle(forceMiracle = false, challengerData = null) {
             closePvpMenu(); // メニューが開いていれば閉じる
+            selectedBattleAction = null;
+            pendingBattleOptions = { forceMiracle, challengerData };
+            const battleCommandPanel = document.getElementById('battleCommandPanel');
+            if (battleCommandPanel) battleCommandPanel.classList.remove('visible');
 
             // 背景をランダム設定
             let randomBg = battleBgList[Math.floor(Math.random() * battleBgList.length)];
@@ -2984,11 +3025,38 @@
                 startBattleBgm();
                 
                 setTimeout(() => {
-                    battleMessageEl.style.display = 'none';
+                    battleMessageEl.textContent = '作戦をえらぼう！';
+                    battleMessageEl.style.color = 'var(--screen-text)';
+                    battleMessageEl.style.fontSize = '1.15rem';
+                    battleMessageEl.style.top = '25%';
                     battleFlashEl.classList.remove('active');
-                    runBattleSequence(forceMiracle, challengerData);
+                    if (battleCommandPanel) battleCommandPanel.classList.add('visible');
                 }, 1000);
             }, 2000);
+        }
+
+        function chooseBattleAction(action) {
+            if (!BATTLE_ACTIONS[action] || selectedBattleAction || !pendingBattleOptions) return;
+
+            playButtonSound();
+            selectedBattleAction = action;
+            const options = pendingBattleOptions;
+            pendingBattleOptions = null;
+
+            const battleCommandPanel = document.getElementById('battleCommandPanel');
+            if (battleCommandPanel) battleCommandPanel.classList.remove('visible');
+
+            const actionInfo = BATTLE_ACTIONS[action];
+            battleMessageEl.innerHTML = `${actionInfo.label}<br><span style="font-size:0.72rem">${actionInfo.message}</span>`;
+            battleMessageEl.style.color = '#ff2a00';
+            battleMessageEl.style.fontSize = '1.6rem';
+            battleMessageEl.style.top = '50%';
+            battleMessageEl.style.display = 'block';
+
+            setTimeout(() => {
+                battleMessageEl.style.display = 'none';
+                runBattleSequence(options.forceMiracle, options.challengerData, action);
+            }, 900);
         }
 
         function createHitFx(x, y) {
@@ -3038,7 +3106,7 @@
             setTimeout(() => popup.remove(), 800);
         }
 
-        function runBattleSequence(forceMiracle = false, challengerData = null) {
+        function runBattleSequence(forceMiracle = false, challengerData = null, battleAction = 'attack') {
             let myStats = getBattleStats();
             let enemyStats = challengerData ? {
                 hp: challengerData.h,
@@ -3046,6 +3114,15 @@
                 evasionRate: challengerData.e,
                 criticalRate: challengerData.c
             } : getEnemyStats(totalCount);
+
+            if (battleAction === 'attack') {
+                myStats.attack = Math.max(1, Math.round(myStats.attack * 1.35));
+            } else if (battleAction === 'guard') {
+                myStats.hp = Math.max(1, Math.round(myStats.hp * 1.4));
+                myStats.evasionRate = Math.min(70, myStats.evasionRate + 10);
+            } else if (battleAction === 'pray') {
+                myStats.criticalRate = Math.min(80, myStats.criticalRate + 15);
+            }
             
             let myMaxHp = myStats.hp;
             let enemyMaxHp = enemyStats.hp;
@@ -3101,6 +3178,9 @@
 
                             // 発動確率は通常3%（テスト時は100%）。ピンチ時は20%に跳ね上がる
                             let probability = forceMiracle ? 1.0 : (isPinch ? 0.20 : 0.03);
+                            if (!forceMiracle && battleAction === 'pray') {
+                                probability = Math.min(0.45, probability * 3);
+                            }
                             
                             if (availableItems.length > 0 && Math.random() < probability) {
                             if (isMyTurn) {
@@ -3278,6 +3358,9 @@
 
         function finishBattle(isWin) {
             stopBattleBgm(); // バトル終了時にBGMを止める
+            const battleCommandPanel = document.getElementById('battleCommandPanel');
+            if (battleCommandPanel) battleCommandPanel.classList.remove('visible');
+            pendingBattleOptions = null;
             setupBattleMessage(isWin);
             
             if (isWin) {
@@ -3305,6 +3388,7 @@
                 battleOverlayEl.classList.remove('visible');
                 myCharEl.className = 'battle-character mine';
                 enemyCharEl.className = 'battle-character enemy';
+                selectedBattleAction = null;
                 
                 // キャンバスのアニメーションタイマーを停止して軽くする
                 if (myCanvasCtx.canvas.animTimer) clearInterval(myCanvasCtx.canvas.animTimer);

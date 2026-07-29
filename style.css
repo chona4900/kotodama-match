@@ -196,6 +196,29 @@
         .zukan-canvas { width: 48px; height: 48px; image-rendering: pixelated; background: #B5C6A9; border: 1px solid #5a5a5a; border-radius: 2px; }
         .zukan-name { font-size: 0.55rem; margin-top: 4px; text-align: center; width: 100%; word-break: break-all; line-height: 1.1; font-weight: bold; }
 
+        .stats-overlay, .zukan-overlay { padding-bottom: 118px; }
+        .info-navigation {
+            position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 30;
+            display: none; flex-direction: column; gap: 6px;
+            padding: 7px; box-sizing: border-box;
+            background: rgba(226, 235, 218, 0.97);
+            border: 2px solid var(--screen-text);
+            box-shadow: 3px 3px 0 rgba(15, 56, 15, 0.22);
+        }
+        .info-navigation.visible { display: flex; }
+        .info-page-indicator { text-align: center; font-size: 0.72rem; font-weight: bold; line-height: 1; }
+        .info-tab-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .info-tab, .info-next-btn {
+            min-height: 32px; border: 2px solid var(--screen-text); border-radius: 3px;
+            background: var(--screen-bg); color: var(--screen-text);
+            font-family: inherit; font-weight: bold; cursor: pointer;
+        }
+        .info-tab[aria-selected="true"] { background: var(--screen-text); color: var(--screen-bg); }
+        .info-next-btn { width: 100%; background: #f8b400; }
+        .info-tab:focus-visible, .info-next-btn:focus-visible {
+            outline: 3px solid #fff; outline-offset: 1px;
+        }
+
         /* 繝懊ち繝ｳ鄒､ */
         .controls { display: flex; justify-content: space-around; width: 100%; margin-top: 30px; }
         .btn-round { width: 60px; height: 60px; border-radius: 50%; background: #F8B400; border: none; box-shadow: inset -2px -2px 8px rgba(0,0,0,0.3), inset 2px 2px 8px rgba(255,255,255,0.5), 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; color: #C0392B; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; }
@@ -646,6 +669,31 @@
             text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff, 2px -2px 0px #fff, -2px 2px 0px #fff, 0 0 10px #ff2a00;
             text-align: center; display: none; animation: popUp 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
         }
+
+        .battle-command-panel {
+            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            width: min(94%, 360px); z-index: 215; display: none;
+            padding: 10px; box-sizing: border-box;
+            background: rgba(226, 235, 218, 0.97);
+            border: 3px double var(--screen-text);
+            box-shadow: 4px 4px 0 rgba(15, 56, 15, 0.25);
+        }
+        .battle-command-panel.visible { display: block; animation: popUp 0.22s steps(3); }
+        .battle-command-title { margin-bottom: 8px; text-align: center; font-size: 1rem; font-weight: bold; }
+        .battle-command-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .battle-command-btn {
+            min-height: 64px; padding: 6px 3px;
+            border: 2px solid var(--screen-text); border-radius: 4px;
+            background: var(--screen-bg); color: var(--screen-text);
+            font-family: inherit; font-weight: bold; cursor: pointer;
+        }
+        .battle-command-btn span { display: block; font-size: 1rem; }
+        .battle-command-btn small { display: block; margin-top: 3px; font-size: 0.57rem; line-height: 1.25; }
+        .battle-command-btn.attack { background: #f6c0a9; }
+        .battle-command-btn.guard { background: #b9d9f5; }
+        .battle-command-btn.pray { background: #ead3f5; }
+        .battle-command-btn:active { transform: translateY(2px); background: var(--screen-text); color: var(--screen-bg); }
+        .battle-command-btn:focus-visible { outline: 3px solid #fff; outline-offset: 1px; }
 
         /* --- 逾槫勣繧ｫ繝・ヨ繧､繝ｳ蟆ら畑 --- */
         .miracle-cutin-overlay {
