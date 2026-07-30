@@ -1247,6 +1247,7 @@
             if(percentage > 100) percentage = 100;
             
             progressBarEl.style.width = percentage + '%';
+            progressBarEl.style.minWidth = percentage > 0 ? '4px' : '0';
             
             let denominator;
             if (currentStage === 0) {
@@ -1517,9 +1518,9 @@
             if(!container) return;
             const fx = document.createElement('div');
             fx.textContent = '+' + count;
-            fx.style.position = 'absolute';
-            fx.style.left = (30 + Math.random() * 40) + '%';
-            fx.style.top = '60%'; 
+            fx.className = 'word-count-effect';
+            fx.style.left = (25 + Math.random() * 38) + '%';
+            fx.style.top = '62%';
             const POP_COLORS = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff69b4', '#00ced1', '#ff2e93'];
             const color1 = POP_COLORS[Math.floor(Math.random() * POP_COLORS.length)];
             const color2 = POP_COLORS[Math.floor(Math.random() * POP_COLORS.length)];
@@ -1529,15 +1530,13 @@
             fx.style.fontWeight = 'bold';
             fx.style.fontFamily = "'DotGothic16', sans-serif";
             fx.style.fontSize = '2.5rem';
-            fx.style.pointerEvents = 'none';
-            fx.style.zIndex = 50;
-            fx.style.transition = 'all 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
+            if (isTen) fx.classList.add('word-effect-milestone');
             container.appendChild(fx);
             
             const EMOJI_MAP = {
                 '愛してます': '♥',
                 'ゆるします': '✦',
-                'ありがとう': '✿',
+                'ありがとう': '♪',
                 'うれしい': '☀',
                 '楽しい': '♪',
                 '感謝してます': '❀',
@@ -1546,27 +1545,22 @@
             };
 
             const sparkle = document.createElement('div');
-            sparkle.textContent = EMOJI_MAP[word] || '★';
-            sparkle.style.position = 'absolute';
-            sparkle.style.left = (parseFloat(fx.style.left) + 20) + '%';
-            sparkle.style.top = '58%';
+            sparkle.textContent = EMOJI_MAP[word] || '♪';
+            sparkle.className = 'word-symbol-effect';
+            sparkle.style.left = Math.min(76, parseFloat(fx.style.left) + 18) + '%';
+            sparkle.style.top = '60%';
             sparkle.style.color = color2;
             sparkle.style.textShadow = '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff';
             sparkle.style.fontFamily = "'DotGothic16', sans-serif";
             sparkle.style.fontSize = '2.5rem';
-            // 強制テキスト表示を削除し、絵文字本来の色やポップな色を活かす
-            sparkle.style.pointerEvents = 'none';
-            sparkle.style.zIndex = 49;
-            sparkle.style.transition = 'all 0.8s ease-out';
+            if (isTen) sparkle.classList.add('word-effect-milestone');
             container.appendChild(sparkle);
 
-            // ピコンというキャラクターの跳ねる動き
-            const can = document.getElementById('pixelCanvas');
-            if(can) {
-                can.style.transition = 'transform 0.15s ease-out';
-                can.style.transform = 'scale(1.15)';
-                setTimeout(() => { can.style.transform = 'scale(1)'; }, 150);
-            }
+            // チュートリアルの強調表示と競合しないよう、キャラクターではなく表示領域を弾ませる
+            container.classList.remove('word-received-pulse');
+            void container.offsetWidth;
+            container.classList.add('word-received-pulse');
+            setTimeout(() => container.classList.remove('word-received-pulse'), 360);
 
             // 「テロン」または10の倍数なら「テレレン」を鳴らす
             if (isTen) {
@@ -1575,17 +1569,22 @@
                 playWordPopSound();
             }
 
-            // 浮上アニメーション開始
-            requestAnimationFrame(() => {
-                fx.style.top = '10%';
-                fx.style.opacity = '0';
-                fx.style.transform = 'scale(1.2)';
-                
-                sparkle.style.top = '5%';
-                sparkle.style.opacity = '0';
-                sparkle.style.transform = 'scale(1.5) rotate(45deg)';
-            });
-            setTimeout(() => { fx.remove(); sparkle.remove(); }, 800);
+            // WebKitでも開始フレームが省略されないCSSキーフレームで動かし、完了後に削除する
+            const cleanup = () => {
+                fx.remove();
+                sparkle.remove();
+            };
+            fx.addEventListener('animationend', cleanup, { once: true });
+            setTimeout(cleanup, 1300);
+        }
+
+        function animateProgressGain() {
+            const progressContainer = document.getElementById('progressContainer');
+            if (!progressContainer) return;
+            progressContainer.classList.remove('progress-gain');
+            void progressContainer.offsetWidth;
+            progressContainer.classList.add('progress-gain');
+            setTimeout(() => progressContainer.classList.remove('progress-gain'), 500);
         }
 
         function addWordLog(word, count=1) {
@@ -1626,6 +1625,7 @@
                     setTimeout(() => createWordEffect(1, word, isTen), i * 150);
                 }
             }
+            animateProgressGain();
 
 
             // 進化のタイミングと被るかどうか判定
@@ -1665,8 +1665,8 @@
                 const msg = randomMessages[Math.floor(Math.random() * randomMessages.length)];
                 statusTextEl.textContent = msg;
                 renderCanvasArt(currentForm, ctx); // 少し揺らす
-                updateUI();
             }
+            updateUI();
 
             // おやつマイルストーンチェック（秘密のアイテムゲット：各おやつ言霊1万回で特定アイテム獲得）
             const ITEM_MAPPING = {
@@ -3623,8 +3623,27 @@
             }
         }
 
+        function preventViewportZoom() {
+            const cancelZoomGesture = (event) => event.preventDefault();
+            ['gesturestart', 'gesturechange', 'gestureend'].forEach(eventName => {
+                document.addEventListener(eventName, cancelZoomGesture, { passive: false });
+            });
+
+            document.addEventListener('touchmove', event => {
+                if (event.touches.length > 1) event.preventDefault();
+            }, { passive: false });
+
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', event => {
+                const now = Date.now();
+                if (now - lastTouchEnd < 320) event.preventDefault();
+                lastTouchEnd = now;
+            }, { passive: false });
+        }
+
         // 初回ロード
         window.onload = () => {
+            preventViewportZoom();
             init();
         };
 

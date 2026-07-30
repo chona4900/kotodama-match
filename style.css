@@ -5,6 +5,11 @@
             --screen-shadow: #306230;
         }
 
+        html, body {
+            touch-action: manipulation;
+            overscroll-behavior: none;
+        }
+
         body {
             font-family: 'DotGothic16', sans-serif;
             background: var(--device-bg);
@@ -166,6 +171,13 @@
             width: 0%;
             transition: width 0.3s;
         }
+        .progress-container.progress-gain {
+            animation: progressGainFlash 0.45s steps(3);
+        }
+        @keyframes progressGainFlash {
+            0%, 100% { box-shadow: none; }
+            35% { box-shadow: 0 0 0 3px rgba(255,255,255,0.9), 0 0 10px 5px rgba(248,180,0,0.75); }
+        }
         .progress-text {
             position: absolute;
             top: 50%; left: 0; width: 100%;
@@ -259,6 +271,43 @@
         @keyframes tutorialPulse {
             from { transform: scale(1); box-shadow: 0 0 0 4px rgba(255,255,255,0.65), 0 0 0 8px rgba(248,180,0,0.35); }
             to { transform: scale(1.12); box-shadow: 0 0 0 7px rgba(255,255,255,0.9), 0 0 0 14px rgba(248,180,0,0.55); }
+        }
+
+        .word-count-effect, .word-symbol-effect {
+            position: absolute;
+            pointer-events: none;
+            will-change: transform, opacity;
+            transform: translate3d(0, 0, 0);
+        }
+        .word-count-effect {
+            z-index: 50;
+            animation: wordCountFloat 1.05s cubic-bezier(0.22, 0.8, 0.35, 1) forwards;
+        }
+        .word-symbol-effect {
+            z-index: 49;
+            animation: wordSymbolFloat 1.05s cubic-bezier(0.22, 0.8, 0.35, 1) forwards;
+        }
+        .word-effect-milestone {
+            filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 8px #f8b400);
+        }
+        .art-container.word-received-pulse {
+            animation: wordReceivedPulse 0.32s steps(3);
+        }
+        @keyframes wordCountFloat {
+            0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.7); }
+            14% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.15); }
+            68% { opacity: 1; }
+            100% { opacity: 0; transform: translate3d(-8px, -125px, 0) scale(1.3); }
+        }
+        @keyframes wordSymbolFloat {
+            0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(0.65) rotate(-12deg); }
+            18% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.05) rotate(0deg); }
+            65% { opacity: 1; }
+            100% { opacity: 0; transform: translate3d(12px, -135px, 0) scale(1.45) rotate(35deg); }
+        }
+        @keyframes wordReceivedPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.035); }
         }
 
         /* 繝懊ち繝ｳ鄒､ */
@@ -994,5 +1043,22 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
+    }
+    .word-count-effect, .word-symbol-effect {
+        animation-name: wordEffectReduced !important;
+        animation-duration: 0.9s !important;
+    }
+    .progress-container.progress-gain {
+        animation-name: progressGainReduced !important;
+        animation-duration: 0.55s !important;
+    }
+    @keyframes wordEffectReduced {
+        0% { opacity: 0; transform: scale(0.9); }
+        15%, 78% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(1); }
+    }
+    @keyframes progressGainReduced {
+        0%, 100% { box-shadow: none; }
+        25%, 70% { box-shadow: 0 0 0 3px rgba(255,255,255,0.9); }
     }
 }
