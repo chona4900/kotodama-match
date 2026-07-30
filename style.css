@@ -1044,6 +1044,77 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
     }
+
+    /* 戦歴オーラは停止させず、回転をゆっくりにして状態が分かるようにする */
+    .aura-10::before {
+        animation-duration: 6s !important;
+        animation-iteration-count: infinite !important;
+        animation-play-state: running !important;
+    }
+    .aura-50::before {
+        animation-duration: 5.5s !important;
+        animation-iteration-count: infinite !important;
+        animation-play-state: running !important;
+    }
+    .aura-50::after {
+        animation-duration: 4.5s !important;
+        animation-iteration-count: infinite !important;
+        animation-play-state: running !important;
+    }
+    .aura-100::before {
+        animation-duration: 4.5s !important;
+        animation-iteration-count: infinite !important;
+        animation-play-state: running !important;
+    }
+    .aura-100::after {
+        animation-duration: 3.4s !important;
+        animation-iteration-count: infinite !important;
+        animation-play-state: running !important;
+    }
+
+    /* 攻撃・被弾・回避はゲーム結果を伝える動きなので、移動量を抑えて残す */
+    .battle-character.attack-mine {
+        animation-name: battleAttackMineReduced !important;
+        animation-duration: 0.55s !important;
+    }
+    .battle-character.attack-enemy {
+        animation-name: battleAttackEnemyReduced !important;
+        animation-duration: 0.55s !important;
+    }
+    .battle-character.hit {
+        animation-name: battleHitReduced !important;
+        animation-duration: 0.35s !important;
+    }
+    .battle-character.miss {
+        animation-name: battleMissReduced !important;
+        animation-duration: 0.45s !important;
+    }
+    .battle-character.win {
+        animation-name: battleWinReduced !important;
+        animation-duration: 0.7s !important;
+        animation-iteration-count: infinite !important;
+    }
+    .battle-character.lose {
+        animation-name: battleLoseReduced !important;
+        animation-duration: 0.5s !important;
+    }
+    .battle-flash.active {
+        animation-duration: 0.18s !important;
+    }
+    .hit-fx {
+        animation-duration: 0.4s !important;
+    }
+    .battle-popup-text {
+        animation-duration: 0.9s !important;
+    }
+    .battle-message,
+    .battle-command-panel.visible {
+        animation-duration: 0.25s !important;
+    }
+    .battle-hp-bar {
+        transition-duration: 0.25s !important;
+    }
+
     .word-count-effect, .word-symbol-effect {
         animation-name: wordEffectReduced !important;
         animation-duration: 0.9s !important;
@@ -1060,5 +1131,32 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
     @keyframes progressGainReduced {
         0%, 100% { box-shadow: none; }
         25%, 70% { box-shadow: 0 0 0 3px rgba(255,255,255,0.9); }
+    }
+    @keyframes battleAttackMineReduced {
+        0%, 100% { transform: translate(0, 0); }
+        30% { transform: translate(-4px, 4px); }
+        65% { transform: translate(22px, -22px); }
+    }
+    @keyframes battleAttackEnemyReduced {
+        0%, 100% { transform: translate(0, 0); }
+        30% { transform: translate(4px, -4px); }
+        65% { transform: translate(-22px, 22px); }
+    }
+    @keyframes battleHitReduced {
+        0%, 100% { transform: translateX(0); }
+        35% { transform: translateX(-7px); }
+        70% { transform: translateX(7px); }
+    }
+    @keyframes battleMissReduced {
+        0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+        50% { transform: translate(-10px, -12px); opacity: 0.75; }
+    }
+    @keyframes battleWinReduced {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-7px) scale(1.03); }
+    }
+    @keyframes battleLoseReduced {
+        0% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(8px); opacity: 0.55; }
     }
 }
