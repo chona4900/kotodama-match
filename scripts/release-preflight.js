@@ -37,6 +37,8 @@ requireText('index.html', 'id="tutorialCoachmark"');
 requireText('index.html', 'id="soundToggleButton"');
 requireText('ios/App/App/Info.plist', 'NSSpeechRecognitionUsageDescription');
 requireText('ios/App/App/Info.plist', 'NSMicrophoneUsageDescription');
+requireText('ios/App/App/Info.plist', 'UIInterfaceOrientationLandscapeLeft');
+requireText('ios/App/App/Info.plist', 'UIInterfaceOrientationLandscapeRight');
 requireText('plugins/kotodama-speech-recognition/Package.swift', 'KotodamaSpeechRecognition');
 
 const main = read('main.js');
