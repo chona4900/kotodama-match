@@ -785,7 +785,9 @@
 
         function loadState() {
             try {
-                soundEnabled = localStorage.getItem('kotodama_sound_enabled') !== 'false';
+                // 音量は端末側で管理する。旧バージョンのアプリ内OFF設定は引き継がない。
+                soundEnabled = true;
+                localStorage.removeItem('kotodama_sound_enabled');
                 const saved = localStorage.getItem('kotodama_state');
                 if (saved) {
                     let state;
@@ -898,7 +900,6 @@
                 const remaining = Math.max(0, SICKNESS_RECOVERY_GOAL - sickRecoveryCount);
                 statusTextEl.textContent = `ことだまを あと ${remaining} 回で元気！`;
             }
-            updateSoundSettingUI();
             renderCanvasArt(currentForm, ctx);
             updateUI();
             if (useNativeSpeech) {
@@ -906,11 +907,10 @@
                     console.warn('Speech recognition prewarm failed:', error);
                 });
             }
-            if (!localStorage.getItem('kotodama_onboarding_seen')) {
-                document.getElementById('onboardingOverlay').classList.add('visible');
-            }
+            startFirstLaunchTutorial();
         }
 
+        const FIRST_LAUNCH_TUTORIAL_KEY = 'kotodama_onboarding_seen';
         let tutorialStep = 0;
         const tutorialCoachmarkEl = document.getElementById('tutorialCoachmark');
         const tutorialStepLabelEl = document.getElementById('tutorialStepLabel');
@@ -932,9 +932,16 @@
             tutorialCoachmarkEl.classList.add('visible');
         }
 
-        function startInteractiveTutorial() {
-            playButtonSound();
-            document.getElementById('onboardingOverlay').classList.remove('visible');
+        function startFirstLaunchTutorial() {
+            if (localStorage.getItem(FIRST_LAUNCH_TUTORIAL_KEY)) return;
+
+            // 表示した時点で記録し、次回起動からは自動表示しない。
+            localStorage.setItem(FIRST_LAUNCH_TUTORIAL_KEY, 'true');
+            startInteractiveTutorial(false);
+        }
+
+        function startInteractiveTutorial(shouldPlaySound = true) {
+            if (shouldPlaySound) playButtonSound();
             clearTutorialHighlights();
             micBtnEl.classList.add('tutorial-highlight');
             showTutorialCoach(1, 'MICを押してみよう', 'マイクを許可すると、ことだまを聞き取れるよ。');
@@ -957,7 +964,6 @@
 
         function finishTutorial() {
             playButtonSound();
-            localStorage.setItem('kotodama_onboarding_seen', 'true');
             tutorialStep = 0;
             tutorialCoachmarkEl.classList.remove('visible');
             clearTutorialHighlights();
@@ -965,37 +971,9 @@
         }
 
         function skipOnboarding() {
-            localStorage.setItem('kotodama_onboarding_seen', 'true');
             tutorialStep = 0;
-            document.getElementById('onboardingOverlay').classList.remove('visible');
             tutorialCoachmarkEl.classList.remove('visible');
             clearTutorialHighlights();
-        }
-
-        function restartTutorial() {
-            closeOverlays();
-            startInteractiveTutorial();
-        }
-
-        function updateSoundSettingUI() {
-            const soundButton = document.getElementById('soundToggleButton');
-            if (!soundButton) return;
-            soundButton.textContent = `音：${soundEnabled ? 'ON' : 'OFF'}`;
-            soundButton.setAttribute('aria-pressed', String(soundEnabled));
-        }
-
-        function toggleSoundSetting() {
-            soundEnabled = !soundEnabled;
-            localStorage.setItem('kotodama_sound_enabled', String(soundEnabled));
-
-            if (soundEnabled) {
-                initAudio();
-                playButtonSound();
-            } else {
-                stopBattleBgm();
-                if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
-            }
-            updateSoundSettingUI();
         }
 
         function renderCanvasArt(key, targetCtx) {
