@@ -1,19 +1,49 @@
 // --- サウンド（Web Audio API） ---
         let audioCtx = null;
         function initAudio() {
-            if (!audioCtx) {
+            if (!audioCtx || audioCtx.state === 'closed') {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            if (soundEnabled && audioCtx.state === 'suspended') {
-                audioCtx.resume();
+            if (soundEnabled && audioCtx.state !== 'running') {
+                const resumeResult = audioCtx.resume();
+                if (resumeResult && typeof resumeResult.catch === 'function') {
+                    resumeResult.catch((error) => console.warn('AudioContext resume failed:', error));
+                }
             } else if (!soundEnabled && audioCtx.state === 'running') {
                 audioCtx.suspend();
             }
+            return audioCtx;
+        }
+
+        function playWhenAudioReady(playback) {
+            if (!soundEnabled || typeof playback !== 'function') return;
+            const ctx = initAudio();
+            if (!ctx) return;
+
+            if (ctx.state === 'running') {
+                playback(ctx);
+                return;
+            }
+
+            Promise.resolve(ctx.resume())
+                .then(() => {
+                    if (ctx.state === 'running') {
+                        playback(ctx);
+                    }
+                })
+                .catch((error) => console.warn('Audio playback resume failed:', error));
         }
         
         // iOS/WKWebView向けに、最初のタップでAudioContextを強制起動・ロック解除する
         const unlockAudio = function() {
-            initAudio();
+            const ctx = initAudio();
+            if (ctx && soundEnabled) {
+                // iOSではコンテキスト作成だけでは解除されない場合があるため、無音を1サンプル再生する
+                const source = ctx.createBufferSource();
+                source.buffer = ctx.createBuffer(1, 1, 22050);
+                source.connect(ctx.destination);
+                source.start(0);
+            }
             document.removeEventListener('touchstart', unlockAudio);
             document.removeEventListener('click', unlockAudio);
         };

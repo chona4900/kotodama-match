@@ -19,6 +19,12 @@ function requireText(relativePath, expected) {
   }
 }
 
+function forbidText(relativePath, forbidden) {
+  if (fs.existsSync(path.join(root, relativePath)) && read(relativePath).includes(forbidden)) {
+    errors.push(`${relativePath} に不要な処理が残っています: ${forbidden}`);
+  }
+}
+
 requireText('index.html', 'privacy.html');
 requireText('privacy.html', 'プライバシーポリシー');
 requireText('support.html', 'コトダマっち サポート');
@@ -43,6 +49,11 @@ requireText('style.css', 'touch-action: manipulation');
 requireText('style.css', 'animation-name: battleAttackMineReduced');
 requireText('style.css', '.aura-100::before');
 requireText('style.css', 'animation-iteration-count: infinite !important');
+requireText('data.js', 'function playWhenAudioReady(playback)');
+requireText('main.js', 'await prepareNativeSpeech()');
+requireText('main.js', "micBtnEl.classList.add('mic-starting')");
+forbidText('main.js', "container.classList.add('word-received-pulse')");
+forbidText('main.js', 'renderCanvasArt(currentForm, ctx); // 少し揺らす');
 requireText('ios/App/App/Info.plist', 'NSSpeechRecognitionUsageDescription');
 requireText('ios/App/App/Info.plist', 'NSMicrophoneUsageDescription');
 requireText('ios/App/App/Info.plist', 'UIInterfaceOrientationLandscapeLeft');

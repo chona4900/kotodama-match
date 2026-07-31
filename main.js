@@ -901,6 +901,11 @@
             updateSoundSettingUI();
             renderCanvasArt(currentForm, ctx);
             updateUI();
+            if (useNativeSpeech) {
+                prepareNativeSpeech().catch((error) => {
+                    console.warn('Speech recognition prewarm failed:', error);
+                });
+            }
             if (!localStorage.getItem('kotodama_onboarding_seen')) {
                 document.getElementById('onboardingOverlay').classList.add('visible');
             }
@@ -1556,12 +1561,6 @@
             if (isTen) sparkle.classList.add('word-effect-milestone');
             container.appendChild(sparkle);
 
-            // チュートリアルの強調表示と競合しないよう、キャラクターではなく表示領域を弾ませる
-            container.classList.remove('word-received-pulse');
-            void container.offsetWidth;
-            container.classList.add('word-received-pulse');
-            setTimeout(() => container.classList.remove('word-received-pulse'), 360);
-
             // 「テロン」または10の倍数なら「テレレン」を鳴らす
             if (isTen) {
                 playTenPopSound();
@@ -1664,7 +1663,6 @@
                 const randomMessages = ["大満足", "喜んでいる", "パワーアップ"];
                 const msg = randomMessages[Math.floor(Math.random() * randomMessages.length)];
                 statusTextEl.textContent = msg;
-                renderCanvasArt(currentForm, ctx); // 少し揺らす
             }
             updateUI();
 
@@ -2545,6 +2543,7 @@
 
         // --- 音声認識 ---
         let isListening = false;
+        let isStartingMic = false;
         const WebSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let webRecognition = null;
         let useNativeSpeech = window.Capacitor && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins.SpeechRecognition;
@@ -2625,66 +2624,105 @@
         async function toggleMic() {
             playButtonSound();
             if (!useNativeSpeech && !webRecognition) return alert('この環境は音声認識に非対応です');
+            if (isStartingMic) return;
             if(isListening) {
                 stopMic();
             } else {
-                if (useNativeSpeech) {
-                    try {
+                isStartingMic = true;
+                micBtnEl.classList.add('mic-starting');
+                statusTextEl.textContent = 'マイク準備中...';
+
+                try {
+                    if (useNativeSpeech) {
                         const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
-                        const permissions = await speechPlugin.checkPermissions();
-                        if (permissions.speechRecognition !== 'granted') {
+                        await prepareNativeSpeech();
+                        if (!nativePermissionGranted) {
                             const requested = await speechPlugin.requestPermissions();
-                            if (requested.speechRecognition !== 'granted') {
+                            nativePermissionGranted = requested.speechRecognition === 'granted';
+                            if (!nativePermissionGranted) {
                                 statusTextEl.textContent = 'マイクの許可が必要です';
                                 return;
                             }
                         }
-                    } catch (e) {
-                        console.error('Permission request failed', e);
-                        statusTextEl.textContent = 'マイクを使えるように設定してください';
-                        return;
                     }
+                    await startMic();
+                } catch (e) {
+                    console.error('Speech recognition failed to start', e);
+                    statusTextEl.textContent = 'マイクを使えるように設定してください';
+                } finally {
+                    isStartingMic = false;
+                    micBtnEl.classList.remove('mic-starting');
+                    if (!isListening) micBtnEl.classList.remove('mic-active');
                 }
-                startMic();
             }
         }
 
         let nativeInterimMatchCounts = {};
+        let nativeListenersReady = false;
+        let nativePermissionGranted = false;
+        let nativePreparationPromise = null;
+
+        async function prepareNativeSpeech() {
+            if (!useNativeSpeech) return false;
+            if (nativePreparationPromise) return nativePreparationPromise;
+
+            nativePreparationPromise = (async () => {
+                const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
+                if (!nativeListenersReady) {
+                    await speechPlugin.removeAllListeners();
+                    await speechPlugin.addListener('partialResults', (data) => {
+                        if (data && data.matches && data.matches.length > 0) {
+                            processTranscript(data.matches[0], false, nativeInterimMatchCounts);
+                        }
+                    });
+                    await speechPlugin.addListener('listeningState', (data) => {
+                        if (data && data.status === 'started') {
+                            isListening = true;
+                            isStartingMic = false;
+                            micBtnEl.classList.remove('mic-starting');
+                            micBtnEl.classList.add('mic-active');
+                            statusTextEl.textContent = 'ききとり中...';
+                        } else if (data && data.status === 'stopped') {
+                            isListening = false;
+                            isStartingMic = false;
+                            micBtnEl.classList.remove('mic-starting', 'mic-active');
+                            if (currentStage < 3) statusTextEl.textContent = 'マイクがオフです';
+                        }
+                    });
+                    nativeListenersReady = true;
+                }
+
+                const permissions = await speechPlugin.checkPermissions();
+                nativePermissionGranted = permissions.speechRecognition === 'granted';
+                return nativePermissionGranted;
+            })().catch((error) => {
+                nativePreparationPromise = null;
+                nativeListenersReady = false;
+                throw error;
+            });
+
+            return nativePreparationPromise;
+        }
         
         async function startMic(){ 
             if (useNativeSpeech) {
                 nativeInterimMatchCounts = {};
                 const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
-                await speechPlugin.removeAllListeners();
-                await speechPlugin.addListener('partialResults', (data) => {
-                    if (data && data.matches && data.matches.length > 0) {
-                        processTranscript(data.matches[0], false, nativeInterimMatchCounts);
-                    }
+                await prepareNativeSpeech();
+                await speechPlugin.start({
+                    language: "ja-JP",
+                    maxResults: 1,
+                    prompt: "言霊を唱えてください",
+                    partialResults: true,
+                    popup: false
                 });
-                await speechPlugin.addListener('listeningState', (data) => {
-                    if (data && data.status === 'stopped' && isListening) {
-                        isListening = false;
-                        micBtnEl.classList.remove('mic-active');
-                        if (currentStage < 3) statusTextEl.textContent = 'マイクがオフです';
-                    }
-                });
-
-                try {
-                    await speechPlugin.start({
-                        language: "ja-JP",
-                        maxResults: 1,
-                        prompt: "言霊を唱えてください",
-                        partialResults: true,
-                        popup: false
-                    });
-                    isListening = true;
-                    micBtnEl.classList.add('mic-active');
-                    statusTextEl.textContent = 'ききとり中...';
-                    onMicrophoneStartedForTutorial();
-                } catch(e) {
-                    console.error('Speech recognition failed to start', e);
-                    stopMic();
-                }
+                isListening = true;
+                micBtnEl.classList.remove('mic-starting');
+                micBtnEl.classList.add('mic-active');
+                statusTextEl.textContent = 'ききとり中...';
+                onMicrophoneStartedForTutorial();
+                // ネイティブ音声入力開始で中断されたWeb Audioを戻す
+                initAudio();
             } else if (webRecognition) {
                 try{ webRecognition.start(); }catch(e){} 
             }
@@ -2692,11 +2730,11 @@
 
         async function stopMic(){ 
             isListening = false; 
+            isStartingMic = false;
             if (useNativeSpeech) {
-                micBtnEl.classList.remove('mic-active');
+                micBtnEl.classList.remove('mic-starting', 'mic-active');
                 try {
                     await window.Capacitor.Plugins.SpeechRecognition.stop();
-                    await window.Capacitor.Plugins.SpeechRecognition.removeAllListeners();
                 } catch(e){}
             } else if (webRecognition) {
                 webRecognition.stop(); 
@@ -3020,37 +3058,30 @@
 
         function playButtonSound() {
             if (!soundEnabled) return;
-            if (typeof initAudio === 'function') initAudio();
-            if (!audioCtx) return;
-            
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            
-            // WebKitの同期的な再生許可を得るため、setTimeoutやasyncは使わずに少し未来にスケジュール
-            const offset = (audioCtx.state === 'suspended' || audioCtx.currentTime < 0.1) ? 0.05 : 0;
-            const now = audioCtx.currentTime + offset;
-            
-            playOscillator(880, now, 0.08, 0.1, 'square');
+            playWhenAudioReady((ctx) => {
+                const now = ctx.currentTime + 0.01;
+                playOscillator(880, now, 0.06, 0.14, 'square');
+                playOscillator(1174.66, now + 0.045, 0.07, 0.10, 'square');
+            });
         }
 
         function playWordPopSound() {
-            if (!audioCtx) initAudio();
-            if (!audioCtx) return; // AudioContextが許可されていない場合は鳴らさない
-            const now = audioCtx.currentTime;
-            // 軽やかな「テロン♪」という音 (C5 -> E5)
-            playOscillator(523.25, now, 0.08, 0.02, 'sine');
-            playOscillator(659.25, now + 0.08, 0.15, 0.02, 'sine');
+            playWhenAudioReady((ctx) => {
+                const now = ctx.currentTime + 0.01;
+                // 軽やかな「テロン♪」という音 (C5 -> E5)
+                playOscillator(523.25, now, 0.10, 0.08, 'sine');
+                playOscillator(659.25, now + 0.08, 0.18, 0.10, 'sine');
+            });
         }
 
         function playTenPopSound() {
-            if (!audioCtx) initAudio();
-            if (!audioCtx) return;
-            const now = audioCtx.currentTime;
-            // 10回ごとの「テレレン♪」という音 (C5 -> E5 -> G5) 少しだけ華やかに
-            playOscillator(523.25, now, 0.08, 0.03, 'sine');
-            playOscillator(659.25, now + 0.08, 0.08, 0.03, 'sine');
-            playOscillator(783.99, now + 0.16, 0.20, 0.03, 'sine');
+            playWhenAudioReady((ctx) => {
+                const now = ctx.currentTime + 0.01;
+                // 10回ごとの「テレレン♪」という音 (C5 -> E5 -> G5)
+                playOscillator(523.25, now, 0.10, 0.08, 'sine');
+                playOscillator(659.25, now + 0.08, 0.10, 0.09, 'sine');
+                playOscillator(783.99, now + 0.16, 0.24, 0.11, 'sine');
+            });
         }
 
         const battleMessageEl = document.getElementById('battleMessage');

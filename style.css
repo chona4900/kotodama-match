@@ -290,9 +290,6 @@
         .word-effect-milestone {
             filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 8px #f8b400);
         }
-        .art-container.word-received-pulse {
-            animation: wordReceivedPulse 0.32s steps(3);
-        }
         @keyframes wordCountFloat {
             0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.7); }
             14% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.15); }
@@ -305,14 +302,10 @@
             65% { opacity: 1; }
             100% { opacity: 0; transform: translate3d(12px, -135px, 0) scale(1.45) rotate(35deg); }
         }
-        @keyframes wordReceivedPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.035); }
-        }
-
         /* 繝懊ち繝ｳ鄒､ */
         .controls { display: flex; justify-content: space-around; width: 100%; margin-top: 30px; }
         .btn-round { width: 60px; height: 60px; border-radius: 50%; background: #F8B400; border: none; box-shadow: inset -2px -2px 8px rgba(0,0,0,0.3), inset 2px 2px 8px rgba(255,255,255,0.5), 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; color: #C0392B; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .btn-round.mic-starting { background: #E67E22; color: white; transform: scale(0.94); }
         .btn-round.mic-active { background: #E74C3C; color: white; animation: pulse-red 1.5s infinite; }
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
         .btn-label { margin-top: 10px; font-size: 0.8rem; color: white; text-align: center; }
