@@ -27,3 +27,7 @@ Thumbs.db
 /p12_base64.txt
 /pp_base64.txt
 /CertificateSigningRequest.certSigningRequest
+
+# Cloudflare/Wrangler local development state and logs
+/online-battle/.wrangler/
+/online-battle/.wrangler-config/

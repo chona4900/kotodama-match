@@ -41,6 +41,11 @@ requireText('main.js', 'function startFirstLaunchTutorial()');
 requireText('main.js', "localStorage.setItem(FIRST_LAUNCH_TUTORIAL_KEY, 'true')");
 requireText('main.js', 'function animateProgressGain()');
 requireText('main.js', 'function preventViewportZoom()');
+requireText('main.js', 'function getRebirthDeadline()');
+requireText('main.js', 'function updateRebirthCountdown()');
+requireText('main.js', 'function getEnemyStats(playerStats = getBattleStats())');
+requireText('index.html', 'id="rebirthCountdown"');
+requireText('style.css', '.rebirth-countdown');
 requireText('main.js', "'kotodama_state_backup'");
 requireText('index.html', 'id="tutorialCoachmark"');
 forbidText('index.html', 'id="soundToggleButton"');
@@ -56,6 +61,14 @@ requireText('style.css', 'animation-iteration-count: infinite !important');
 requireText('data.js', 'function playWhenAudioReady(playback)');
 requireText('main.js', 'await prepareNativeSpeech()');
 requireText('main.js', "micBtnEl.classList.add('mic-starting')");
+requireText('index.html', 'onclick="openOnlineBattleMenu()"');
+requireText('main.js', 'function createOnlineBattleRoom()');
+requireText('main.js', 'function runOnlineBattleSequence(result, seat)');
+requireText('online-battle/src/index.mjs', 'export class BattleRoom extends DurableObject');
+requireText('online-battle/src/index.mjs', "ROOM_TTL_MS = 15 * 60 * 1000");
+requireText('online-battle/src/battle-engine.mjs', 'export function simulateBattle');
+requireText('online-battle/wrangler.jsonc', '"class_name": "BattleRoom"');
+requireText('online-battle-config.js', 'KOTODAMA_ONLINE_BATTLE_API_URL');
 forbidText('main.js', "container.classList.add('word-received-pulse')");
 forbidText('main.js', 'renderCanvasArt(currentForm, ctx); // 少し揺らす');
 requireText('ios/App/App/Info.plist', 'NSSpeechRecognitionUsageDescription');
@@ -65,7 +78,7 @@ requireText('ios/App/App/Info.plist', 'UIInterfaceOrientationLandscapeRight');
 requireText('plugins/kotodama-speech-recognition/Package.swift', 'KotodamaSpeechRecognition');
 
 const main = read('main.js');
-for (const forbidden of ["wordCounts['愛してます'] = 2980", 'battleWins = 100', 'true || unlockedForms', 'generateChallengeUrl']) {
+for (const forbidden of ["wordCounts['愛してます'] = 2980", 'battleWins = 100', 'true || unlockedForms', 'generateChallengeUrl', 'getEnemyStats(totalCount)']) {
   if (main.includes(forbidden)) errors.push(`main.js に開発用コードが残っています: ${forbidden}`);
 }
 

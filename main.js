@@ -681,6 +681,10 @@
         const oyatsuOverlayEl = document.getElementById('oyatsuOverlay');
         const oyatsuListEl = document.getElementById('oyatsuList');
         const micBtnEl = document.getElementById('micBtn');
+        const rebirthCountdownEl = document.getElementById('rebirthCountdown');
+
+        const REBIRTH_STAGE3_DELAY_MS = 3 * 24 * 60 * 60 * 1000;
+        const REBIRTH_STAGE4_DELAY_MS = 4 * 24 * 60 * 60 * 1000;
 
         // --- 今後の対戦機能に向けた裏側ステータス（表には表示しない） ---
         // ※ 育成（心のごはん）の総量からステータスを自動計算する仕組みです
@@ -719,35 +723,18 @@
             return stats;
         }
 
-        function getEnemyStats(myTotalCount) {
-            let stats = {
-                hp: 100,
-                attack: 10,
-                evasionRate: 5,
-                criticalRate: 5
+        function getEnemyStats(playerStats = getBattleStats()) {
+            // CPUは「戦闘に使う能力」を基準にする。おやつ等の総発話数では強くならない。
+            const strength = 0.88 + Math.random() * 0.24; // 自分とほぼ同格（-12% 〜 +12%）
+            const hpTilt = 0.92 + Math.random() * 0.16;
+            const attackTilt = 0.92 + Math.random() * 0.16;
+
+            return {
+                hp: Math.max(100, Math.round(playerStats.hp * strength * hpTilt)),
+                attack: Math.max(10, Math.round(playerStats.attack * strength * attackTilt)),
+                evasionRate: Math.min(60, Math.max(5, Math.round(playerStats.evasionRate * strength))),
+                criticalRate: Math.min(60, Math.max(5, Math.round(playerStats.criticalRate * strength)))
             };
-            
-            // 自分のごはんと同レベル〜やや強い/弱い敵を作る (0.8x 〜 1.2x)
-            let enemyScore = Math.floor(myTotalCount * (0.8 + Math.random() * 0.4));
-            
-            // ポイントを4つのステータスにランダム配分
-            let pDef = Math.random();
-            let pAtk = Math.random();
-            let pEva = Math.random();
-            let pCrit = Math.random();
-            let sum = pDef + pAtk + pEva + pCrit;
-            
-            let defScore = Math.floor(enemyScore * (pDef / sum));
-            let atkScore = Math.floor(enemyScore * (pAtk / sum));
-            let evaScore = Math.floor(enemyScore * (pEva / sum));
-            let critScore = Math.floor(enemyScore * (pCrit / sum));
-            
-            stats.hp += defScore * 2;
-            stats.attack += atkScore * 1;
-            stats.evasionRate = Math.min(stats.evasionRate + (evaScore * 0.2), 50);
-            stats.criticalRate = Math.min(stats.criticalRate + (critScore * 0.2), 50);
-            
-            return stats;
         }
 
         function saveState() {
@@ -843,21 +830,39 @@
         }
 
         // --- 転生ロジック ---
-        function checkRebirth() {
-            if (finalEvolutionTimestamp) {
-                const now = Date.now();
-                if (currentStage === 3) {
-                    // 第4段階：3日（3 * 24 * 60 * 60 * 1000 = 259,200,000 ミリ秒）経過で転生
-                    if (now - finalEvolutionTimestamp >= 259200000) {
-                        reincarnate();
-                    }
-                } else if (currentStage === 4) {
-                    // 第5段階（シークレット）：寿命を1日延ばし、4日（4 * 24 * 60 * 60 * 1000 = 345,600,000 ミリ秒）経過で転生
-                    if (now - finalEvolutionTimestamp >= 345600000) {
-                        reincarnate();
-                    }
-                }
+        function getRebirthDeadline() {
+            if (!finalEvolutionTimestamp) return null;
+            if (currentStage === 3) return finalEvolutionTimestamp + REBIRTH_STAGE3_DELAY_MS;
+            if (currentStage === 4) return finalEvolutionTimestamp + REBIRTH_STAGE4_DELAY_MS;
+            return null;
+        }
+
+        function updateRebirthCountdown() {
+            if (!rebirthCountdownEl) return;
+
+            const deadline = getRebirthDeadline();
+            if (!deadline) {
+                rebirthCountdownEl.hidden = true;
+                rebirthCountdownEl.textContent = '';
+                return;
             }
+
+            const remainingMs = Math.max(0, deadline - Date.now());
+            const totalHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+            const days = Math.floor(totalHours / 24);
+            const hours = totalHours % 24;
+            const remainingLabel = remainingMs <= 0
+                ? 'まもなく'
+                : (days > 0 ? `あと ${days}日 ${hours}時間` : `あと ${Math.max(1, hours)}時間`);
+
+            rebirthCountdownEl.textContent = `転生まで ${remainingLabel}`;
+            rebirthCountdownEl.setAttribute('aria-label', `現在の姿は${remainingLabel}で転生します。図鑑とアイテムは残ります。`);
+            rebirthCountdownEl.hidden = false;
+        }
+
+        function checkRebirth() {
+            const deadline = getRebirthDeadline();
+            if (deadline && Date.now() >= deadline) reincarnate();
         }
 
         function reincarnate() {
@@ -902,6 +907,11 @@
             }
             renderCanvasArt(currentForm, ctx);
             updateUI();
+            // 開いたままでも日付をまたいだ表示・転生を取りこぼさない。
+            window.setInterval(() => {
+                checkRebirth();
+                updateRebirthCountdown();
+            }, 60 * 1000);
             if (useNativeSpeech) {
                 prepareNativeSpeech().catch((error) => {
                     console.warn('Speech recognition prewarm failed:', error);
@@ -1284,6 +1294,8 @@
                 battleRecordDisplay.innerHTML = `戦歴<br>${trophyHtml}${battleWins}勝<br>${battleLosses}敗`;
             }
 
+            updateRebirthCountdown();
+
             if(totalCount >= STAGE4_GOAL && currentStage < 4) {
                 evolve(4);
             } else if(totalCount >= STAGE3_GOAL && currentStage < 3) {
@@ -1491,7 +1503,14 @@
                 saveState(); // 進化状態を保存
                 renderCanvasArt(evolutionType, ctx);
                 
-                statusTextEl.textContent = `★ ${newName}！ ★`;
+                if (currentStage === 3) {
+                    statusTextEl.textContent = `★ ${newName}！ 3日後に転生するよ。図鑑・アイテムは残るよ！ ★`;
+                } else if (currentStage === 4) {
+                    statusTextEl.textContent = `★ ${newName}！ 転生までの時間が1日延びたよ。★`;
+                } else {
+                    statusTextEl.textContent = `★ ${newName}！ ★`;
+                }
+                updateRebirthCountdown();
                 canvas.classList.remove('bouncing');
             }, targetStage === 4);
         }
@@ -3073,12 +3092,197 @@
         let pendingChallengerData = null;
         let selectedBattleAction = null;
         let pendingBattleOptions = null;
+        const ONLINE_BATTLE_API_URL = String(window.KOTODAMA_ONLINE_BATTLE_API_URL || '').replace(/\/$/, '');
+        let onlineBattleSession = null;
 
         const BATTLE_ACTIONS = {
             attack: { label: '攻める！', message: '攻撃力が 35% アップ！' },
             guard: { label: '守る！', message: 'HPと回避率が アップ！' },
             pray: { label: '祈る！', message: '会心と神器の力が アップ！' }
         };
+
+        function getOnlineBattleSnapshot() {
+            const stats = getBattleStats();
+            return {
+                form: currentForm,
+                hp: Math.min(5000, Math.max(100, Math.round(stats.hp))),
+                attack: Math.min(1000, Math.max(10, Math.round(stats.attack))),
+                evasionRate: Math.min(75, Math.max(0, Math.round(stats.evasionRate))),
+                criticalRate: Math.min(75, Math.max(0, Math.round(stats.criticalRate))),
+                wins: Math.min(99999, Math.max(0, Math.round(battleWins)))
+            };
+        }
+
+        function onlineBattleStatus(message) {
+            const status = document.getElementById('onlineBattleStatus');
+            if (status) status.textContent = message;
+        }
+
+        function openOnlineBattleMenu() {
+            playButtonSound();
+            document.getElementById('pvpMainMenu').style.display = 'none';
+            document.getElementById('onlineBattleMenu').style.display = 'flex';
+            onlineBattleStatus(ONLINE_BATTLE_API_URL ? '部屋をつくるか、友だちのコードを入力してね。' : 'オンライン対戦サーバーを準備しています。');
+        }
+
+        function closeOnlineBattleMenu() {
+            playButtonSound();
+            document.getElementById('onlineBattleMenu').style.display = 'none';
+            document.getElementById('pvpMainMenu').style.display = 'flex';
+        }
+
+        async function onlineBattleRequest(path, options = {}) {
+            if (!ONLINE_BATTLE_API_URL) throw new Error('オンライン対戦サーバーの接続設定がまだありません。');
+            const response = await fetch(`${ONLINE_BATTLE_API_URL}${path}`, {
+                ...options,
+                headers: { 'content-type': 'application/json', ...(options.headers || {}) }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.error || '通信に失敗しました。');
+            return payload;
+        }
+
+        async function createOnlineBattleRoom() {
+            try {
+                playButtonSound();
+                onlineBattleStatus('部屋をつくっています…');
+                const data = await onlineBattleRequest('/v1/rooms', {
+                    method: 'POST', body: JSON.stringify({ snapshot: getOnlineBattleSnapshot() })
+                });
+                onlineBattleSession = { code: data.code, token: data.playerToken, seat: 'host', started: false, socket: null };
+                const codeInput = document.getElementById('onlineBattleCode');
+                if (codeInput) codeInput.value = data.code;
+                onlineBattleStatus(`招待コード: ${data.code}\n友だちに伝えて、入室を待ってね。`);
+                connectOnlineBattleSocket();
+            } catch (error) {
+                onlineBattleStatus(error.message || '部屋をつくれませんでした。');
+            }
+        }
+
+        async function joinOnlineBattleRoom() {
+            try {
+                playButtonSound();
+                const code = String(document.getElementById('onlineBattleCode')?.value || '').trim().toUpperCase();
+                if (!/^[A-Z2-9]{6}$/.test(code)) throw new Error('6文字の招待コードを入力してね。');
+                onlineBattleStatus('部屋に入っています…');
+                const data = await onlineBattleRequest(`/v1/rooms/${code}`, {
+                    method: 'POST', body: JSON.stringify({ snapshot: getOnlineBattleSnapshot() })
+                });
+                onlineBattleSession = { code, token: data.playerToken, seat: 'guest', started: false, socket: null };
+                onlineBattleStatus('入室できたよ。対戦を始めます…');
+                connectOnlineBattleSocket();
+            } catch (error) {
+                onlineBattleStatus(error.message || '入室できませんでした。');
+            }
+        }
+
+        function connectOnlineBattleSocket() {
+            if (!onlineBattleSession || !ONLINE_BATTLE_API_URL) return;
+            const socketUrl = `${ONLINE_BATTLE_API_URL.replace(/^http/, 'ws')}/v1/rooms/${onlineBattleSession.code}/socket`;
+            const socket = new WebSocket(socketUrl);
+            onlineBattleSession.socket = socket;
+            socket.addEventListener('open', () => socket.send(JSON.stringify({ type: 'auth', token: onlineBattleSession.token })));
+            socket.addEventListener('message', (event) => handleOnlineBattleMessage(event));
+            socket.addEventListener('close', () => {
+                if (onlineBattleSession && !onlineBattleSession.finished) {
+                    onlineBattleStatus('通信が切れました。もう一度、部屋へ入り直してね。');
+                }
+            });
+            socket.addEventListener('error', () => onlineBattleStatus('通信を開始できませんでした。接続を確認してね。'));
+        }
+
+        function handleOnlineBattleMessage(event) {
+            let message;
+            try { message = JSON.parse(event.data); } catch { return; }
+            if (!onlineBattleSession) return;
+            if (message.type === 'error') return onlineBattleStatus(message.message || '通信エラーが起きました。');
+            if (message.type === 'expired') {
+                onlineBattleStatus('この部屋は期限切れです。新しい部屋をつくってね。');
+                return;
+            }
+            if (message.type === 'room') {
+                if (message.seat) onlineBattleSession.seat = message.seat;
+                const room = message.room;
+                if (room.phase === 'waiting') {
+                    onlineBattleStatus(`招待コード: ${room.code}\n友だちの入室を待っています。`);
+                } else if (room.phase === 'choosing' && !onlineBattleSession.started) {
+                    startOnlineBattle(room);
+                }
+                return;
+            }
+            if (message.type === 'waiting') {
+                battleMessageEl.textContent = '相手の作戦を待っています…';
+                battleMessageEl.style.display = 'block';
+                return;
+            }
+            if (message.type === 'result') {
+                onlineBattleSession.finished = true;
+                runOnlineBattleSequence(message.result, onlineBattleSession.seat);
+            }
+        }
+
+        function startOnlineBattle(room) {
+            const opponent = onlineBattleSession.seat === 'host' ? room.guest : room.host;
+            if (!opponent) return;
+            onlineBattleSession.started = true;
+            startBattle(false, { f: opponent.form, w: opponent.wins, h: 100, a: 10, e: 5, c: 5 });
+            if (pendingBattleOptions) pendingBattleOptions.online = true;
+        }
+
+        function submitOnlineBattleAction(action) {
+            const socket = onlineBattleSession?.socket;
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                battleMessageEl.textContent = '通信が切れました。対戦をやり直してね。';
+                battleMessageEl.style.display = 'block';
+                return;
+            }
+            socket.send(JSON.stringify({ type: 'choose', action }));
+        }
+
+        function runOnlineBattleSequence(result, seat) {
+            const myRole = seat;
+            const enemyRole = seat === 'host' ? 'guest' : 'host';
+            const myMaxHp = result.maxHp[myRole];
+            const enemyMaxHp = result.maxHp[enemyRole];
+            let eventIndex = 0;
+            battleMessageEl.style.display = 'none';
+
+            const playNext = () => {
+                const event = result.events[eventIndex];
+                if (!event) {
+                    const didWin = seat === 'host' ? result.hostWon : !result.hostWon;
+                    finishBattle(didWin);
+                    return;
+                }
+                eventIndex += 1;
+                const isMyTurn = event.attacker === myRole;
+                const attackerEl = isMyTurn ? myCharEl : enemyCharEl;
+                const defenderEl = isMyTurn ? enemyCharEl : myCharEl;
+                const atkClass = isMyTurn ? 'attack-mine' : 'attack-enemy';
+                attackerEl.classList.add(atkClass);
+                initAudio();
+                playOscillator(150, audioCtx ? audioCtx.currentTime : 0, 0.12, 0.08, 'sawtooth');
+                setTimeout(() => {
+                    if (event.hit) {
+                        defenderEl.classList.add('hit');
+                        const arenaRect = battleArenaEl.getBoundingClientRect();
+                        createHitFx(arenaRect.width / 2, arenaRect.height / 2);
+                        createPopupText(event.critical ? `CRITICAL! ${event.damage}` : `-${event.damage}`, isMyTurn, event.critical);
+                        if (event.critical) playCriticalSound(); else playExplosionSound();
+                        setTimeout(() => defenderEl.classList.remove('hit'), 350);
+                    } else {
+                        defenderEl.classList.add('miss');
+                        createPopupText('MISS!', isMyTurn, false);
+                        setTimeout(() => defenderEl.classList.remove('miss'), 350);
+                    }
+                    myHpBarEl.style.width = `${Math.max(0, event.hp[myRole]) / myMaxHp * 100}%`;
+                    enemyHpBarEl.style.width = `${Math.max(0, event.hp[enemyRole]) / enemyMaxHp * 100}%`;
+                    setTimeout(() => attackerEl.classList.remove(atkClass), 250);
+                    setTimeout(playNext, 850);
+                }, 260);
+            };
+            playNext();
+        }
 
         function startBattle(forceMiracle = false, challengerData = null) {
             closePvpMenu(); // メニューが開いていれば閉じる
@@ -3190,6 +3394,17 @@
             battleMessageEl.style.top = '50%';
             battleMessageEl.style.display = 'block';
 
+            if (options.online) {
+                setTimeout(() => {
+                    battleMessageEl.textContent = '相手の作戦を待っています…';
+                    battleMessageEl.style.color = 'var(--screen-text)';
+                    battleMessageEl.style.fontSize = '1.1rem';
+                    battleMessageEl.style.display = 'block';
+                    submitOnlineBattleAction(action);
+                }, 900);
+                return;
+            }
+
             setTimeout(() => {
                 battleMessageEl.style.display = 'none';
                 runBattleSequence(options.forceMiracle, options.challengerData, action);
@@ -3250,7 +3465,7 @@
                 attack: challengerData.a,
                 evasionRate: challengerData.e,
                 criticalRate: challengerData.c
-            } : getEnemyStats(totalCount);
+            } : getEnemyStats(myStats);
 
             if (battleAction === 'attack') {
                 myStats.attack = Math.max(1, Math.round(myStats.attack * 1.35));
@@ -3553,6 +3768,7 @@
 
             document.getElementById('pvpMenuOverlay').classList.add('visible');
             document.getElementById('pvpMainMenu').style.display = 'flex';
+            document.getElementById('onlineBattleMenu').style.display = 'none';
         }
 
         function closePvpMenu() {
