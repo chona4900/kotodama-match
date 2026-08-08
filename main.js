@@ -860,21 +860,16 @@
             rebirthCountdownEl.hidden = false;
         }
 
-        function checkRebirth() {
+        function checkRebirth({ announce = true } = {}) {
             const deadline = getRebirthDeadline();
-            if (deadline && Date.now() >= deadline) reincarnate();
+            if (deadline && Date.now() >= deadline) reincarnate({ announce });
         }
 
-        function reincarnate() {
+        function reincarnate({ announce = true } = {}) {
             const overlay = document.getElementById('rebirthOverlay');
             if(!overlay) return;
-            
-            // 転生サウンドと暗転開始
-            playRebirthSound();
-            overlay.classList.add('active');
-            
-            // 3秒後（完全に真っ黒になった瞬間）にデータをリセット
-            setTimeout(() => {
+
+            const resetToEgg = () => {
                 currentStage = 0;
                 currentForm = 'egg';
                 totalCount = 0;
@@ -890,8 +885,23 @@
                 
                 renderCanvasArt('egg', ctx);
                 updateUI();
-                statusTextEl.textContent = "ふたたび たまごになった...";
-                
+                statusTextEl.textContent = announce ? "ふたたび たまごになった..." : "マイクをオンにしてね";
+            };
+
+            // 起動時に期限切れを検出した場合は、転生演出を出さず通常の案内で始める。
+            if (!announce) {
+                resetToEgg();
+                return;
+            }
+
+            // 起動中に迎えた転生だけは、転生サウンドと暗転を表示する。
+            playRebirthSound();
+            overlay.classList.add('active');
+
+            // 3秒後（完全に真っ黒になった瞬間）にデータをリセット
+            setTimeout(() => {
+                resetToEgg();
+
                 // ゆっくり明転させる
                 overlay.classList.remove('active');
             }, 3000);
@@ -900,7 +910,7 @@
         // --- 描画ロジック ---
         function init() {
             loadState();
-            checkRebirth();
+            checkRebirth({ announce: false });
             if (isSick) {
                 const remaining = Math.max(0, SICKNESS_RECOVERY_GOAL - sickRecoveryCount);
                 statusTextEl.textContent = `ことだまを あと ${remaining} 回で元気！`;
@@ -2632,20 +2642,22 @@
                 try {
                     if (useNativeSpeech) {
                         const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
-                        await prepareNativeSpeech();
-                        if (!nativePermissionGranted) {
-                            const requested = await speechPlugin.requestPermissions();
-                            nativePermissionGranted = requested.speechRecognition === 'granted';
-                            if (!nativePermissionGranted) {
-                                statusTextEl.textContent = 'マイクの許可が必要です';
-                                return;
-                            }
+                        const permissionResult = await ensureNativeSpeechPermissions();
+                        if (!permissionResult.granted) {
+                            statusTextEl.textContent = permissionResult.message;
+                            return;
+                        }
+
+                        const availability = await speechPlugin.available();
+                        if (!availability.available) {
+                            statusTextEl.textContent = '音声認識を開始できません。通信状態を確認して、もう一度試してください';
+                            return;
                         }
                     }
                     await startMic();
                 } catch (e) {
                     console.error('Speech recognition failed to start', e);
-                    statusTextEl.textContent = 'マイクを使えるように設定してください';
+                    statusTextEl.textContent = getNativeSpeechErrorMessage(e);
                 } finally {
                     isStartingMic = false;
                     micBtnEl.classList.remove('mic-starting');
@@ -2657,7 +2669,67 @@
         let nativeInterimMatchCounts = {};
         let nativeListenersReady = false;
         let nativePermissionGranted = false;
+        let nativePermissionState = {
+            microphone: 'prompt',
+            speechRecognition: 'prompt'
+        };
         let nativePreparationPromise = null;
+
+        function updateNativePermissionState(permissions = {}) {
+            nativePermissionState = {
+                microphone: permissions.microphone || 'prompt',
+                speechRecognition: permissions.speechRecognition || 'prompt'
+            };
+            nativePermissionGranted = nativePermissionState.microphone === 'granted'
+                && nativePermissionState.speechRecognition === 'granted';
+            return nativePermissionState;
+        }
+
+        function getNativePermissionMessage(permissions = nativePermissionState) {
+            if (permissions.microphone !== 'granted') {
+                return permissions.microphone === 'denied'
+                    ? '設定で「マイク」をオンにしてください'
+                    : 'マイクの許可が必要です';
+            }
+
+            if (permissions.speechRecognition !== 'granted') {
+                return permissions.speechRecognition === 'denied'
+                    ? '設定で「音声認識」をオンにしてください'
+                    : '音声認識の許可が必要です';
+            }
+
+            return '';
+        }
+
+        function getNativeSpeechErrorMessage(error) {
+            const message = String(error?.message || error || '').toLowerCase();
+            if (message.includes('microphone permission')) {
+                return '設定で「マイク」をオンにしてください';
+            }
+            if (message.includes('speech recognition permission')) {
+                return '設定で「音声認識」をオンにしてください';
+            }
+            if (message.includes('unavailable')) {
+                return '音声認識を開始できません。通信状態を確認して、もう一度試してください';
+            }
+            return '音声認識を開始できませんでした。通信状態を確認して、もう一度試してください';
+        }
+
+        async function ensureNativeSpeechPermissions() {
+            const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
+            let permissions = updateNativePermissionState(await speechPlugin.checkPermissions());
+            const needsPrompt = permissions.microphone === 'prompt'
+                || permissions.speechRecognition === 'prompt';
+
+            if (!nativePermissionGranted && needsPrompt) {
+                permissions = updateNativePermissionState(await speechPlugin.requestPermissions());
+            }
+
+            return {
+                granted: nativePermissionGranted,
+                message: getNativePermissionMessage(permissions)
+            };
+        }
 
         async function prepareNativeSpeech() {
             if (!useNativeSpeech) return false;
@@ -2690,7 +2762,7 @@
                 }
 
                 const permissions = await speechPlugin.checkPermissions();
-                nativePermissionGranted = permissions.speechRecognition === 'granted';
+                updateNativePermissionState(permissions);
                 return nativePermissionGranted;
             })().catch((error) => {
                 nativePreparationPromise = null;

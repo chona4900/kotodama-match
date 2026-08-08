@@ -118,11 +118,7 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc override public func checkPermissions(_ call: CAPPluginCall) {
-        let speechStatus = SFSpeechRecognizer.authorizationStatus()
-        let microphoneStatus = AVAudioSession.sharedInstance().recordPermission
-        let granted = speechStatus == .authorized && microphoneStatus == .granted
-        let denied = speechStatus == .denied || speechStatus == .restricted || microphoneStatus == .denied
-        call.resolve(["speechRecognition": granted ? "granted" : (denied ? "denied" : "prompt")])
+        call.resolve(permissionPayload())
     }
 
     @objc override public func requestPermissions(_ call: CAPPluginCall) {
@@ -132,6 +128,39 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
                     self?.checkPermissions(call)
                 }
             }
+        }
+    }
+
+    private func permissionPayload() -> [String: String] {
+        [
+            "speechRecognition": speechPermissionState(),
+            "microphone": microphonePermissionState()
+        ]
+    }
+
+    private func speechPermissionState() -> String {
+        switch SFSpeechRecognizer.authorizationStatus() {
+        case .authorized:
+            return "granted"
+        case .denied, .restricted:
+            return "denied"
+        case .notDetermined:
+            return "prompt"
+        @unknown default:
+            return "prompt"
+        }
+    }
+
+    private func microphonePermissionState() -> String {
+        switch AVAudioSession.sharedInstance().recordPermission {
+        case .granted:
+            return "granted"
+        case .denied:
+            return "denied"
+        case .undetermined:
+            return "prompt"
+        @unknown default:
+            return "prompt"
         }
     }
 
