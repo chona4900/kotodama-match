@@ -686,6 +686,13 @@
         const REBIRTH_STAGE3_DELAY_MS = 3 * 24 * 60 * 60 * 1000;
         const REBIRTH_STAGE4_DELAY_MS = 4 * 24 * 60 * 60 * 1000;
 
+        function getDisplayedStats() {
+            if (currentStage === 0 && totalCount === 0) {
+                return { hp: 0, attack: 0, evasionRate: 0, criticalRate: 0 };
+            }
+            return getBattleStats();
+        }
+
         // --- 今後の対戦機能に向けた裏側ステータス（表には表示しない） ---
         // ※ 育成（心のごはん）の総量からステータスを自動計算する仕組みです
         function getBattleStats() {
@@ -739,6 +746,7 @@
 
         function saveState() {
             const state = {
+                saveDataVersion: window.KotodamaStateMigrations.CURRENT_SAVE_DATA_VERSION,
                 currentStage,
                 currentForm,
                 wordCounts,
@@ -790,6 +798,18 @@
                     if (!state || typeof state !== 'object') {
                         throw new Error('保存データの形式が不正です');
                     }
+
+                    const migration = window.KotodamaStateMigrations.migrateSavedState(state, allWords);
+                    state = migration.state;
+                    if (migration.didChange) {
+                        const migratedState = JSON.stringify(state);
+                        localStorage.setItem('kotodama_state', migratedState);
+                        localStorage.setItem('kotodama_state_backup', migratedState);
+                    }
+                    if (migration.didResetKnownTestState) {
+                        console.info('公開前のテストデータを初期状態へ移行しました。');
+                    }
+
                     currentStage = (state.currentStage !== undefined) ? Number(state.currentStage) : 0;
                     currentForm = state.currentForm || 'egg';
                     totalCount = (state.totalCount !== undefined) ? Number(state.totalCount) : 0;
@@ -1278,7 +1298,7 @@
             }
 
             // メイン画面のステータス表示を更新
-            const currentStats = getBattleStats();
+            const currentStats = getDisplayedStats();
             const mainStatsDisplay = document.getElementById('mainStatsDisplay');
             if (mainStatsDisplay) {
                 mainStatsDisplay.innerHTML = `
@@ -1705,9 +1725,6 @@
         let overlayState = 0; // 0: closed, 1: stats, 2: oyatsu, 3: zukan
         const zukanOverlayEl = document.getElementById('zukanOverlay');
         const zukanListEl = document.getElementById('zukanList');
-        const infoNavigationEl = document.getElementById('infoNavigation');
-        const infoPageIndicatorEl = document.getElementById('infoPageIndicator');
-        const infoNextButtonEl = document.getElementById('infoNextButton');
 
         function setInfoPage(page) {
             const nextPage = Math.max(1, Math.min(3, Number(page) || 1));
@@ -1721,35 +1738,10 @@
             statsOverlayEl.classList.toggle('visible', nextPage === 1);
             oyatsuOverlayEl.classList.toggle('visible', nextPage === 2);
             zukanOverlayEl.classList.toggle('visible', nextPage === 3);
-            infoNavigationEl.classList.add('visible');
-            infoPageIndicatorEl.textContent = `${nextPage} / 3`;
-            infoNextButtonEl.textContent = nextPage === 3 ? '閉じる' : '次へ →';
-
-            infoNavigationEl.querySelectorAll('[data-info-page]').forEach((tab) => {
-                const isSelected = Number(tab.dataset.infoPage) === nextPage;
-                tab.setAttribute('aria-selected', String(isSelected));
-                tab.tabIndex = isSelected ? 0 : -1;
-            });
 
             if (nextPage === 1) updateStatsList();
             if (nextPage === 2) updateOyatsuList();
             if (nextPage === 3) renderZukan();
-        }
-
-        function openInfoPage(page) {
-            playButtonSound();
-            setInfoPage(page);
-        }
-
-        function showNextInfoPage() {
-            playButtonSound();
-            if (overlayState === 0) {
-                setInfoPage(1);
-            } else if (overlayState < 3) {
-                setInfoPage(overlayState + 1);
-            } else {
-                closeOverlays();
-            }
         }
 
         function toggleAButton() {
@@ -1766,7 +1758,6 @@
             statsOverlayEl.classList.remove('visible');
             oyatsuOverlayEl.classList.remove('visible');
             zukanOverlayEl.classList.remove('visible');
-            infoNavigationEl.classList.remove('visible');
             
             const zukanDetail = document.getElementById('zukanDetailOverlay');
             if(zukanDetail) zukanDetail.classList.remove('visible');
