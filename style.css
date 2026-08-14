@@ -1041,6 +1041,30 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
         transition-duration: 0.01ms !important;
     }
 
+    /* 進化演出は状態変化を伝えるため、短い点滅に置き換える。
+       0.01msの最終フレーム（黒）だけが残るWebKitの挙動を避ける。 */
+    .evolution-overlay.flashing {
+        animation-name: evolutionPulsateReduced !important;
+        animation-duration: 1.2s !important;
+        animation-timing-function: step-end !important;
+        animation-iteration-count: 1 !important;
+    }
+    .evolution-overlay.flashing-ultimate {
+        animation-name: ultimatePulsateReduced !important;
+        animation-duration: 1.8s !important;
+        animation-timing-function: step-end !important;
+        animation-iteration-count: 1 !important;
+    }
+    @keyframes evolutionPulsateReduced {
+        0%, 20%, 40%, 60%, 80% { opacity: 0; }
+        10%, 30%, 50%, 70%, 90%, 100% { opacity: 1; }
+    }
+    @keyframes ultimatePulsateReduced {
+        0%, 20%, 40%, 60%, 80% { opacity: 0; background: #fff; }
+        10%, 50%, 90%, 100% { opacity: 1; background: #fff; }
+        30%, 70% { opacity: 0.85; background: #f1c40f; }
+    }
+
     /* 戦歴オーラは停止させず、回転をゆっくりにして状態が分かるようにする */
     .aura-10::before {
         animation-duration: 6s !important;

@@ -1367,33 +1367,46 @@
                 callback();
                 return;
             }
-            
+
+            const animationClass = isUltimate ? 'flashing-ultimate' : 'flashing';
+            const animationNames = isUltimate
+                ? ['ultimatePulsate', 'ultimatePulsateReduced']
+                : ['evolutionPulsate', 'evolutionPulsateReduced'];
+            const fallbackMs = isUltimate ? 9500 : 6500;
+            let finished = false;
+            let fallbackTimer = null;
+
+            const finishEvolutionEffect = () => {
+                if (finished) return;
+                finished = true;
+                if (fallbackTimer !== null) clearTimeout(fallbackTimer);
+                overlay.removeEventListener('animationend', handleAnimationEnd);
+
+                try {
+                    // 最終フレームで姿を切り替え、直後に暗転を必ず解除する。
+                    callback();
+                } finally {
+                    overlay.classList.remove('flashing', 'flashing-ultimate');
+                }
+            };
+
+            const handleAnimationEnd = (event) => {
+                if (event.target === overlay && animationNames.includes(event.animationName)) {
+                    finishEvolutionEffect();
+                }
+            };
+
+            // 同じ演出を続けて実行しても、WebKitでアニメーションを再始動できるようにする。
+            overlay.classList.remove('flashing', 'flashing-ultimate');
+            void overlay.offsetWidth;
+            overlay.addEventListener('animationend', handleAnimationEnd);
+            fallbackTimer = setTimeout(finishEvolutionEffect, fallbackMs);
+            overlay.classList.add(animationClass);
+
             if (isUltimate) {
-                overlay.classList.add('flashing-ultimate');
-                playUltimateEvolutionSound(); // 究極進化用の超派手な音
-                
-                // 9.0秒経過したとき（真っ白の瞬間）で姿を切り替える
-                setTimeout(() => {
-                    callback();
-                    
-                    // ゆっくりと白い光が晴れていく余韻
-                    setTimeout(() => {
-                        overlay.classList.remove('flashing-ultimate');
-                    }, 3000);
-                }, 9000);
+                playUltimateEvolutionSound();
             } else {
-                overlay.classList.add('flashing');
-                playEvolutionSound(); // ドキドキパルス音＋ファンファーレ開始
-                
-                // 6.0秒経過したとき（真っ黒のタイミング）で姿を切り替える
-                setTimeout(() => {
-                    callback();
-                    
-                    // 真っ黒になってから少し余韻を残してゆっくりと晴れる
-                    setTimeout(() => {
-                        overlay.classList.remove('flashing');
-                    }, 1000);
-                }, 6000);
+                playEvolutionSound();
             }
         }
 
