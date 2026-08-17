@@ -18,6 +18,10 @@ Thumbs.db
 /www/
 /dist/
 
+# Android release signing materials and local tools (never commit private keys)
+/.android-signing/
+/.tools/
+
 # Apple signing materials (never commit private keys or provisioning profiles)
 /ios_distribution.key
 /ios_distribution.p12

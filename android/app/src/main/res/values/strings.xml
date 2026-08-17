@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">コトダマっち</string>
+    <string name="title_activity_main">コトダマっち</string>
+    <string name="package_name">com.kotodamamatch.app</string>
+    <string name="custom_url_scheme">com.kotodamamatch.app</string>
+</resources>
