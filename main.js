@@ -693,8 +693,18 @@
             return getBattleStats();
         }
 
-        // --- 今後の対戦機能に向けた裏側ステータス（表には表示しない） ---
-        // ※ 育成（心のごはん）の総量からステータスを自動計算する仕組みです
+        function diminishingStatGrowth(score, scale) {
+            const safeScore = Math.max(0, Number(score) || 0);
+            return Math.round(scale * (Math.sqrt(safeScore + 25) - 5));
+        }
+
+        function diminishingRateGrowth(score) {
+            const safeScore = Math.max(0, Number(score) || 0);
+            // 5%から始まり、発話を重ねるほど緩やかに45%へ近づく。
+            return 5 + (40 * (1 - Math.exp(-safeScore / 3000)));
+        }
+
+        // 育成（心のごはん）の総量から、伸びが次第に緩やかになる戦闘能力を計算する。
         function getBattleStats() {
             // 基本ステータス
             let stats = {
@@ -706,25 +716,25 @@
 
             // 1. 耐久力・タンク系（HPアップ）
             const defScore = (wordCounts['愛してます'] || 0) + (wordCounts['ゆるします'] || 0);
-            stats.hp += defScore * 2; // 1回ごとにHP+2
+            stats.hp += diminishingStatGrowth(defScore, 20);
 
             // 2. 火力・パワー系（攻撃力アップ）
             const atkScore = (wordCounts['ありがとう'] || 0) + (wordCounts['感謝してます'] || 0);
-            stats.attack += atkScore * 1; // 1回ごとに攻撃力+1
+            stats.attack += diminishingStatGrowth(atkScore, 3);
 
             // 3. スピード・回避系（回避率アップ）
             const evaScore = (wordCounts['楽しい'] || 0) + (wordCounts['うれしい'] || 0);
-            stats.evasionRate = Math.min(stats.evasionRate + (evaScore * 0.2), 50); // 上限50%にキャップ
+            stats.evasionRate = diminishingRateGrowth(evaScore);
 
             // 4. 運・ミラクル系（クリティカル率アップ）
             const critScore = (wordCounts['ツイてる'] || 0) + (wordCounts['しあわせ'] || 0);
-            stats.criticalRate = Math.min(stats.criticalRate + (critScore * 0.2), 50); // 上限50%にキャップ
+            stats.criticalRate = diminishingRateGrowth(critScore);
             // シークレット（第5段階）による全ステータスアップのボーナス
             if (currentForm.startsWith('ultimate')) {
-                stats.hp = Math.floor(stats.hp * 1.3); // HP 1.3倍
-                stats.attack = Math.floor(stats.attack * 1.3); // 攻撃 1.3倍
-                stats.evasionRate = Math.min(stats.evasionRate + 15, 60); // 回避+15%
-                stats.criticalRate = Math.min(stats.criticalRate + 15, 60); // 会心+15%
+                stats.hp = Math.floor(stats.hp * 1.12); // HP 12%アップ
+                stats.attack = Math.floor(stats.attack * 1.12); // 攻撃 12%アップ
+                stats.evasionRate = Math.min(stats.evasionRate + 5, 50); // 回避+5%
+                stats.criticalRate = Math.min(stats.criticalRate + 5, 50); // 会心+5%
             }
 
             return stats;
@@ -861,7 +871,8 @@
             if (!rebirthCountdownEl) return;
 
             const deadline = getRebirthDeadline();
-            if (!deadline) {
+            // 情報・おやつ・図鑑を開いている間は、画面を覆うタイマーを出さない。
+            if (!deadline || overlayState !== 0) {
                 rebirthCountdownEl.hidden = true;
                 rebirthCountdownEl.textContent = '';
                 return;
@@ -1340,6 +1351,11 @@
                 if(totalCount > 500) statusTextEl.textContent = "おおきくなってきた！";
                 if(totalCount > 800) statusTextEl.textContent = "もうすぐうまれる...！";
             }
+
+            // 最終段階では、トップ画面の上部はキャラクター名だけにする。
+            if (currentStage >= 3 && !isSick && overlayState === 0) {
+                statusTextEl.textContent = getCurrentFormName();
+            }
             
             updateAuraEffect();
         }
@@ -1546,10 +1562,8 @@
                 saveState(); // 進化状態を保存
                 renderCanvasArt(evolutionType, ctx);
                 
-                if (currentStage === 3) {
-                    statusTextEl.textContent = `★ ${newName}！ 3日後に転生するよ。図鑑・アイテムは残るよ！ ★`;
-                } else if (currentStage === 4) {
-                    statusTextEl.textContent = `★ ${newName}！ 転生までの時間が1日延びたよ。★`;
+                if (currentStage === 3 || currentStage === 4) {
+                    statusTextEl.textContent = newName;
                 } else {
                     statusTextEl.textContent = `★ ${newName}！ ★`;
                 }
@@ -1739,6 +1753,10 @@
         const zukanOverlayEl = document.getElementById('zukanOverlay');
         const zukanListEl = document.getElementById('zukanList');
 
+        function getCurrentFormName() {
+            return charNames[currentForm] || currentForm;
+        }
+
         function setInfoPage(page) {
             const nextPage = Math.max(1, Math.min(3, Number(page) || 1));
 
@@ -1755,6 +1773,7 @@
             if (nextPage === 1) updateStatsList();
             if (nextPage === 2) updateOyatsuList();
             if (nextPage === 3) renderZukan();
+            updateRebirthCountdown();
         }
 
         function toggleAButton() {
@@ -1783,6 +1802,7 @@
                     c.animTimer = null;
                 }
             });
+            updateRebirthCountdown();
         }
 
         const ZUKAN_DESCRIPTIONS = { 
@@ -3141,19 +3161,19 @@
         function playWordPopSound() {
             playWhenAudioReady((ctx) => {
                 const now = ctx.currentTime + 0.01;
-                // 軽やかな「テロン♪」という音 (C5 -> E5)
-                playOscillator(523.25, now, 0.10, 0.08, 'sine');
-                playOscillator(659.25, now + 0.08, 0.18, 0.10, 'sine');
+                // マイク使用中のiPhoneでも聞き取りやすい「テロン♪」(C5 -> E5)
+                playOscillator(523.25, now, 0.10, 0.16, 'sine');
+                playOscillator(659.25, now + 0.08, 0.18, 0.20, 'sine');
             });
         }
 
         function playTenPopSound() {
             playWhenAudioReady((ctx) => {
                 const now = ctx.currentTime + 0.01;
-                // 10回ごとの「テレレン♪」という音 (C5 -> E5 -> G5)
-                playOscillator(523.25, now, 0.10, 0.08, 'sine');
-                playOscillator(659.25, now + 0.08, 0.10, 0.09, 'sine');
-                playOscillator(783.99, now + 0.16, 0.24, 0.11, 'sine');
+                // 10回ごとの「テレレン♪」も通常認識音と同じ音量感にする
+                playOscillator(523.25, now, 0.10, 0.16, 'sine');
+                playOscillator(659.25, now + 0.08, 0.10, 0.18, 'sine');
+                playOscillator(783.99, now + 0.16, 0.24, 0.22, 'sine');
             });
         }
 
@@ -3547,9 +3567,9 @@
                 myStats.attack = Math.max(1, Math.round(myStats.attack * 1.35));
             } else if (battleAction === 'guard') {
                 myStats.hp = Math.max(1, Math.round(myStats.hp * 1.4));
-                myStats.evasionRate = Math.min(70, myStats.evasionRate + 10);
+                myStats.evasionRate = Math.min(60, myStats.evasionRate + 10);
             } else if (battleAction === 'pray') {
-                myStats.criticalRate = Math.min(80, myStats.criticalRate + 15);
+                myStats.criticalRate = Math.min(65, myStats.criticalRate + 15);
             }
             
             let myMaxHp = myStats.hp;

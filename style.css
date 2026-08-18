@@ -104,14 +104,12 @@
             margin-bottom: 5px;
         }
 
-        /* 最終進化後だけ表示する転生タイマー。左右の能力・戦歴表示を避けて上部中央に置く。 */
+        /* 最終進化後だけ表示する転生タイマー。キャラクターの下に表示する。 */
         .rebirth-countdown {
-            position: absolute;
-            top: 32px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 12;
+            align-self: center;
+            flex-shrink: 0;
             min-width: 128px;
+            margin: 2px auto 0;
             padding: 2px 5px;
             box-sizing: border-box;
             border: 1px solid var(--screen-text);
@@ -123,6 +121,11 @@
             text-align: center;
             font-weight: bold;
             pointer-events: none;
+        }
+
+        /* タイマー表示中は進化ゲージとの間隔を少し詰める。 */
+        .rebirth-countdown:not([hidden]) + .progress-container {
+            margin-top: 5px;
         }
 
         /* 笘・鬮倩ｧ｣蜒丞ｺｦ繝峨ャ繝育ｵｵ陦ｨ遉ｺ逕ｨ Canvas 笘・*/
@@ -1041,17 +1044,17 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
         transition-duration: 0.01ms !important;
     }
 
-    /* 進化演出は状態変化を伝えるため、短い点滅に置き換える。
-       0.01msの最終フレーム（黒）だけが残るWebKitの挙動を避ける。 */
+    /* 進化演出は端末の「視差効果を減らす」が有効でも、本来と同じ時間をかける。
+       点滅回数だけを抑え、途中で進化後の姿へ切り替わらないようにする。 */
     .evolution-overlay.flashing {
         animation-name: evolutionPulsateReduced !important;
-        animation-duration: 1.2s !important;
+        animation-duration: 6s !important;
         animation-timing-function: step-end !important;
         animation-iteration-count: 1 !important;
     }
     .evolution-overlay.flashing-ultimate {
         animation-name: ultimatePulsateReduced !important;
-        animation-duration: 1.8s !important;
+        animation-duration: 9s !important;
         animation-timing-function: step-end !important;
         animation-iteration-count: 1 !important;
     }

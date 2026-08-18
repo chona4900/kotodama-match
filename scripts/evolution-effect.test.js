@@ -68,7 +68,7 @@ test('normal evolution clears the dark overlay when its animation ends', () => {
   assert.equal(effect.timeouts.size, 0);
 });
 
-test('reduced-motion evolution also clears the dark overlay when its short pulse ends', () => {
+test('reduced-motion evolution also clears the dark overlay when its pulse ends', () => {
   const effect = loadEvolutionEffect();
   let callbackCount = 0;
 
@@ -93,7 +93,8 @@ test('fallback clears the overlay if WebKit does not emit animationend', () => {
   assert.equal(effect.classes.has('flashing'), false);
 });
 
-test('reduced-motion CSS uses a visible short pulse instead of a 0.01ms black frame', () => {
-  assert.match(styleSource, /\.evolution-overlay\.flashing\s*\{[\s\S]*?animation-name:\s*evolutionPulsateReduced\s*!important;[\s\S]*?animation-duration:\s*1\.2s\s*!important;/);
+test('reduced-motion CSS keeps the full evolution duration instead of revealing the new form early', () => {
+  assert.match(styleSource, /\.evolution-overlay\.flashing\s*\{[\s\S]*?animation-name:\s*evolutionPulsateReduced\s*!important;[\s\S]*?animation-duration:\s*6s\s*!important;/);
+  assert.match(styleSource, /\.evolution-overlay\.flashing-ultimate\s*\{[\s\S]*?animation-name:\s*ultimatePulsateReduced\s*!important;[\s\S]*?animation-duration:\s*9s\s*!important;/);
   assert.match(styleSource, /@keyframes evolutionPulsateReduced/);
 });

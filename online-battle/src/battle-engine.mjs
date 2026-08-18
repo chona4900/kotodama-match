@@ -36,16 +36,47 @@ function withAction(snapshot, action) {
   if (action === 'attack') adjusted.attack = Math.max(1, Math.round(adjusted.attack * 1.35));
   if (action === 'guard') {
     adjusted.hp = Math.max(1, Math.round(adjusted.hp * 1.4));
-    adjusted.evasionRate = Math.min(75, adjusted.evasionRate + 10);
+    adjusted.evasionRate = Math.min(60, adjusted.evasionRate + 10);
   }
-  if (action === 'pray') adjusted.criticalRate = Math.min(80, adjusted.criticalRate + 15);
+  if (action === 'pray') adjusted.criticalRate = Math.min(65, adjusted.criticalRate + 15);
   return adjusted;
+}
+
+function balanceRelativePair(first, second, spreadRatio = 0.15) {
+  const midpoint = (first + second) / 2;
+  const spread = midpoint * spreadRatio;
+  return [
+    Math.round(Math.min(midpoint + spread, Math.max(midpoint - spread, first))),
+    Math.round(Math.min(midpoint + spread, Math.max(midpoint - spread, second)))
+  ];
+}
+
+function balancePercentagePair(first, second, maximumGap = 16) {
+  const midpoint = (first + second) / 2;
+  const halfGap = maximumGap / 2;
+  return [
+    Math.round(Math.min(midpoint + halfGap, Math.max(midpoint - halfGap, first))),
+    Math.round(Math.min(midpoint + halfGap, Math.max(midpoint - halfGap, second)))
+  ];
+}
+
+export function balanceMatchup(host, guest) {
+  const balancedHost = { ...host };
+  const balancedGuest = { ...guest };
+
+  [balancedHost.hp, balancedGuest.hp] = balanceRelativePair(host.hp, guest.hp);
+  [balancedHost.attack, balancedGuest.attack] = balanceRelativePair(host.attack, guest.attack);
+  [balancedHost.evasionRate, balancedGuest.evasionRate] = balancePercentagePair(host.evasionRate, guest.evasionRate);
+  [balancedHost.criticalRate, balancedGuest.criticalRate] = balancePercentagePair(host.criticalRate, guest.criticalRate);
+
+  return { host: balancedHost, guest: balancedGuest };
 }
 
 export function simulateBattle({ host, guest, hostAction, guestAction, random = Math.random }) {
   if (!ACTIONS.has(hostAction) || !ACTIONS.has(guestAction)) throw new Error('invalid battle action');
-  const hostStats = withAction(sanitizeSnapshot(host), hostAction);
-  const guestStats = withAction(sanitizeSnapshot(guest), guestAction);
+  const matchup = balanceMatchup(sanitizeSnapshot(host), sanitizeSnapshot(guest));
+  const hostStats = withAction(matchup.host, hostAction);
+  const guestStats = withAction(matchup.guest, guestAction);
   const maxHp = { host: hostStats.hp, guest: guestStats.hp };
   const hp = { ...maxHp };
   const events = [];
