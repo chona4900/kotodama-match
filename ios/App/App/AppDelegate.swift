@@ -7,14 +7,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // マナーモード（サイレントスイッチ）を無視して音を鳴らす設定
+    private func activatePlaybackAudioSession() {
+        let session = AVAudioSession.sharedInstance()
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            try AVAudioSession.sharedInstance().setActive(true)
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            print("Failed to set audio session category: \(error)")
+            print("Failed to activate playback audio session: \(error)")
         }
+    }
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        activatePlaybackAudioSession()
         return true
     }
 
@@ -34,6 +38,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        // マイク使用中のplayAndRecord設定は維持し、それ以外では出力を再有効化する。
+        if AVAudioSession.sharedInstance().category != .playAndRecord {
+            activatePlaybackAudioSession()
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

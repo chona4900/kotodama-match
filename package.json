@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node build.js",
     "dev": "npx live-server",
-    "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js",
+    "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js scripts/gameplay-regressions.test.js",
     "release:preflight": "node scripts/release-preflight.js",
     "online:test": "node --test online-battle/test/battle-engine.test.mjs",
     "online:check": "cd online-battle && npx wrangler deploy --config wrangler.jsonc --dry-run"

@@ -10,6 +10,7 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "available", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stop", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "refreshAudioSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "isListening", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getSupportedLanguages", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
@@ -60,8 +61,7 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
 
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker])
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            try configureRecordingSession(session)
 
             let inputNode = engine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
@@ -107,6 +107,20 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func stop(_ call: CAPPluginCall) {
         stopRecognition(notify: true)
         call.resolve()
+    }
+
+    @objc func refreshAudioSession(_ call: CAPPluginCall) {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            if audioEngine?.isRunning == true {
+                try configureRecordingSession(session)
+            } else {
+                try configurePlaybackSession(session)
+            }
+            call.resolve(["listening": audioEngine?.isRunning == true])
+        } catch {
+            call.reject("Failed to refresh the audio session: \(error.localizedDescription)")
+        }
     }
 
     @objc func isListening(_ call: CAPPluginCall) {
@@ -164,6 +178,16 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    private func configureRecordingSession(_ session: AVAudioSession) throws {
+        try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .mixWithOthers])
+        try session.setActive(true, options: .notifyOthersOnDeactivation)
+    }
+
+    private func configurePlaybackSession(_ session: AVAudioSession) throws {
+        try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        try session.setActive(true, options: .notifyOthersOnDeactivation)
+    }
+
     private func stopRecognition(notify: Bool) {
         let wasRunning = audioEngine?.isRunning == true
         audioEngine?.stop()
@@ -174,6 +198,12 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
         recognitionRequest = nil
         audioEngine = nil
         speechRecognizer = nil
+
+        do {
+            try configurePlaybackSession(AVAudioSession.sharedInstance())
+        } catch {
+            print("Failed to restore playback audio session: \(error)")
+        }
 
         if wasRunning && notify {
             notifyListeners("listeningState", data: ["status": "stopped"])

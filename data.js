@@ -1,5 +1,21 @@
 // --- サウンド（Web Audio API） ---
         let audioCtx = null;
+        let nativeAudioRefreshPromise = null;
+        let lastAudioRecoveryAt = 0;
+
+        function refreshNativeAudioSession() {
+            const speechPlugin = window.Capacitor?.Plugins?.SpeechRecognition;
+            if (!window.Capacitor?.isNativePlatform?.() || !speechPlugin?.refreshAudioSession) {
+                return Promise.resolve();
+            }
+            if (nativeAudioRefreshPromise) return nativeAudioRefreshPromise;
+
+            nativeAudioRefreshPromise = Promise.resolve(speechPlugin.refreshAudioSession())
+                .catch((error) => console.warn('Native audio session refresh failed:', error))
+                .finally(() => { nativeAudioRefreshPromise = null; });
+            return nativeAudioRefreshPromise;
+        }
+
         function initAudio() {
             if (!audioCtx || audioCtx.state === 'closed') {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -34,21 +50,37 @@
                 .catch((error) => console.warn('Audio playback resume failed:', error));
         }
         
-        // iOS/WKWebView向けに、最初のタップでAudioContextを強制起動・ロック解除する
-        const unlockAudio = function() {
+        function nudgeWebAudioOutput() {
             const ctx = initAudio();
             if (ctx && soundEnabled) {
-                // iOSではコンテキスト作成だけでは解除されない場合があるため、無音を1サンプル再生する
+                // iOSではセッション再開後も、ユーザー操作内でWeb Audioへ
+                // 1サンプル流さないと出力が戻らない場合がある。
                 const source = ctx.createBufferSource();
                 source.buffer = ctx.createBuffer(1, 1, 22050);
                 source.connect(ctx.destination);
                 source.start(0);
             }
-            document.removeEventListener('touchstart', unlockAudio);
-            document.removeEventListener('click', unlockAudio);
+        }
+
+        // iOS/WKWebViewでは、消音解除・通話・画面復帰などの後に音声セッションが
+        // 古い状態のまま残ることがある。最初の1回だけでなく、その後の操作でも
+        // ネイティブ側とWeb Audio側を再開できるようにする。
+        const recoverAudioOutput = function({ force = false } = {}) {
+            if (!soundEnabled) return;
+            const now = Date.now();
+            if (!force && now - lastAudioRecoveryAt < 500) return;
+            lastAudioRecoveryAt = now;
+
+            // Web Audioの再開はユーザー操作と同じ同期処理内でも実行する。
+            nudgeWebAudioOutput();
+            refreshNativeAudioSession().then(nudgeWebAudioOutput);
         };
-        document.addEventListener('touchstart', unlockAudio, { once: true });
-        document.addEventListener('click', unlockAudio, { once: true });
+        document.addEventListener('touchstart', recoverAudioOutput, { passive: true });
+        document.addEventListener('click', recoverAudioOutput);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) recoverAudioOutput({ force: true });
+        });
+        window.addEventListener('pageshow', () => recoverAudioOutput({ force: true }));
 
         function playOscillator(freq, startTime, duration, vol=0.1, type='square') {
             if(!audioCtx || !soundEnabled) return;

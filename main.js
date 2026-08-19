@@ -12,7 +12,7 @@
             'ありがとう': ['有難う', '有り難う', '有難うございます', 'ありがとうございます', 'ありがと', 'アリガトウ'],
             'うれしい': ['嬉しい', 'ウレシイ'],
             '楽しい': ['たのしい', '楽し', 'タノシイ'],
-            '感謝してます': ['感謝しています', '感謝', 'かんしゃしてます'],
+            '感謝してます': ['感謝しています', 'かんしゃしています', 'かんしゃしてます'],
             'しあわせ': ['幸せ', '仕合わせ', 'シアワセ', '幸せです'],
             'ツイてる': ['ついてる', '付いてる', '就いてる', '憑いてる', 'ツキがある', 'ツイテル', 'ついている'],
             
@@ -2617,6 +2617,7 @@
 
         // 共通の認識文字列処理
         let lastWordMatchTime = {};
+        const WORD_MATCH_COOLDOWN_MS = 600;
         function processTranscript(rawTranscript, isFinal, interimMatchCounts) {
             let transcript = rawTranscript.replace(/[\s　、。！？,!?]/g, '');
             const sortedWords = [...allWords].sort((a, b) => b.length - a.length);
@@ -2628,15 +2629,20 @@
                 const matches = transcript.match(regex);
                 
                 const currentMatchCount = matches ? matches.length : 0;
+                // ネイティブ音声認識は、無音を挟むと同じ認識セッション内でも
+                // 文字列を短く作り直すことがある。その場合は新しい発話として
+                // 比較元をリセットし、同じ言霊の連続発話を取りこぼさない。
+                const storedMatchCount = interimMatchCounts[w] || 0;
+                if (currentMatchCount < storedMatchCount) {
+                    interimMatchCounts[w] = currentMatchCount;
+                }
                 const previousMatchCount = interimMatchCounts[w] || 0;
                 
                 if (currentMatchCount > previousMatchCount) {
                     let now = Date.now();
-                    const isOyatsu = OYATSU_WORDS.includes(w);
-                    // 魂のおやつは4秒、通常の言霊は0.5秒の連続検知防止（二重カウント防止策）
-                    const cooldown = isOyatsu ? 4000 : 500;
-                    
-                    if (!lastWordMatchTime[w] || (now - lastWordMatchTime[w] > cooldown)) {
+                    // interimResultsの揺れによる二重加算だけを防ぐ短い待機時間。
+                    // 魂のおやつにも通常言霊と同じ値を使い、連続発話を許可する。
+                    if (!lastWordMatchTime[w] || (now - lastWordMatchTime[w] > WORD_MATCH_COOLDOWN_MS)) {
                         addWordLog(w, currentMatchCount - previousMatchCount);
                         lastWordMatchTime[w] = now;
                     }
@@ -3045,13 +3051,14 @@
             'maou_game_medley02.mp3'
         ];
         let currentBgmAudio = null;
+        const BATTLE_BGM_VOLUME = 0.08;
 
         function startBattleBgm() {
             if (!soundEnabled) return;
             let randomBgmFile = bgmFileList[Math.floor(Math.random() * bgmFileList.length)];
             currentBgmAudio = new Audio(randomBgmFile);
             currentBgmAudio.loop = true;
-            currentBgmAudio.volume = 0.15; // 音量を大幅に下げてSEを目立たせる
+            currentBgmAudio.volume = BATTLE_BGM_VOLUME;
             // 自動再生ポリシー対策
             currentBgmAudio.play().catch(e => console.log('BGM Play Error:', e));
         }
@@ -3161,9 +3168,10 @@
         function playWordPopSound() {
             playWhenAudioReady((ctx) => {
                 const now = ctx.currentTime + 0.01;
-                // マイク使用中のiPhoneでも聞き取りやすい「テロン♪」(C5 -> E5)
-                playOscillator(523.25, now, 0.10, 0.16, 'sine');
-                playOscillator(659.25, now + 0.08, 0.18, 0.20, 'sine');
+                // マイク使用中のiPhoneでも埋もれない、芯のある「テロン♪」
+                playOscillator(523.25, now, 0.14, 0.34, 'sine');
+                playOscillator(659.25, now + 0.08, 0.24, 0.40, 'sine');
+                playOscillator(1318.51, now + 0.08, 0.16, 0.12, 'triangle');
             });
         }
 
@@ -3171,9 +3179,10 @@
             playWhenAudioReady((ctx) => {
                 const now = ctx.currentTime + 0.01;
                 // 10回ごとの「テレレン♪」も通常認識音と同じ音量感にする
-                playOscillator(523.25, now, 0.10, 0.16, 'sine');
-                playOscillator(659.25, now + 0.08, 0.10, 0.18, 'sine');
-                playOscillator(783.99, now + 0.16, 0.24, 0.22, 'sine');
+                playOscillator(523.25, now, 0.14, 0.32, 'sine');
+                playOscillator(659.25, now + 0.08, 0.14, 0.36, 'sine');
+                playOscillator(783.99, now + 0.16, 0.28, 0.42, 'sine');
+                playOscillator(1567.98, now + 0.16, 0.18, 0.12, 'triangle');
             });
         }
 
@@ -3347,7 +3356,7 @@
                 const event = result.events[eventIndex];
                 if (!event) {
                     const didWin = seat === 'host' ? result.hostWon : !result.hostWon;
-                    finishBattle(didWin);
+                    finishBattle(didWin, true);
                     return;
                 }
                 eventIndex += 1;
@@ -3804,7 +3813,7 @@
             setTimeout(executeTurn, 1000);
         }
 
-        function finishBattle(isWin) {
+        function finishBattle(isWin, recordOnlineResult = false) {
             stopBattleBgm(); // バトル終了時にBGMを止める
             const battleCommandPanel = document.getElementById('battleCommandPanel');
             if (battleCommandPanel) battleCommandPanel.classList.remove('visible');
@@ -3812,12 +3821,12 @@
             setupBattleMessage(isWin);
             
             if (isWin) {
-                battleWins++;
+                if (recordOnlineResult) battleWins++;
                 myCharEl.classList.add('win');
                 enemyCharEl.classList.add('lose');
                 playCelebrateSound(); // 勝利のファンファーレ
             } else {
-                battleLosses++;
+                if (recordOnlineResult) battleLosses++;
                 myCharEl.classList.add('lose');
                 enemyCharEl.classList.add('win');
                 // 敗北のファンファーレ
@@ -3828,7 +3837,7 @@
                 playOscillator(100, now + 0.8, 1.0, 0.3, 'sawtooth');
             }
             
-            saveState(); // 勝敗を保存
+            if (recordOnlineResult) saveState(); // 人とのオンライン対戦だけ戦績を保存
             updateUI(); // メイン画面の戦績を更新
             
             setTimeout(() => {
