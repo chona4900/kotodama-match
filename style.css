@@ -859,6 +859,68 @@
             width: 85%; font-size: 1rem; font-weight: bold;
         }
         .pvp-btn:active { background: var(--screen-text); color: var(--screen-bg); }
+        .intoku-noon-button {
+            width: 95%; margin: 0 0 8px; padding: 7px; font-size: 0.82rem;
+            background: #fff8d5;
+        }
+
+        .noon-ritual-overlay,
+        .noon-notification-prompt {
+            position: absolute; inset: 0; z-index: 430;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            box-sizing: border-box; padding: 10px;
+            background: rgba(181, 198, 169, 0.985); color: var(--screen-text);
+            text-align: center;
+        }
+        .noon-ritual-overlay.visible,
+        .noon-notification-prompt.visible { display: flex; }
+        .noon-ritual-header { font-size: 1rem; font-weight: bold; letter-spacing: 0.04em; }
+        .noon-ritual-lead { margin: 2px 0 6px; font-size: 0.63rem; }
+        .noon-phrase-card {
+            width: 96%; display: grid; grid-template-columns: 1fr auto; align-items: center;
+            gap: 6px; box-sizing: border-box; margin: 3px 0; padding: 7px;
+            border: 2px solid var(--screen-text); border-radius: 4px;
+            background: rgba(255,255,255,0.52); text-align: left;
+        }
+        .noon-phrase-card.complete { background: #fff4ad; box-shadow: 0 0 0 2px rgba(248,180,0,0.45); }
+        .noon-phrase-text { font-size: 0.68rem; font-weight: bold; line-height: 1.35; }
+        .noon-phrase-progress { min-width: 38px; font-size: 0.82rem; font-weight: bold; text-align: right; }
+        .noon-ritual-status { min-height: 1.25em; margin: 4px 0; font-size: 0.64rem; font-weight: bold; }
+        .noon-mic-button {
+            min-width: 132px; min-height: 34px; padding: 5px 14px;
+            border: 2px solid var(--screen-text); border-radius: 18px;
+            background: #f8b400; color: #a42f25; font-family: inherit; font-weight: bold;
+        }
+        .noon-mic-button.listening {
+            background: #e74c3c; color: #fff; animation: pulse-red 1.5s infinite;
+        }
+        .noon-mic-button:disabled { opacity: 0.55; animation: none; }
+        .noon-ritual-actions,
+        .noon-prompt-actions { display: flex; justify-content: center; gap: 7px; margin-top: 6px; }
+        .noon-ritual-actions button,
+        .noon-prompt-actions button {
+            min-height: 28px; padding: 4px 9px; border: 1px solid var(--screen-text); border-radius: 3px;
+            background: transparent; color: var(--screen-text); font-family: inherit; font-size: 0.62rem;
+        }
+        .noon-reward-effect {
+            position: absolute; inset: 0; z-index: 2; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            background: radial-gradient(circle, rgba(255,247,161,0.98), rgba(248,180,0,0.82) 42%, rgba(181,198,169,0.25) 72%);
+            pointer-events: none;
+        }
+        .noon-reward-effect.visible { display: flex; animation: noonRewardGlow 2.4s ease-out forwards; }
+        .noon-reward-effect span { font-size: 0.95rem; }
+        .noon-reward-effect strong { margin-top: 5px; font-size: 1.8rem; }
+        @keyframes noonRewardGlow {
+            0% { opacity: 0; transform: scale(0.7); }
+            20%, 68% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.12); }
+        }
+        .noon-notification-prompt { z-index: 440; padding: 18px; }
+        .noon-prompt-icon { font-size: 2rem; }
+        .noon-prompt-title { margin-top: 3px; font-size: 1rem; font-weight: bold; }
+        .noon-notification-prompt p { margin: 8px 0; font-size: 0.7rem; line-height: 1.55; }
+        .noon-prompt-actions button:first-child { background: #fff8d5; font-weight: bold; }
         .online-battle-code {
             width: 85%; max-width: 260px; box-sizing: border-box; padding: 10px;
             border: 2px solid var(--screen-text); border-radius: 4px; background: #fff;

@@ -682,6 +682,23 @@
         const oyatsuListEl = document.getElementById('oyatsuList');
         const micBtnEl = document.getElementById('micBtn');
         const rebirthCountdownEl = document.getElementById('rebirthCountdown');
+        const noonRitualOverlayEl = document.getElementById('noonRitualOverlay');
+        const noonRitualMicButtonEl = document.getElementById('noonRitualMicButton');
+        const noonRitualStatusEl = document.getElementById('noonRitualStatus');
+        const noonThanksProgressEl = document.getElementById('noonThanksProgress');
+        const noonFutureProgressEl = document.getElementById('noonFutureProgress');
+        const noonThanksCardEl = document.getElementById('noonThanksCard');
+        const noonFutureCardEl = document.getElementById('noonFutureCard');
+        const noonRewardEffectEl = document.getElementById('noonRewardEffect');
+        const noonNotificationPromptEl = document.getElementById('noonNotificationPrompt');
+
+        const NOON_RITUAL_STORAGE_KEY = 'kotodama_noon_ritual_v1';
+        const NOON_NOTIFICATION_PROMPTED_KEY = 'kotodama_noon_notification_prompted_v1';
+        const NOON_NOTIFICATION_ID = 1159;
+        const NOON_THANKS_PHRASE = '宇宙の調和に感謝します';
+        const NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
+        let noonRitualState = window.KotodamaNoonRitual.createState();
+        let noonNotificationListenersReady = false;
 
         const REBIRTH_STAGE3_DELAY_MS = 3 * 24 * 60 * 60 * 1000;
         const REBIRTH_STAGE4_DELAY_MS = 4 * 24 * 60 * 60 * 1000;
@@ -941,6 +958,7 @@
         // --- 描画ロジック ---
         function init() {
             loadState();
+            loadNoonRitualState();
             checkRebirth({ announce: false });
             if (isSick) {
                 const remaining = Math.max(0, SICKNESS_RECOVERY_GOAL - sickRecoveryCount);
@@ -958,7 +976,11 @@
                     console.warn('Speech recognition prewarm failed:', error);
                 });
             }
+            initNoonNotifications().catch((error) => {
+                console.warn('正午の通知を初期化できませんでした。', error);
+            });
             startFirstLaunchTutorial();
+            window.setTimeout(maybeShowNoonNotificationPrompt, 1200);
         }
 
         const FIRST_LAUNCH_TUTORIAL_KEY = 'kotodama_onboarding_seen';
@@ -1019,13 +1041,232 @@
             tutorialCoachmarkEl.classList.remove('visible');
             clearTutorialHighlights();
             statusTextEl.textContent = '次は10回を目指そう！';
+            window.setTimeout(maybeShowNoonNotificationPrompt, 450);
         }
 
         function skipOnboarding() {
             tutorialStep = 0;
             tutorialCoachmarkEl.classList.remove('visible');
             clearTutorialHighlights();
+            window.setTimeout(maybeShowNoonNotificationPrompt, 450);
         }
+
+        // --- 毎日の「正午のことだま」 ---
+        function getLocalNotificationsPlugin() {
+            if (!window.Capacitor?.isNativePlatform?.()) return null;
+            return window.Capacitor.Plugins?.LocalNotifications || null;
+        }
+
+        function loadNoonRitualState() {
+            let stored = null;
+            try {
+                stored = JSON.parse(localStorage.getItem(NOON_RITUAL_STORAGE_KEY) || 'null');
+            } catch (error) {
+                console.warn('正午のことだまの保存データを読み込めませんでした。', error);
+            }
+            noonRitualState = window.KotodamaNoonRitual.normalizeState(stored);
+            saveNoonRitualState();
+        }
+
+        function saveNoonRitualState() {
+            try {
+                localStorage.setItem(NOON_RITUAL_STORAGE_KEY, JSON.stringify(noonRitualState));
+            } catch (error) {
+                console.warn('正午のことだまの進捗を保存できませんでした。', error);
+            }
+        }
+
+        function renderNoonRitual() {
+            const normalized = window.KotodamaNoonRitual.normalizeState(noonRitualState);
+            if (normalized.date !== noonRitualState.date) {
+                noonRitualState = normalized;
+                saveNoonRitualState();
+            } else {
+                noonRitualState = normalized;
+            }
+
+            const thanksCount = noonRitualState.counts[NOON_THANKS_PHRASE] || 0;
+            const futureCount = noonRitualState.counts[NOON_FUTURE_PHRASE] || 0;
+            noonThanksProgressEl.textContent = `${thanksCount} / 3`;
+            noonFutureProgressEl.textContent = `${futureCount} / 3`;
+            noonThanksCardEl.classList.toggle('complete', thanksCount >= 3);
+            noonFutureCardEl.classList.toggle('complete', futureCount >= 3);
+
+            if (noonRitualState.rewarded) {
+                noonRitualStatusEl.textContent = '本日達成！ 徳が1たまりました';
+            } else if (window.KotodamaNoonRitual.isComplete(noonRitualState)) {
+                noonRitualStatusEl.textContent = '達成！ 徳をためています…';
+            } else {
+                noonRitualStatusEl.textContent = `本日の進み具合 ${thanksCount + futureCount} / 6`;
+            }
+            updateNoonRitualMicButton();
+        }
+
+        function openNoonRitual(shouldPlaySound = true) {
+            if (shouldPlaySound) playButtonSound();
+            closeOverlays();
+            document.getElementById('pvpMenuOverlay')?.classList.remove('visible');
+            document.getElementById('intokuOverlay')?.classList.remove('visible');
+            noonNotificationPromptEl?.classList.remove('visible');
+            renderNoonRitual();
+            noonRitualOverlayEl.classList.add('visible');
+            noonRitualOverlayEl.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeNoonRitual() {
+            playButtonSound();
+            hideNoonRitual();
+        }
+
+        function hideNoonRitual() {
+            const wasVisible = noonRitualOverlayEl.classList.contains('visible');
+            if (wasVisible && (isListening || isStartingMic)) stopMic();
+            noonRitualOverlayEl.classList.remove('visible');
+            noonRitualOverlayEl.setAttribute('aria-hidden', 'true');
+            updateNoonRitualMicButton();
+        }
+
+        async function toggleNoonRitualMic() {
+            renderNoonRitual();
+            if (noonRitualState.rewarded) return;
+            await toggleMic();
+            updateNoonRitualMicButton();
+        }
+
+        function updateNoonRitualMicButton() {
+            if (!noonRitualMicButtonEl) return;
+            const completed = noonRitualState?.rewarded === true;
+            noonRitualMicButtonEl.disabled = completed;
+            noonRitualMicButtonEl.classList.toggle('listening', isListening);
+            if (completed) {
+                noonRitualMicButtonEl.textContent = '本日達成済み';
+            } else if (isStartingMic) {
+                noonRitualMicButtonEl.textContent = 'マイク準備中…';
+            } else if (isListening) {
+                noonRitualMicButtonEl.textContent = 'ききとり中…';
+            } else {
+                noonRitualMicButtonEl.textContent = 'MICを始める';
+            }
+        }
+
+        function recordNoonRitualPhrase(word, count) {
+            if (!noonRitualOverlayEl.classList.contains('visible')) return;
+            if (![NOON_THANKS_PHRASE, NOON_FUTURE_PHRASE].includes(word)) return;
+
+            noonRitualState = window.KotodamaNoonRitual.recordPhrase(noonRitualState, word, count);
+            saveNoonRitualState();
+            renderNoonRitual();
+
+            const reward = window.KotodamaNoonRitual.claimReward(noonRitualState);
+            noonRitualState = reward.state;
+            if (!reward.didReward) return;
+
+            intokuPower += 1;
+            saveNoonRitualState();
+            saveState();
+            updateUI();
+            stopMic();
+            if (!audioCtx) initAudio();
+            playIntokuSound();
+            renderNoonRitual();
+
+            noonRewardEffectEl.classList.remove('visible');
+            void noonRewardEffectEl.offsetWidth;
+            noonRewardEffectEl.classList.add('visible');
+            window.setTimeout(() => noonRewardEffectEl.classList.remove('visible'), 2500);
+        }
+
+        async function scheduleNoonNotification() {
+            const notifications = getLocalNotificationsPlugin();
+            if (!notifications) return false;
+
+            await notifications.cancel({ notifications: [{ id: NOON_NOTIFICATION_ID }] });
+            await notifications.schedule({
+                notifications: [{
+                    id: NOON_NOTIFICATION_ID,
+                    title: '正午のことだま',
+                    body: '12時に2つの言霊を3回ずつ唱えて、徳を積みましょう。',
+                    sound: 'default',
+                    foreground: true,
+                    autoCancel: true,
+                    schedule: {
+                        on: { hour: 11, minute: 59 },
+                        repeats: true,
+                        allowWhileIdle: true
+                    },
+                    extra: { route: 'noon-ritual' }
+                }]
+            });
+            return true;
+        }
+
+        async function initNoonNotifications() {
+            const notifications = getLocalNotificationsPlugin();
+            if (!notifications) return;
+
+            if (!noonNotificationListenersReady) {
+                await notifications.addListener('localNotificationActionPerformed', event => {
+                    if (event?.notification?.id === NOON_NOTIFICATION_ID || event?.notification?.extra?.route === 'noon-ritual') {
+                        window.setTimeout(() => openNoonRitual(false), 100);
+                    }
+                });
+                noonNotificationListenersReady = true;
+            }
+
+            const permission = await notifications.checkPermissions();
+            if (permission.display === 'granted') await scheduleNoonNotification();
+        }
+
+        function maybeShowNoonNotificationPrompt() {
+            if (!getLocalNotificationsPlugin()) return;
+            if (tutorialStep !== 0) return;
+            if (localStorage.getItem(NOON_NOTIFICATION_PROMPTED_KEY)) return;
+            noonNotificationPromptEl.classList.add('visible');
+            noonNotificationPromptEl.setAttribute('aria-hidden', 'false');
+        }
+
+        function dismissNoonNotificationPrompt() {
+            playButtonSound();
+            localStorage.setItem(NOON_NOTIFICATION_PROMPTED_KEY, 'true');
+            noonNotificationPromptEl.classList.remove('visible');
+            noonNotificationPromptEl.setAttribute('aria-hidden', 'true');
+        }
+
+        async function enableNoonNotifications() {
+            playButtonSound();
+            localStorage.setItem(NOON_NOTIFICATION_PROMPTED_KEY, 'true');
+            noonNotificationPromptEl.classList.remove('visible');
+            noonNotificationPromptEl.setAttribute('aria-hidden', 'true');
+
+            const notifications = getLocalNotificationsPlugin();
+            if (!notifications) {
+                openNoonRitual(false);
+                noonRitualStatusEl.textContent = '通知設定はiPhone・iPad・Android版で利用できます';
+                return;
+            }
+
+            try {
+                let permission = await notifications.checkPermissions();
+                if (permission.display !== 'granted') permission = await notifications.requestPermissions();
+                openNoonRitual(false);
+                if (permission.display === 'granted') {
+                    await scheduleNoonNotification();
+                    noonRitualStatusEl.textContent = '毎日11:59の通知を設定しました';
+                } else {
+                    noonRitualStatusEl.textContent = '端末の設定で「通知」を許可してください';
+                }
+            } catch (error) {
+                console.warn('通知設定に失敗しました。', error);
+                openNoonRitual(false);
+                noonRitualStatusEl.textContent = '通知を設定できませんでした。端末設定を確認してください';
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            loadNoonRitualState();
+            if (noonRitualOverlayEl.classList.contains('visible')) renderNoonRitual();
+        });
 
         function renderCanvasArt(key, targetCtx) {
             // 病気ステータスなら病気用スプライトを探す（メインキャンバスのみ）
@@ -1759,6 +2000,8 @@
 
         function setInfoPage(page) {
             const nextPage = Math.max(1, Math.min(3, Number(page) || 1));
+
+            hideNoonRitual();
 
             const pvpOverlay = document.getElementById('pvpMenuOverlay');
             if (pvpOverlay) pvpOverlay.classList.remove('visible');
@@ -2591,6 +2834,7 @@
             webRecognition.onstart = () => {
                 isListening = true;
                 micBtnEl.classList.add('mic-active');
+                updateNoonRitualMicButton();
                 onMicrophoneStartedForTutorial();
             };
 
@@ -2612,6 +2856,7 @@
                     micBtnEl.classList.remove('mic-active');
                     if(currentStage < 3) statusTextEl.textContent = "マイクがオフです";
                 }
+                updateNoonRitualMicButton();
             };
         }
 
@@ -2643,7 +2888,11 @@
                     // interimResultsの揺れによる二重加算だけを防ぐ短い待機時間。
                     // 魂のおやつにも通常言霊と同じ値を使い、連続発話を許可する。
                     if (!lastWordMatchTime[w] || (now - lastWordMatchTime[w] > WORD_MATCH_COOLDOWN_MS)) {
-                        addWordLog(w, currentMatchCount - previousMatchCount);
+                        const addedCount = currentMatchCount - previousMatchCount;
+                        addWordLog(w, addedCount);
+                        if (typeof recordNoonRitualPhrase === 'function') {
+                            recordNoonRitualPhrase(w, addedCount);
+                        }
                         lastWordMatchTime[w] = now;
                     }
                     interimMatchCounts[w] = currentMatchCount;
@@ -2692,6 +2941,7 @@
                     isStartingMic = false;
                     micBtnEl.classList.remove('mic-starting');
                     if (!isListening) micBtnEl.classList.remove('mic-active');
+                    updateNoonRitualMicButton();
                 }
             }
         }
@@ -2781,11 +3031,13 @@
                             micBtnEl.classList.remove('mic-starting');
                             micBtnEl.classList.add('mic-active');
                             statusTextEl.textContent = 'ききとり中...';
+                            updateNoonRitualMicButton();
                         } else if (data && data.status === 'stopped') {
                             isListening = false;
                             isStartingMic = false;
                             micBtnEl.classList.remove('mic-starting', 'mic-active');
                             if (currentStage < 3) statusTextEl.textContent = 'マイクがオフです';
+                            updateNoonRitualMicButton();
                         }
                     });
                     nativeListenersReady = true;
@@ -2819,6 +3071,7 @@
                 micBtnEl.classList.remove('mic-starting');
                 micBtnEl.classList.add('mic-active');
                 statusTextEl.textContent = 'ききとり中...';
+                updateNoonRitualMicButton();
                 onMicrophoneStartedForTutorial();
                 // ネイティブ音声入力開始で中断されたWeb Audioを戻す
                 initAudio();
@@ -2838,6 +3091,7 @@
             } else if (webRecognition) {
                 webRecognition.stop(); 
             }
+            updateNoonRitualMicButton();
         }
 
         // --- UI用 ---
@@ -3866,6 +4120,8 @@
         function openPvpMenu() {
             playButtonSound();
 
+            hideNoonRitual();
+
             // 他のメニューを閉じる
             closeOverlays();
             const intokuOverlay = document.getElementById('intokuOverlay');
@@ -3884,6 +4140,8 @@
         // --- 陰徳システム ---
         function openIntokuModal() {
             playButtonSound();
+
+            hideNoonRitual();
 
             // 他のメニューを閉じる
             closeOverlays();

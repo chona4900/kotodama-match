@@ -1,6 +1,6 @@
 {
   "name": "kotodama-match",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "",
   "main": "main.js",
   "directories": {
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node build.js",
     "dev": "npx live-server",
-    "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js scripts/gameplay-regressions.test.js",
+    "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js scripts/gameplay-regressions.test.js scripts/noon-ritual.test.js",
     "release:preflight": "node scripts/release-preflight.js",
     "online:test": "node --test online-battle/test/battle-engine.test.mjs",
     "online:check": "cd online-battle && npx wrangler deploy --config wrangler.jsonc --dry-run"
@@ -23,6 +23,7 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.3.0",
     "@capacitor/ios": "^8.3.0",
+    "@capacitor/local-notifications": "^8.0.0",
     "@kotodama/speech-recognition": "file:plugins/kotodama-speech-recognition",
     "jimp": "^1.6.1"
   },
