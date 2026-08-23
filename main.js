@@ -699,6 +699,7 @@
         const NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
         let noonRitualState = window.KotodamaNoonRitual.createState();
         let noonNotificationListenersReady = false;
+        let noonRitualAvailabilityTimer = null;
 
         const REBIRTH_STAGE3_DELAY_MS = 3 * 24 * 60 * 60 * 1000;
         const REBIRTH_STAGE4_DELAY_MS = 4 * 24 * 60 * 60 * 1000;
@@ -1076,6 +1077,25 @@
             }
         }
 
+        function isNoonRitualAvailable() {
+            return window.KotodamaNoonRitual.isWithinNoonWindow(new Date());
+        }
+
+        function startNoonRitualAvailabilityTimer() {
+            if (noonRitualAvailabilityTimer) return;
+            noonRitualAvailabilityTimer = window.setInterval(() => {
+                if (!noonRitualOverlayEl?.classList.contains('visible')) return;
+                if (!isNoonRitualAvailable() && (isListening || isStartingMic)) stopMic();
+                renderNoonRitual();
+            }, 1000);
+        }
+
+        function stopNoonRitualAvailabilityTimer() {
+            if (!noonRitualAvailabilityTimer) return;
+            window.clearInterval(noonRitualAvailabilityTimer);
+            noonRitualAvailabilityTimer = null;
+        }
+
         function renderNoonRitual() {
             const normalized = window.KotodamaNoonRitual.normalizeState(noonRitualState);
             if (normalized.date !== noonRitualState.date) {
@@ -1092,8 +1112,11 @@
             noonThanksCardEl.classList.toggle('complete', thanksCount >= 3);
             noonFutureCardEl.classList.toggle('complete', futureCount >= 3);
 
+            const isAvailable = isNoonRitualAvailable();
             if (noonRitualState.rewarded) {
                 noonRitualStatusEl.textContent = '本日達成！ 徳が1たまりました';
+            } else if (!isAvailable) {
+                noonRitualStatusEl.textContent = '正午のことだまは毎日12:00〜12:00:59だけできます';
             } else if (window.KotodamaNoonRitual.isComplete(noonRitualState)) {
                 noonRitualStatusEl.textContent = '達成！ 徳をためています…';
             } else {
@@ -1111,6 +1134,7 @@
             renderNoonRitual();
             noonRitualOverlayEl.classList.add('visible');
             noonRitualOverlayEl.setAttribute('aria-hidden', 'false');
+            startNoonRitualAvailabilityTimer();
         }
 
         function closeNoonRitual() {
@@ -1123,12 +1147,13 @@
             if (wasVisible && (isListening || isStartingMic)) stopMic();
             noonRitualOverlayEl.classList.remove('visible');
             noonRitualOverlayEl.setAttribute('aria-hidden', 'true');
+            stopNoonRitualAvailabilityTimer();
             updateNoonRitualMicButton();
         }
 
         async function toggleNoonRitualMic() {
             renderNoonRitual();
-            if (noonRitualState.rewarded) return;
+            if (noonRitualState.rewarded || !isNoonRitualAvailable()) return;
             await toggleMic();
             updateNoonRitualMicButton();
         }
@@ -1136,10 +1161,13 @@
         function updateNoonRitualMicButton() {
             if (!noonRitualMicButtonEl) return;
             const completed = noonRitualState?.rewarded === true;
-            noonRitualMicButtonEl.disabled = completed;
+            const isAvailable = isNoonRitualAvailable();
+            noonRitualMicButtonEl.disabled = completed || !isAvailable;
             noonRitualMicButtonEl.classList.toggle('listening', isListening);
             if (completed) {
                 noonRitualMicButtonEl.textContent = '本日達成済み';
+            } else if (!isAvailable) {
+                noonRitualMicButtonEl.textContent = '12:00〜12:00:59だけ開始できます';
             } else if (isStartingMic) {
                 noonRitualMicButtonEl.textContent = 'マイク準備中…';
             } else if (isListening) {
@@ -1152,6 +1180,11 @@
         function recordNoonRitualPhrase(word, count) {
             if (!noonRitualOverlayEl.classList.contains('visible')) return;
             if (![NOON_THANKS_PHRASE, NOON_FUTURE_PHRASE].includes(word)) return;
+            if (!isNoonRitualAvailable()) {
+                if (isListening || isStartingMic) stopMic();
+                renderNoonRitual();
+                return;
+            }
 
             noonRitualState = window.KotodamaNoonRitual.recordPhrase(noonRitualState, word, count);
             saveNoonRitualState();

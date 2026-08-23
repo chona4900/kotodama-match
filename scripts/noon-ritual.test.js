@@ -6,6 +6,20 @@ const DAY_ONE = new Date(2026, 7, 20, 12, 0, 0);
 const DAY_TWO = new Date(2026, 7, 21, 9, 0, 0);
 const [THANKS, FUTURE] = ritual.PHRASES;
 
+test('正午のことだまは12時00分から12時00分59秒までだけ開始できる', () => {
+    assert.equal(ritual.isWithinNoonWindow(new Date(2026, 7, 20, 11, 59, 59)), false);
+    assert.equal(ritual.isWithinNoonWindow(new Date(2026, 7, 20, 12, 0, 0)), true);
+    assert.equal(ritual.isWithinNoonWindow(new Date(2026, 7, 20, 12, 0, 59)), true);
+    assert.equal(ritual.isWithinNoonWindow(new Date(2026, 7, 20, 12, 1, 0)), false);
+});
+
+test('正午以外の時間には言霊を加算しない', () => {
+    const beforeNoon = new Date(2026, 7, 20, 11, 59, 59);
+    let state = ritual.createState(DAY_ONE);
+    state = ritual.recordPhrase(state, THANKS, 1, beforeNoon);
+    assert.equal(state.counts[THANKS], 0);
+});
+
 test('2つの言霊をそれぞれ3回まで数える', () => {
     let state = ritual.createState(DAY_ONE);
     state = ritual.recordPhrase(state, THANKS, 5, DAY_ONE);

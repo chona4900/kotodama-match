@@ -4,6 +4,8 @@
     if (root) root.KotodamaNoonRitual = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     const TARGET_COUNT = 3;
+    const NOON_WINDOW_HOUR = 12;
+    const NOON_WINDOW_MINUTE = 0;
     const PHRASES = Object.freeze([
         '宇宙の調和に感謝します',
         'だんだんよくなる未来はあかるい'
@@ -13,6 +15,11 @@
         const value = date instanceof Date ? date : new Date(date);
         const pad = number => String(number).padStart(2, '0');
         return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+    }
+
+    function isWithinNoonWindow(date = new Date()) {
+        const value = date instanceof Date ? date : new Date(date);
+        return value.getHours() === NOON_WINDOW_HOUR && value.getMinutes() === NOON_WINDOW_MINUTE;
     }
 
     function createState(date = new Date()) {
@@ -40,7 +47,7 @@
 
     function recordPhrase(value, phrase, amount = 1, date = new Date()) {
         const state = normalizeState(value, date);
-        if (!PHRASES.includes(phrase) || state.rewarded) return state;
+        if (!isWithinNoonWindow(date) || !PHRASES.includes(phrase) || state.rewarded) return state;
         const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
         state.counts[phrase] = Math.min(TARGET_COUNT, state.counts[phrase] + safeAmount);
         return state;
@@ -62,6 +69,7 @@
         TARGET_COUNT,
         PHRASES,
         getDateKey,
+        isWithinNoonWindow,
         createState,
         normalizeState,
         recordPhrase,
