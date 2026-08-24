@@ -71,7 +71,8 @@ test('CPU battles do not update the persistent win/loss record', () => {
 
 test('the online battle result path explicitly enables record keeping', () => {
   assert.match(mainSource, /finishBattle\(didWin, true\)/);
-  assert.match(mainSource, /finishBattle\(myHpRatio >= enemyHpRatio\)/);
+  assert.match(mainSource, /finishBattle\(enemyHp <= 0\)/);
+  assert.doesNotMatch(mainSource, /turnCount > maxTurns/);
 });
 
 test('soul snack phrases can be recognized in consecutive utterances', () => {
@@ -161,4 +162,86 @@ test('iOS audio output can recover after mute, interruption, or app resume', () 
   assert.match(speechPluginSource, /try configureRecordingSession\(session\)/);
   assert.match(appDelegateSource, /func applicationDidBecomeActive/);
   assert.match(appDelegateSource, /activatePlaybackAudioSession\(\)/);
+});
+
+test('転生しても累計の言霊回数を残し、今回の進化回数だけを戻す', () => {
+  const reincarnationSource = sourceBetween(
+    'function reincarnate({ announce = true } = {})',
+    '// --- 描画ロジック ---',
+  );
+  const context = vm.createContext({
+    currentStage: 3,
+    currentForm: 'childA_1_1',
+    totalCount: 4900,
+    ultimateAttemptCount: 1,
+    wordCounts: { ありがとう: 10000, 愛してます: 2400 },
+    cycleWordCounts: { ありがとう: 4900, 愛してます: 0 },
+    finalEvolutionTimestamp: 123,
+    isSick: true,
+    sickRecoveryCount: 4,
+    document: { getElementById: () => ({ classList: { add() {}, remove() {} } }) },
+    saveState() {},
+    renderCanvasArt() {},
+    ctx: {},
+    updateUI() {},
+    statusTextEl: { textContent: '' },
+    playRebirthSound() {},
+    setTimeout() {},
+  });
+
+  vm.runInContext(`${reincarnationSource}\nthis.reincarnate = reincarnate;`, context);
+  context.reincarnate({ announce: false });
+
+  assert.equal(context.currentStage, 0);
+  assert.equal(context.currentForm, 'egg');
+  assert.equal(context.totalCount, 0);
+  assert.equal(context.ultimateAttemptCount, 0);
+  assert.deepEqual({ ...context.wordCounts }, { ありがとう: 10000, 愛してます: 2400 });
+  assert.deepEqual({ ...context.cycleWordCounts }, { ありがとう: 0, 愛してます: 0 });
+});
+
+test('究極進化の失敗で回数を4800へ巻き戻さず、二重抽選もしない', () => {
+  const addWordSource = sourceBetween(
+    'function addWordLog(word, count=1)',
+    '// --- 割合表示と図鑑画面 ---',
+  );
+
+  assert.doesNotMatch(mainSource, /totalCount\s*=\s*4800/);
+  assert.doesNotMatch(addWordSource, /Math\.random\(\)\s*<\s*0\.05/);
+  assert.match(mainSource, /何も起きなかった。次は/);
+  assert.match(addWordSource, /cycleWordCounts\[word\] \+= count/);
+  assert.match(addWordSource, /maybeStartUltimateEvolution\(\)/);
+});
+
+test('究極進化に失敗した結果文と次回目標が暗転後に残る', () => {
+  const evolveSource = sourceBetween(
+    'function evolve(targetStage, { forcedUltimateSuccess = null } = {})',
+    'function maybeStartUltimateEvolution()',
+  );
+  let updateOptions;
+  const context = vm.createContext({
+    isEvolutionInProgress: false,
+    currentStage: 3,
+    currentForm: 'childA_1_1',
+    totalCount: 4900,
+    intokuPower: 0,
+    statusTextEl: { textContent: '' },
+    canvas: { classList: { add() {}, remove() {} } },
+    charNames: { childA_1_1: '天照大御神っち' },
+    createEvolutionEffect(callback) { callback(); },
+    getNextUltimateEvolutionGoal: () => 9800,
+    saveState() {},
+    updateUI(options) { updateOptions = options; },
+    setTimeout() {},
+    checkRebirth() {},
+  });
+
+  vm.runInContext(`${evolveSource}\nthis.evolve = evolve;`, context);
+  context.evolve(4, { forcedUltimateSuccess: false });
+
+  assert.equal(context.totalCount, 4900);
+  assert.equal(context.currentStage, 3);
+  assert.equal(context.isEvolutionInProgress, false);
+  assert.equal(context.statusTextEl.textContent, '……しかし、何も起きなかった。次は 9,800 回で再挑戦！');
+  assert.deepEqual({ ...updateOptions }, { preserveStatus: true, checkEvolution: false });
 });

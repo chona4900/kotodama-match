@@ -68,6 +68,19 @@ test('normal evolution clears the dark overlay when its animation ends', () => {
   assert.equal(effect.timeouts.size, 0);
 });
 
+test('進化結果は最後の完全な暗転中に切り替わる', () => {
+  const effect = loadEvolutionEffect();
+  let callbackRanWhileDark = false;
+
+  effect.createEvolutionEffect(() => {
+    callbackRanWhileDark = effect.classes.has('flashing');
+  }, false);
+  effect.emitAnimationEnd('evolutionPulsate');
+
+  assert.equal(callbackRanWhileDark, true);
+  assert.match(styleSource, /@keyframes evolutionPulsate\s*\{[\s\S]*?100%\s*\{\s*opacity:\s*1;/);
+});
+
 test('reduced-motion evolution also clears the dark overlay when its pulse ends', () => {
   const effect = loadEvolutionEffect();
   let callbackCount = 0;

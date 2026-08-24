@@ -61,7 +61,11 @@
 
         let wordCounts = {};
         allWords.forEach(w => wordCounts[w] = 0);
+        let cycleWordCounts = {};
+        allWords.forEach(w => cycleWordCounts[w] = 0);
         let totalCount = 0;
+        let ultimateAttemptCount = 0;
+        let isEvolutionInProgress = false;
         let intokuPower = 0;
         let battleWins = 0;
         let battleLosses = 0;
@@ -705,7 +709,8 @@
         const REBIRTH_STAGE4_DELAY_MS = 4 * 24 * 60 * 60 * 1000;
 
         function getDisplayedStats() {
-            if (currentStage === 0 && totalCount === 0) {
+            const hasTrainingHistory = allWords.some(word => (wordCounts[word] || 0) > 0);
+            if (currentStage === 0 && totalCount === 0 && !hasTrainingHistory) {
                 return { hp: 0, attack: 0, evasionRate: 0, criticalRate: 0 };
             }
             return getBattleStats();
@@ -778,7 +783,9 @@
                 currentStage,
                 currentForm,
                 wordCounts,
+                cycleWordCounts,
                 totalCount,
+                ultimateAttemptCount,
                 intokuPower,
                 battleWins,
                 battleLosses,
@@ -841,6 +848,7 @@
                     currentStage = (state.currentStage !== undefined) ? Number(state.currentStage) : 0;
                     currentForm = state.currentForm || 'egg';
                     totalCount = (state.totalCount !== undefined) ? Number(state.totalCount) : 0;
+                    ultimateAttemptCount = Math.max(0, Math.floor(Number(state.ultimateAttemptCount) || 0));
                     intokuPower = (state.intokuPower !== undefined) ? Number(state.intokuPower) : 0;
                     battleWins = (state.battleWins !== undefined) ? Number(state.battleWins) : 0;
                     battleLosses = (state.battleLosses !== undefined) ? Number(state.battleLosses) : 0;
@@ -860,6 +868,15 @@
                         for (let w in state.wordCounts) {
                             if (wordCounts.hasOwnProperty(w)) {
                                 wordCounts[w] = Number(state.wordCounts[w]) || 0;
+                            }
+                        }
+                    }
+
+                    // 進化ルート用の回数は転生ごとに区切り、累計表示・能力値とは分けて持つ。
+                    if (state.cycleWordCounts) {
+                        for (let w in state.cycleWordCounts) {
+                            if (cycleWordCounts.hasOwnProperty(w)) {
+                                cycleWordCounts[w] = Number(state.cycleWordCounts[w]) || 0;
                             }
                         }
                     }
@@ -905,7 +922,7 @@
                 : (days > 0 ? `あと ${days}日 ${hours}時間` : `あと ${Math.max(1, hours)}時間`);
 
             rebirthCountdownEl.textContent = `転生まで ${remainingLabel}`;
-            rebirthCountdownEl.setAttribute('aria-label', `現在の姿は${remainingLabel}で転生します。図鑑とアイテムは残ります。`);
+            rebirthCountdownEl.setAttribute('aria-label', `現在の姿は${remainingLabel}で転生します。図鑑、アイテム、言霊の累計、育成能力は残ります。`);
             rebirthCountdownEl.hidden = false;
         }
 
@@ -922,14 +939,15 @@
                 currentStage = 0;
                 currentForm = 'egg';
                 totalCount = 0;
-                for (let w in wordCounts) {
-                    wordCounts[w] = 0;
+                ultimateAttemptCount = 0;
+                for (let w in cycleWordCounts) {
+                    cycleWordCounts[w] = 0;
                 }
                 finalEvolutionTimestamp = null;
                 isSick = false;
                 sickRecoveryCount = 0;
                 
-                // 図鑑とアイテムはそのまま！
+                // 図鑑・アイテム・言霊別の累計・育成ステータスはそのまま！
                 saveState();
                 
                 renderCanvasArt('egg', ctx);
@@ -1531,7 +1549,11 @@
             });
         }
 
-        function updateUI() {
+        function getNextUltimateEvolutionGoal() {
+            return window.KotodamaProgression.getUltimateAttemptGoal(ultimateAttemptCount);
+        }
+
+        function updateUI({ preserveStatus = false, checkEvolution = true } = {}) {
             let percentage = 0;
             let currentGoal = STAGE1_GOAL;
 
@@ -1545,13 +1567,15 @@
                 currentGoal = STAGE3_GOAL;
                 percentage = ((totalCount - STAGE2_GOAL) / (STAGE3_GOAL - STAGE2_GOAL)) * 100;
             } else if (currentStage === 3) {
-                currentGoal = STAGE4_GOAL;
-                percentage = ((totalCount - STAGE3_GOAL) / (STAGE4_GOAL - STAGE3_GOAL)) * 100;
+                currentGoal = getNextUltimateEvolutionGoal();
+                const progressStart = window.KotodamaProgression.getUltimateProgressStart(ultimateAttemptCount);
+                percentage = ((totalCount - progressStart) / (currentGoal - progressStart)) * 100;
             } else {
                 percentage = 100;
-                currentGoal = STAGE4_GOAL;
+                currentGoal = getNextUltimateEvolutionGoal();
             }
 
+            if(percentage < 0) percentage = 0;
             if(percentage > 100) percentage = 100;
             
             progressBarEl.style.width = percentage + '%';
@@ -1565,7 +1589,7 @@
             } else if (currentStage === 2) {
                 denominator = STAGE3_GOAL;
             } else if (currentStage === 3) {
-                denominator = STAGE4_GOAL;
+                denominator = currentGoal;
             } else {
                 denominator = 'MAX';
             }
@@ -1579,7 +1603,9 @@
             if (progressContainer) {
                 progressContainer.setAttribute('aria-valuenow', String(totalCount));
                 progressContainer.setAttribute('aria-valuemax', denominator === 'MAX' ? String(totalCount) : String(denominator));
-                progressContainer.setAttribute('aria-valuetext', denominator === 'MAX' ? `${totalCount}回。最大進化済み` : `${totalCount}回。次の進化まで${denominator}回`);
+                progressContainer.setAttribute('aria-valuetext', denominator === 'MAX'
+                    ? `${totalCount}回。最大進化済み`
+                    : `${totalCount}回。次の進化まであと${Math.max(0, denominator - totalCount)}回`);
             }
 
             // メイン画面のステータス表示を更新
@@ -1611,15 +1637,12 @@
 
             updateRebirthCountdown();
 
-            if(totalCount >= STAGE4_GOAL && currentStage < 4) {
-                evolve(4);
-            } else if(totalCount >= STAGE3_GOAL && currentStage < 3) {
-                evolve(3);
-            } else if(totalCount >= STAGE2_GOAL && currentStage < 2) {
-                evolve(2);
-            } else if (totalCount >= STAGE1_GOAL && currentStage < 1) {
-                evolve(1);
-            } else if (currentStage === 0) {
+            const nextStage = checkEvolution && !isEvolutionInProgress
+                ? window.KotodamaProgression.getNextEvolutionStage(currentStage, totalCount)
+                : null;
+            if (nextStage !== null) {
+                evolve(nextStage);
+            } else if (currentStage === 0 && !isEvolutionInProgress) {
                 if(totalCount > 0) statusTextEl.textContent = "トクトク...";
                 if(totalCount > 300) statusTextEl.textContent = "うごきはじめた...";
                 if(totalCount > 500) statusTextEl.textContent = "おおきくなってきた！";
@@ -1627,7 +1650,7 @@
             }
 
             // 最終段階では、トップ画面の上部はキャラクター名だけにする。
-            if (currentStage >= 3 && !isSick && overlayState === 0) {
+            if (!preserveStatus && !isEvolutionInProgress && currentStage >= 3 && !isSick && overlayState === 0) {
                 statusTextEl.textContent = getCurrentFormName();
             }
             
@@ -1700,7 +1723,10 @@
             }
         }
 
-        function evolve(targetStage) {
+        function evolve(targetStage, { forcedUltimateSuccess = null } = {}) {
+            if (isEvolutionInProgress) return false;
+
+            isEvolutionInProgress = true;
             let prevStage = currentStage;
             currentStage = targetStage;
             statusTextEl.textContent = "ドキドキ...";
@@ -1710,9 +1736,9 @@
             let newName = "";
 
             if(targetStage === 1) {
-                let sumA = WORD_GROUPS.A.words.reduce((sum, w) => sum + wordCounts[w], 0);
-                let sumB = WORD_GROUPS.B.words.reduce((sum, w) => sum + wordCounts[w], 0);
-                let sumC = WORD_GROUPS.C.words.reduce((sum, w) => sum + wordCounts[w], 0);
+                let sumA = WORD_GROUPS.A.words.reduce((sum, w) => sum + cycleWordCounts[w], 0);
+                let sumB = WORD_GROUPS.B.words.reduce((sum, w) => sum + cycleWordCounts[w], 0);
+                let sumC = WORD_GROUPS.C.words.reduce((sum, w) => sum + cycleWordCounts[w], 0);
 
                 evolutionType = 'childA';
                 let maxVal = sumA;
@@ -1743,8 +1769,8 @@
 
                 const group = STAGE2_GROUPS[currentForm];
                 if(group) {
-                    const sum1 = group.path1.reduce((s, w) => s + (wordCounts[w] || 0), 0);
-                    const sum2 = group.path2.reduce((s, w) => s + (wordCounts[w] || 0), 0);
+                    const sum1 = group.path1.reduce((s, w) => s + (cycleWordCounts[w] || 0), 0);
+                    const sum2 = group.path2.reduce((s, w) => s + (cycleWordCounts[w] || 0), 0);
                     evolutionType = (sum2 > sum1) ? group.types[1] : group.types[0];
                 }
                 
@@ -1757,9 +1783,14 @@
             } else if(targetStage === 3) {
                 let maxVal = -1;
                 let maxIdx = 0;
-                allWords.forEach((w, idx) => {
-                    if(wordCounts[w] > maxVal) {
-                        maxVal = wordCounts[w];
+                const evolutionWords = [
+                    ...WORD_GROUPS.A.words,
+                    ...WORD_GROUPS.B.words,
+                    ...WORD_GROUPS.C.words
+                ];
+                evolutionWords.forEach((w, idx) => {
+                    if(cycleWordCounts[w] > maxVal) {
+                        maxVal = cycleWordCounts[w];
                         maxIdx = idx;
                     }
                 });
@@ -1789,9 +1820,11 @@
                 // 第5段階シークレット確率（基本3% + 陰徳パワー49毎に1%増加）
                 let baseProb = 0.03;
                 let bonusProb = Math.floor((intokuPower || 0) / 49) * 0.01;
-                let totalProb = baseProb + bonusProb;
+                let totalProb = Math.min(1, baseProb + bonusProb);
                 
-                const isSuccess = Math.random() < totalProb;
+                const isSuccess = forcedUltimateSuccess === null
+                    ? Math.random() < totalProb
+                    : !!forcedUltimateSuccess;
                 if (isSuccess) {
                     const rnd = Math.random();
                     if (rnd < 0.333) {
@@ -1814,12 +1847,13 @@
             createEvolutionEffect(() => {
                 const isFailedUltimate = (targetStage === 4 && evolutionType === currentForm);
                 if (isFailedUltimate) {
-                    statusTextEl.textContent = "進化に失敗した...";
-                    totalCount = 4800; // カウントを少し戻して再挑戦させる
-                    currentStage = prevStage; // ステージも手前に戻す
+                    currentStage = prevStage;
+                    isEvolutionInProgress = false;
                     saveState();
-                    updateUI(); // UIのカウンタも戻す
+                    updateUI({ preserveStatus: true, checkEvolution: false });
                     canvas.classList.remove('bouncing');
+                    statusTextEl.textContent = `……しかし、何も起きなかった。次は ${getNextUltimateEvolutionGoal().toLocaleString('ja-JP')} 回で再挑戦！`;
+                    setTimeout(() => checkRebirth(), 4000);
                     return; 
                 }
 
@@ -1833,9 +1867,11 @@
                     finalEvolutionTimestamp = Date.now();
                 }
                 
+                isEvolutionInProgress = false;
                 saveState(); // 進化状態を保存
                 renderCanvasArt(evolutionType, ctx);
-                
+                updateUI({ preserveStatus: true, checkEvolution: false });
+
                 if (currentStage === 3 || currentStage === 4) {
                     statusTextEl.textContent = newName;
                 } else {
@@ -1843,7 +1879,32 @@
                 }
                 updateRebirthCountdown();
                 canvas.classList.remove('bouncing');
+                setTimeout(continueProgressionAfterEvolution, 0);
             }, targetStage === 4);
+            return true;
+        }
+
+        function maybeStartUltimateEvolution() {
+            if (isEvolutionInProgress
+                || !window.KotodamaProgression.isUltimateAttemptDue(currentStage, totalCount, ultimateAttemptCount)) {
+                return false;
+            }
+
+            // 判定開始時点で回数を保存し、アプリが暗転中に閉じても同じ回を再抽選しない。
+            ultimateAttemptCount += 1;
+            saveState();
+            return evolve(4);
+        }
+
+        function continueProgressionAfterEvolution() {
+            if (isEvolutionInProgress) return;
+
+            const nextStage = window.KotodamaProgression.getNextEvolutionStage(currentStage, totalCount);
+            if (nextStage !== null) {
+                evolve(nextStage);
+                return;
+            }
+            maybeStartUltimateEvolution();
         }
 
         function createWordEffect(count, word, isTen = false) {
@@ -1916,31 +1977,12 @@
 
         function addWordLog(word, count=1) {
             wordCounts[word] += count;
+            cycleWordCounts[word] += count;
             let oldCount = totalCount;
             totalCount += count;
             handleTutorialWordRecognized(word);
             
             let crossedTen = Math.floor(totalCount / 10) > Math.floor(oldCount / 10);
-            
-            // 第5段階（シークレット進化）の判定 (最終形態後、5000回ごとのチャレンジ)
-            if (currentStage === 3) {
-                let stage5Old = Math.floor((oldCount - STAGE3_GOAL) / 5000);
-                let stage5New = Math.floor((totalCount - STAGE3_GOAL) / 5000);
-                if (stage5New > stage5Old && stage5New >= 1) {
-                    if (Math.random() < 0.05) { // 指定通り 5% に変更
-                        evolve(4);
-                    } else {
-                        // 失敗時も同じエフェクトを流す（ガセ演出）
-                        statusTextEl.textContent = "ドキドキ...";
-                        canvas.classList.add('bouncing');
-                        createEvolutionEffect(() => {
-                            statusTextEl.textContent = "何かの気配がしたが...静まり返った";
-                            canvas.classList.remove('bouncing');
-                            setTimeout(() => checkRebirth(), 4000);
-                        }, true);
-                    }
-                }
-            }
             
             // お金が貯まるようなピコンピコンエフェクト
             if (count > 5) {
@@ -1956,7 +1998,10 @@
 
 
             // 進化のタイミングと被るかどうか判定
-            const isEvolutionMilestone = [STAGE1_GOAL, STAGE2_GOAL, STAGE3_GOAL, STAGE4_GOAL].some(goal => oldCount < goal && totalCount >= goal);
+            const ultimateGoal = getNextUltimateEvolutionGoal();
+            const isUltimateEvolutionDue = currentStage === 3 && totalCount >= ultimateGoal;
+            const isEvolutionMilestone = [STAGE1_GOAL, STAGE2_GOAL, STAGE3_GOAL].some(goal => oldCount < goal && totalCount >= goal)
+                || isUltimateEvolutionDue;
 
             // 100回ごとの区切りでお祝いを表示（進化と被る場合は非表示）
             if (!isEvolutionMilestone && Math.floor(totalCount / 100) > Math.floor(oldCount / 100)) {
@@ -1993,6 +2038,7 @@
                 statusTextEl.textContent = msg;
             }
             updateUI();
+            maybeStartUltimateEvolution();
 
             // おやつマイルストーンチェック（秘密のアイテムゲット：各おやつ言霊1万回で特定アイテム獲得）
             const ITEM_MAPPING = {
@@ -2008,7 +2054,7 @@
                 let oldCountForWord = wordCounts[word] - count;
                 let newCountForWord = wordCounts[word];
                 
-                // 初めて2万回、3万回と節目を超えるたびに発動（複数回取得させず図鑑に1回だけ登録でも弾く）
+                // 1万回の節目を超えたら発動（同じアイテムは1回だけ登録する）
                 if (Math.floor(newCountForWord / 10000) > Math.floor(oldCountForWord / 10000)) {
                     const itemId = ITEM_MAPPING[word];
                     if (!unlockedItems.includes(itemId)) {
@@ -2701,6 +2747,9 @@
                 currentForm = 'egg';
                 totalCount = 0;
                 allWords.forEach(w => wordCounts[w] = 0);
+                allWords.forEach(w => cycleWordCounts[w] = 0);
+                ultimateAttemptCount = 0;
+                isEvolutionInProgress = false;
                 intokuPower = 0;
                 battleWins = 0;
                 battleLosses = 0;
@@ -3295,7 +3344,7 @@
             stage5WinBtn.textContent = '第5段階進化(成功)';
             stage5WinBtn.onclick = () => { 
                 currentStage = 3; // テスト用に事前条件を合わせる
-                evolve(4); 
+                evolve(4, { forcedUltimateSuccess: true });
             };
             div2.appendChild(stage5WinBtn);
 
@@ -3304,13 +3353,8 @@
             stage5LoseBtn.style.background = '#dcdde1';
             stage5LoseBtn.textContent = '第5段階進化(失敗)';
             stage5LoseBtn.onclick = () => {
-                statusTextEl.textContent = "ドキドキ...";
-                canvas.classList.add('bouncing');
-                createEvolutionEffect(() => {
-                    statusTextEl.textContent = "何かの気配がしたが...静まり返った";
-                    canvas.classList.remove('bouncing');
-                    setTimeout(() => checkRebirth(), 4000);
-                }, true);
+                currentStage = 3;
+                evolve(4, { forcedUltimateSuccess: false });
             };
             div2.appendChild(stage5LoseBtn);
 
@@ -3873,19 +3917,15 @@
             let myHp = myMaxHp;
             let enemyHp = enemyMaxHp;
             
-            let turnCount = 0;
-            const maxTurns = 8;
             let isBattleOver = false;
 
             function executeTurn() {
                 if (isBattleOver) return;
 
-                turnCount++;
-                if (myHp <= 0 || enemyHp <= 0 || turnCount > maxTurns) {
+                // 勝敗はHPが尽きたときだけ決める。残りHPの割合やターン数では打ち切らない。
+                if (myHp <= 0 || enemyHp <= 0) {
                     isBattleOver = true;
-                    const myHpRatio = myMaxHp > 0 ? myHp / myMaxHp : 0;
-                    const enemyHpRatio = enemyMaxHp > 0 ? enemyHp / enemyMaxHp : 0;
-                    finishBattle(myHpRatio >= enemyHpRatio);
+                    finishBattle(enemyHp <= 0);
                     return;
                 }
                 

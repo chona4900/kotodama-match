@@ -13,10 +13,28 @@ test('same random source produces one deterministic shared result', () => {
   const values = [0.9, 0.8, 0.1, 0.2, 0.1, 0.4, 0.9, 0.6, 0.3, 0.2, 0.9, 0.4, 0.7, 0.8, 0.2, 0.1, 0.6, 0.5, 0.9, 0.2, 0.8, 0.6, 0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 0.4, 0.6, 0.7, 0.5];
   const randomA = () => values.shift() ?? 0.5;
   const result = simulateBattle({ host: snapshot, guest: { ...snapshot, form: 'adult_2' }, hostAction: 'attack', guestAction: 'guard', random: randomA });
-  assert.ok(result.events.length > 0 && result.events.length <= 8);
+  assert.ok(result.events.length > 0);
   assert.equal(typeof result.hostWon, 'boolean');
   assert.equal(result.maxHp.guest, 140);
   assert.equal(result.maxHp.host, 100);
+  assert.ok(result.hp.host === 0 || result.hp.guest === 0, '勝敗時にはどちらかのHPが0になる');
+});
+
+test('8ターンを超えてもHPが0になるまで戦闘を続ける', () => {
+  const values = [0.9, 0.9, 0.9, 0.0];
+  let index = 0;
+  const random = () => values[index++ % values.length];
+  const result = simulateBattle({
+    host: snapshot,
+    guest: { ...snapshot, form: 'adult_2' },
+    hostAction: 'guard',
+    guestAction: 'guard',
+    random,
+  });
+
+  assert.ok(result.events.length > 8);
+  assert.equal(result.hp.guest, 0);
+  assert.equal(result.hostWon, true);
 });
 
 test('large training gaps are compressed before actions are applied', () => {

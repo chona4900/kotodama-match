@@ -272,10 +272,11 @@
         }
 
         // --- 設定・状態 ---
-        const STAGE1_GOAL = 1000;
-        const STAGE2_GOAL = 2000;
-        const STAGE3_GOAL = 3000;
-        const STAGE4_GOAL = 4900;
+        const {
+            STAGE1_GOAL,
+            STAGE2_GOAL,
+            STAGE3_GOAL
+        } = window.KotodamaProgression;
         const SICKNESS_DELAY_MS = 72 * 60 * 60 * 1000;
         const SICKNESS_RECOVERY_GOAL = 10;
         

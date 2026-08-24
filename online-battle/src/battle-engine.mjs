@@ -81,7 +81,8 @@ export function simulateBattle({ host, guest, hostAction, guestAction, random = 
   const hp = { ...maxHp };
   const events = [];
 
-  for (let turn = 1; turn <= 8 && hp.host > 0 && hp.guest > 0; turn += 1) {
+  let turn = 1;
+  while (hp.host > 0 && hp.guest > 0) {
     const attacker = random() >= 0.5 ? 'host' : 'guest';
     const defender = attacker === 'host' ? 'guest' : 'host';
     const attackerStats = attacker === 'host' ? hostStats : guestStats;
@@ -93,10 +94,10 @@ export function simulateBattle({ host, guest, hostAction, guestAction, random = 
       : 0;
     hp[defender] = Math.max(0, hp[defender] - damage);
     events.push({ turn, attacker, hit, critical, damage, hp: { ...hp } });
+    turn += 1;
   }
 
-  const hostRatio = hp.host / maxHp.host;
-  const guestRatio = hp.guest / maxHp.guest;
-  const hostWon = hostRatio === guestRatio ? random() >= 0.5 : hostRatio > guestRatio;
+  // 残りHPの割合では決めず、相手のHPを0にした側だけを勝者にする。
+  const hostWon = hp.guest <= 0;
   return { hostWon, maxHp, hp, events };
 }
