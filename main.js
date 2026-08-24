@@ -57,6 +57,21 @@
             'どうでもいいどっちでもいいどうせうまくいくから'
         ];
 
+        // 魂のおやつは、種類ではなく合計回数で神器を獲得する。
+        // まだ持っていない神器を優先するため、7種類すべてが入手可能になる。
+        const OYATSU_REWARD_MILESTONE = 10000;
+
+        function getTotalOyatsuCount(counts = wordCounts) {
+            return OYATSU_WORDS.reduce((sum, snackWord) => sum + (Number(counts[snackWord]) || 0), 0);
+        }
+
+        function getRandomSoulSnackRewardItemId(random = Math.random, ownedItemIds = unlockedItems) {
+            const unownedItems = SECRET_ITEMS_DATA.filter(item => !ownedItemIds.includes(item.id));
+            const rewardPool = unownedItems.length > 0 ? unownedItems : SECRET_ITEMS_DATA;
+            if (rewardPool.length === 0) return null;
+            return rewardPool[Math.floor(random() * rewardPool.length)].id;
+        }
+
         const allWords = [...WORD_GROUPS.A.words, ...WORD_GROUPS.B.words, ...WORD_GROUPS.C.words, ...OYATSU_WORDS];
 
         let wordCounts = {};
@@ -1976,6 +1991,8 @@
         }
 
         function addWordLog(word, count=1) {
+            const isSoulSnackWord = OYATSU_WORDS.includes(word);
+            const oldOyatsuTotal = isSoulSnackWord ? getTotalOyatsuCount() : 0;
             wordCounts[word] += count;
             cycleWordCounts[word] += count;
             let oldCount = totalCount;
@@ -2040,26 +2057,12 @@
             updateUI();
             maybeStartUltimateEvolution();
 
-            // おやつマイルストーンチェック（秘密のアイテムゲット：各おやつ言霊1万回で特定アイテム獲得）
-            const ITEM_MAPPING = {
-                '自分はすごいんだ': 'kusanagi_no_tsurugi', // 草薙剣
-                'もっと自分を愛しますもっと自分をゆるします': 'yasakani_no_magatama', // 八尺瓊勾玉
-                '宇宙の調和に感謝します': 'yata_no_kagami', // 八咫鏡
-                'このことがダイヤモンドにかわります': 'houju', // 宝珠
-                'だんだんよくなる未来はあかるい': 'sankosho', // 三鈷杵
-                'どうでもいいどっちでもいいどうせうまくいくから': 'kagurasuzu' // 神楽鈴
-            };
-
-            if (ITEM_MAPPING[word]) {
-                let oldCountForWord = wordCounts[word] - count;
-                let newCountForWord = wordCounts[word];
-                
-                // 1万回の節目を超えたら発動（同じアイテムは1回だけ登録する）
-                if (Math.floor(newCountForWord / 10000) > Math.floor(oldCountForWord / 10000)) {
-                    const itemId = ITEM_MAPPING[word];
-                    if (!unlockedItems.includes(itemId)) {
-                        setTimeout(() => showItemPopup(itemId), 500);
-                    }
+            // 魂のおやつの合計が1万回ごとに、未入手の神器からランダムで1つ獲得する。
+            if (isSoulSnackWord) {
+                const newOyatsuTotal = getTotalOyatsuCount();
+                if (Math.floor(newOyatsuTotal / OYATSU_REWARD_MILESTONE) > Math.floor(oldOyatsuTotal / OYATSU_REWARD_MILESTONE)) {
+                    const itemId = getRandomSoulSnackRewardItemId();
+                    if (itemId) setTimeout(() => showItemPopup(itemId), 500);
                 }
             }
             

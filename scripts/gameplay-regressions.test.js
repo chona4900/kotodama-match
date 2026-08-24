@@ -112,6 +112,50 @@ test('soul snack phrases can be recognized in consecutive utterances', () => {
   ]);
 });
 
+test('soul snack total milestones choose from every sacred item, including 八咫烏', () => {
+  const rewardSource = sourceBetween(
+    'const OYATSU_REWARD_MILESTONE = 10000;',
+    '// --- 24x24 拡張ピクセルアート定義',
+  );
+  const context = vm.createContext({
+    WORD_GROUPS: { A: { words: [] }, B: { words: [] }, C: { words: [] } },
+    OYATSU_WORDS: [
+      'このことがダイヤモンドにかわります',
+      'だんだんよくなる未来はあかるい',
+    ],
+    SECRET_ITEMS_DATA: [
+      { id: 'yata_no_kagami' },
+      { id: 'kusanagi_no_tsurugi' },
+      { id: 'yasakani_no_magatama' },
+      { id: 'houju' },
+      { id: 'sankosho' },
+      { id: 'kagurasuzu' },
+      { id: 'yatagarasu' },
+    ],
+    unlockedItems: [],
+  });
+
+  vm.runInContext(
+    `${rewardSource}\nthis.getTotalOyatsuCount = getTotalOyatsuCount; this.getRandomSoulSnackRewardItemId = getRandomSoulSnackRewardItemId; this.OYATSU_REWARD_MILESTONE = OYATSU_REWARD_MILESTONE;`,
+    context,
+  );
+
+  assert.equal(context.OYATSU_REWARD_MILESTONE, 10000);
+  assert.equal(context.getTotalOyatsuCount({
+    'このことがダイヤモンドにかわります': 6300,
+    'だんだんよくなる未来はあかるい': 3700,
+  }), 10000);
+  assert.equal(context.getRandomSoulSnackRewardItemId(() => 0.999), 'yatagarasu');
+  assert.equal(
+    context.getRandomSoulSnackRewardItemId(() => 0, [
+      'yata_no_kagami', 'kusanagi_no_tsurugi', 'yasakani_no_magatama',
+      'houju', 'sankosho', 'kagurasuzu',
+    ]),
+    'yatagarasu',
+  );
+  assert.doesNotMatch(mainSource, /const ITEM_MAPPING =/);
+});
+
 test('the normal gratitude phrase does not match the bare word 感謝', () => {
   const aliasesSource = sourceBetween(
     'const WORD_ALIASES = {',
