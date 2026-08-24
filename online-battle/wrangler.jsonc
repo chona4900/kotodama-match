@@ -2,7 +2,8 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "kotodama-match-battle",
   "main": "src/index.mjs",
-  "compatibility_date": "2026-07-31",
+  "compatibility_date": "2026-08-24",
+  "compatibility_flags": ["nodejs_compat"],
   "durable_objects": {
     "bindings": [
       { "name": "BATTLE_ROOM", "class_name": "BattleRoom" }
@@ -10,6 +11,13 @@
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["BattleRoom"] }
+  ],
+  "d1_databases": [
+    {
+      "binding": "RANKINGS_DB",
+      "database_name": "kotodama-match-rankings",
+      "migrations_dir": "migrations"
+    }
   ],
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "vars": {

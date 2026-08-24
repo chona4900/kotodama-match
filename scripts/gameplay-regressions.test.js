@@ -75,6 +75,33 @@ test('the online battle result path explicitly enables record keeping', () => {
   assert.doesNotMatch(mainSource, /turnCount > maxTurns/);
 });
 
+test('コトダマ杯は明示同意なしに匿名プロフィールを送信しない', () => {
+  const profileSource = sourceBetween(
+    'function getOnlineProfileConsentDecision()',
+    'function setKotodamaCupStatus(message)',
+  );
+
+  assert.match(profileSource, /if \(!hasOnlineProfileConsent\(\)\) \{/);
+  assert.match(profileSource, /if \(!hasOnlineProfileConsent\(\)\) return null;/);
+  assert.match(profileSource, /localStorage\.setItem\(ONLINE_PROFILE_CONSENT_STORAGE_KEY, 'accepted'\)/);
+  assert.match(profileSource, /localStorage\.setItem\(ONLINE_PROFILE_CONSENT_STORAGE_KEY, 'declined'\)/);
+});
+
+test('本人のランキング履歴はBearer認証し、Bリセットで同意も撤回する', () => {
+  const resetSource = sourceBetween(
+    'async function deleteOnlineProfileForReset(',
+    'function recoverFromSick()',
+  );
+  const rankingRequestSource = sourceBetween(
+    'async function requestWeeklyKotodamaCup(profile)',
+    'function openKotodamaCupMenu(',
+  );
+
+  assert.match(resetSource, /localStorage\.removeItem\(ONLINE_PROFILE_CONSENT_STORAGE_KEY\)/);
+  assert.match(resetSource, /if \(!onlineDataDeleted\) \{/);
+  assert.match(rankingRequestSource, /authorization: `Bearer \$\{profile\.playerToken\}`/);
+});
+
 test('soul snack phrases can be recognized in consecutive utterances', () => {
   const speechSource = sourceBetween(
     'let lastWordMatchTime = {};',

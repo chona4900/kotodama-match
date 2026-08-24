@@ -1687,6 +1687,7 @@
             } else if (battleWins >= 10) {
                 auraEl.classList.add('aura-10');
             }
+            applyAwardVisual(auraEl, document.getElementById('mainAwardBadge'), getStoredActiveAwardRank());
         }
 
         function createEvolutionEffect(callback, isUltimate = false) {
@@ -1937,7 +1938,7 @@
             fx.style.color = color1;
             fx.style.textShadow = '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff';
             fx.style.fontWeight = 'bold';
-            fx.style.fontFamily = "'DotGothic16', sans-serif";
+            fx.style.fontFamily = "'Yu Gothic UI', Meiryo, sans-serif";
             fx.style.fontSize = '2.5rem';
             if (isTen) fx.classList.add('word-effect-milestone');
             container.appendChild(fx);
@@ -1960,7 +1961,7 @@
             sparkle.style.top = '60%';
             sparkle.style.color = color2;
             sparkle.style.textShadow = '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff';
-            sparkle.style.fontFamily = "'DotGothic16', sans-serif";
+            sparkle.style.fontFamily = "'Yu Gothic UI', Meiryo, sans-serif";
             sparkle.style.fontSize = '2.5rem';
             if (isTen) sparkle.classList.add('word-effect-milestone');
             container.appendChild(sparkle);
@@ -2332,7 +2333,7 @@
                         zctx.fillStyle = '#5a5a5a';
                         zctx.fillRect(0,0,24,24);
                         zctx.fillStyle = '#fff';
-                        zctx.font = '16px DotGothic16, sans-serif';
+                        zctx.font = '16px "Yu Gothic UI", Meiryo, sans-serif';
                         zctx.textAlign = 'center';
                         zctx.textBaseline = 'middle';
                         zctx.fillText('?', 12, 12);
@@ -2434,7 +2435,7 @@
                     zctx.fillStyle = '#8e44ad'; // 謎のシルエット
                     zctx.fillRect(0,0,24,24);
                     zctx.fillStyle = '#fff';
-                    zctx.font = '16px DotGothic16, sans-serif';
+                    zctx.font = '16px "Yu Gothic UI", Meiryo, sans-serif';
                     zctx.textAlign = 'center';
                     zctx.textBaseline = 'middle';
                     zctx.fillText('?', 12, 12);
@@ -2743,9 +2744,65 @@
             oyatsuListEl.appendChild(hintRow);
         }
 
-        function resetGame() {
+        async function deleteOnlineProfileForReset({ allowUnconsentedDeletion = false } = {}) {
+            if (onlineProfilePromise) {
+                try {
+                    await Promise.race([
+                        onlineProfilePromise.catch(() => null),
+                        new Promise(resolve => window.setTimeout(resolve, 13000))
+                    ]);
+                } catch { /* 作成に失敗した時は保存済みプロフィールを確認する */ }
+            }
+            const profile = getStoredOnlineProfile();
+            if (!profile) {
+                onlineDataGeneration += 1;
+                localStorage.removeItem(ONLINE_PROFILE_STORAGE_KEY);
+                localStorage.removeItem(ONLINE_PROFILE_CONSENT_STORAGE_KEY);
+                localStorage.removeItem(KOTODAMA_CUP_CACHE_KEY);
+                localStorage.removeItem(ACTIVE_AWARD_STORAGE_KEY);
+                return true;
+            }
+            if (!hasOnlineProfileConsent() && !allowUnconsentedDeletion) return false;
+            if (!ONLINE_BATTLE_API_URL) return false;
+            try {
+                const response = await fetchWithTimeout(`${ONLINE_BATTLE_API_URL}/v1/profiles/${encodeURIComponent(profile.playerId)}`, {
+                    method: 'DELETE',
+                    headers: { authorization: `Bearer ${profile.playerToken}` }
+                });
+                if (!response.ok && response.status !== 404) return false;
+                onlineDataGeneration += 1;
+                localStorage.removeItem(ONLINE_PROFILE_STORAGE_KEY);
+                localStorage.removeItem(ONLINE_PROFILE_CONSENT_STORAGE_KEY);
+                localStorage.removeItem(KOTODAMA_CUP_CACHE_KEY);
+                localStorage.removeItem(ACTIVE_AWARD_STORAGE_KEY);
+                return true;
+            } catch (error) {
+                console.warn('コトダマ杯の記録を削除できませんでした。', error);
+                return false;
+            }
+        }
+
+        async function resetGame() {
             playButtonSound();
+            if (onlineRoomRequestInFlight || onlineBattleSession || document.getElementById('battleOverlay')?.classList.contains('visible')) {
+                alert('対戦中はリセットできません。対戦が終わってから、もう一度ためしてください。');
+                return;
+            }
             if(confirm("すべての育成データを削除して、タマゴからやり直しますか？")){
+                const storedOnlineProfile = getStoredOnlineProfile();
+                let allowUnconsentedDeletion = false;
+                if (storedOnlineProfile && !hasOnlineProfileConsent()) {
+                    allowUnconsentedDeletion = confirm('サーバーの記録も削除するため、問い合わせIDと削除用の鍵を、削除リクエストにだけ送ります。よいですか？');
+                    if (!allowUnconsentedDeletion) {
+                        alert('リセットを中止しました。サーバーの記録は送信も削除もしていません。');
+                        return;
+                    }
+                }
+                const onlineDataDeleted = await deleteOnlineProfileForReset({ allowUnconsentedDeletion });
+                if (!onlineDataDeleted) {
+                    alert('通信できなかったため、コトダマ杯の記録はまだ削除されていません。通信を確認して、もう一度リセットしてください。');
+                    return;
+                }
                 currentStage = 0;
                 currentForm = 'egg';
                 totalCount = 0;
@@ -2767,6 +2824,8 @@
                 renderCanvasArt(currentForm, ctx);
                 updateUI();
                 closeOverlays();
+                document.getElementById('pvpMenuOverlay')?.classList.remove('visible');
+                resetKotodamaCupView();
                 saveState();
             }
         }
@@ -3533,6 +3592,21 @@
         let pendingBattleOptions = null;
         const ONLINE_BATTLE_API_URL = String(window.KOTODAMA_ONLINE_BATTLE_API_URL || '').replace(/\/$/, '');
         let onlineBattleSession = null;
+        const ONLINE_PROFILE_STORAGE_KEY = 'kotodama_online_profile_v1';
+        const ONLINE_PROFILE_CONSENT_STORAGE_KEY = 'kotodama_online_profile_consent_v1';
+        const KOTODAMA_CUP_CACHE_KEY = 'kotodama_cup_cache_v1';
+        const ACTIVE_AWARD_STORAGE_KEY = 'kotodama_cup_active_award_v1';
+        const POST_MATCH_STAMP_LABELS = {
+            thanks: 'ありがとう',
+            nice: 'ナイス！',
+            again: 'また遊ぼう'
+        };
+        let onlineProfilePromise = null;
+        let postMatchAutoCloseTimer = null;
+        let onlineDataGeneration = 0;
+        let onlineRoomRequestInFlight = false;
+        let onlineRoomRequestGeneration = 0;
+        let pendingOnlineConsentTarget = null;
 
         const BATTLE_ACTIONS = {
             attack: { label: '攻める！', message: '攻撃力が 35% アップ！' },
@@ -3557,61 +3631,489 @@
             if (status) status.textContent = message;
         }
 
+        function getStoredOnlineProfile() {
+            try {
+                const profile = JSON.parse(localStorage.getItem(ONLINE_PROFILE_STORAGE_KEY) || 'null');
+                if (!profile || typeof profile !== 'object') return null;
+                if (typeof profile.playerId !== 'string' || typeof profile.playerToken !== 'string' || typeof profile.displayName !== 'string') return null;
+                if (!profile.playerId || !profile.playerToken || !profile.displayName) return null;
+                return profile;
+            } catch (error) {
+                console.warn('コトダマ杯のプロフィールを読み込めませんでした。', error);
+                return null;
+            }
+        }
+
+        function getOnlineProfileConsentDecision() {
+            const decision = localStorage.getItem(ONLINE_PROFILE_CONSENT_STORAGE_KEY);
+            return decision === 'accepted' || decision === 'declined' ? decision : null;
+        }
+
+        function hasOnlineProfileConsent() {
+            return getOnlineProfileConsentDecision() === 'accepted';
+        }
+
+        function showOnlineProfileConsent(target) {
+            pendingOnlineConsentTarget = target;
+            const overlay = document.getElementById('onlineProfileConsent');
+            if (!overlay) return;
+            overlay.classList.add('visible');
+            overlay.setAttribute('aria-hidden', 'false');
+            setTimeout(() => document.getElementById('onlineConsentAccept')?.focus(), 0);
+        }
+
+        function hideOnlineProfileConsent() {
+            const overlay = document.getElementById('onlineProfileConsent');
+            if (!overlay) return;
+            overlay.classList.remove('visible');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function acceptOnlineProfileConsent() {
+            playButtonSound();
+            localStorage.setItem(ONLINE_PROFILE_CONSENT_STORAGE_KEY, 'accepted');
+            const target = pendingOnlineConsentTarget;
+            pendingOnlineConsentTarget = null;
+            hideOnlineProfileConsent();
+            if (target === 'cup') {
+                openKotodamaCupMenu({ skipConsent: true });
+                return;
+            }
+            if (target === 'online') {
+                onlineBattleStatus('安全な匿名プロフィールを準備しています…');
+                ensureOnlineProfile()
+                    .then(profile => profile ? syncActiveAwardForProfile(profile) : null)
+                    .then(() => onlineBattleStatus('部屋をつくるか、友だちのコードを入力してね。'))
+                    .catch((error) => {
+                        console.info('匿名プロフィールを作れないため、ランキング対象外で対戦できます。', error);
+                        onlineBattleStatus('ランキング対象外として、友だちと対戦できます。');
+                    });
+            }
+        }
+
+        function declineOnlineProfileConsent() {
+            playButtonSound();
+            localStorage.setItem(ONLINE_PROFILE_CONSENT_STORAGE_KEY, 'declined');
+            const target = pendingOnlineConsentTarget;
+            pendingOnlineConsentTarget = null;
+            hideOnlineProfileConsent();
+            if (target === 'online') {
+                onlineBattleStatus('ランキングには参加せず、友だちと対戦できます。');
+            }
+        }
+
+        function saveOnlineProfile(profile) {
+            const normalized = {
+                playerId: String(profile.playerId || ''),
+                playerToken: String(profile.playerToken || ''),
+                displayName: String(profile.displayName || '')
+            };
+            if (!normalized.playerId || !normalized.playerToken || !normalized.displayName) {
+                throw new Error('プロフィールの形式が正しくありません。');
+            }
+            localStorage.setItem(ONLINE_PROFILE_STORAGE_KEY, JSON.stringify(normalized));
+            return normalized;
+        }
+
+        async function ensureOnlineProfile() {
+            if (!hasOnlineProfileConsent()) {
+                const error = new Error('コトダマ杯への参加には、保存・公開内容への同意が必要です。');
+                error.code = 'consent-required';
+                throw error;
+            }
+            const storedProfile = getStoredOnlineProfile();
+            if (storedProfile) return storedProfile;
+            if (onlineProfilePromise) return onlineProfilePromise;
+            const requestGeneration = onlineDataGeneration;
+            onlineProfilePromise = onlineBattleRequest('/v1/profiles', {
+                method: 'POST',
+                body: JSON.stringify({})
+            }).then(profile => {
+                if (requestGeneration !== onlineDataGeneration || !hasOnlineProfileConsent()) return null;
+                return saveOnlineProfile(profile);
+            }).finally(() => {
+                onlineProfilePromise = null;
+            });
+            return onlineProfilePromise;
+        }
+
+        function getOnlineProfileCredentials(profile = getStoredOnlineProfile()) {
+            if (!profile) return null;
+            return { playerId: profile.playerId, playerToken: profile.playerToken };
+        }
+
+        async function getOnlineRoomProfile() {
+            if (!hasOnlineProfileConsent()) return null;
+            const stored = getOnlineProfileCredentials();
+            if (stored) return stored;
+            try {
+                const profile = await Promise.race([
+                    ensureOnlineProfile(),
+                    new Promise(resolve => window.setTimeout(() => resolve(null), 3500))
+                ]);
+                return getOnlineProfileCredentials(profile);
+            } catch (error) {
+                console.info('匿名プロフィールなしで従来のオンライン対戦を続けます。', error);
+                return null;
+            }
+        }
+
+        function setKotodamaCupStatus(message) {
+            const status = document.getElementById('kotodamaCupStatus');
+            if (status) status.textContent = message;
+        }
+
+        function resetKotodamaCupView() {
+            const profileEl = document.getElementById('kotodamaCupProfile');
+            const seasonEl = document.getElementById('kotodamaCupSeason');
+            const entriesEl = document.getElementById('kotodamaCupEntries');
+            const meEl = document.getElementById('kotodamaCupMe');
+            const awardsEl = document.getElementById('kotodamaCupAwards');
+            if (profileEl) profileEl.textContent = 'なまえを準備しています…';
+            if (seasonEl) seasonEl.textContent = '';
+            if (entriesEl) entriesEl.textContent = '';
+            if (meEl) meEl.textContent = '';
+            if (awardsEl) awardsEl.textContent = '';
+            setKotodamaCupStatus('ランキングを読み込んでいます…');
+        }
+
+        function getOnlineProfileLabel(profile) {
+            if (!profile) return '匿名プロフィールはオンラインになった時につくられます。';
+            return `あなたのなまえ：${profile.displayName}\n問い合わせID：${profile.playerId}`;
+        }
+
+        function formatKotodamaCupSeasonEnd(value) {
+            const date = new Date(value);
+            if (!Number.isFinite(date.getTime())) return '';
+            return new Intl.DateTimeFormat('ja-JP', {
+                month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit'
+            }).format(date);
+        }
+
+        function getRankingConnections(entry) {
+            return Math.max(0, Number(entry?.connections ?? entry?.uniqueOpponents) || 0);
+        }
+
+        function normalizeAwardRank(value) {
+            const rank = Number(value);
+            return rank === 1 || rank === 2 || rank === 3 ? rank : null;
+        }
+
+        function getAwardVisual(rank) {
+            if (rank === 1) return { label: '👑 金・前回1位', badgeClass: 'award-badge-gold', auraClass: 'award-aura-gold' };
+            if (rank === 2) return { label: '👑 銀・前回2位', badgeClass: 'award-badge-silver', auraClass: 'award-aura-silver' };
+            if (rank === 3) return { label: '👑 銅・前回3位', badgeClass: 'award-badge-bronze', auraClass: 'award-aura-bronze' };
+            return null;
+        }
+
+        function getStoredActiveAwardRank() {
+            try {
+                const stored = JSON.parse(localStorage.getItem(ACTIVE_AWARD_STORAGE_KEY) || 'null');
+                const rank = normalizeAwardRank(stored?.rank);
+                const seasonEndsAt = new Date(stored?.seasonEndsAt).getTime();
+                if (!rank || !Number.isFinite(seasonEndsAt) || seasonEndsAt <= Date.now()) {
+                    localStorage.removeItem(ACTIVE_AWARD_STORAGE_KEY);
+                    return null;
+                }
+                return rank;
+            } catch {
+                localStorage.removeItem(ACTIVE_AWARD_STORAGE_KEY);
+                return null;
+            }
+        }
+
+        function storeActiveAwardFromRanking(data) {
+            const rank = normalizeAwardRank(data?.me?.activeAwardRank);
+            const seasonEndsAt = new Date(data?.seasonEndsAt).getTime();
+            if (rank && Number.isFinite(seasonEndsAt) && seasonEndsAt > Date.now()) {
+                localStorage.setItem(ACTIVE_AWARD_STORAGE_KEY, JSON.stringify({
+                    rank,
+                    seasonKey: String(data?.seasonKey || ''),
+                    seasonEndsAt: new Date(seasonEndsAt).toISOString()
+                }));
+            } else {
+                localStorage.removeItem(ACTIVE_AWARD_STORAGE_KEY);
+            }
+            updateAuraEffect();
+        }
+
+        function applyAwardVisual(auraEl, badgeEl, rawRank) {
+            const rank = normalizeAwardRank(rawRank);
+            const visual = getAwardVisual(rank);
+            if (auraEl) {
+                auraEl.classList.remove('award-aura-gold', 'award-aura-silver', 'award-aura-bronze');
+                if (visual) auraEl.classList.add(visual.auraClass);
+            }
+            if (!badgeEl) return;
+            badgeEl.classList.remove('visible', 'award-badge-gold', 'award-badge-silver', 'award-badge-bronze');
+            badgeEl.textContent = visual?.label || '';
+            badgeEl.setAttribute('aria-hidden', visual ? 'false' : 'true');
+            if (visual) {
+                badgeEl.classList.add('visible', visual.badgeClass);
+                badgeEl.setAttribute('aria-label', `${visual.label}。今週限定のコトダマ杯表彰です。`);
+            } else {
+                badgeEl.removeAttribute('aria-label');
+            }
+        }
+
+        function renderKotodamaCup(data, { cached = false } = {}) {
+            const profile = getStoredOnlineProfile();
+            const profileEl = document.getElementById('kotodamaCupProfile');
+            const seasonEl = document.getElementById('kotodamaCupSeason');
+            const entriesEl = document.getElementById('kotodamaCupEntries');
+            const meEl = document.getElementById('kotodamaCupMe');
+            const awardsEl = document.getElementById('kotodamaCupAwards');
+            if (!profileEl || !seasonEl || !entriesEl || !meEl || !awardsEl) return;
+
+            profileEl.textContent = getOnlineProfileLabel(profile);
+            const seasonEndAt = new Date(data?.seasonEndsAt).getTime();
+            const seasonEnd = formatKotodamaCupSeasonEnd(data?.seasonEndsAt);
+            const seasonIsActive = Number.isFinite(seasonEndAt) && seasonEndAt > Date.now();
+            seasonEl.textContent = seasonEnd
+                ? (seasonIsActive ? `今週の大会は ${seasonEnd} まで` : `この大会は ${seasonEnd} に終了しました`)
+                : '今週のコトダマ杯';
+
+            entriesEl.textContent = '';
+            const entries = Array.isArray(data?.entries) ? data.entries : [];
+            entries.slice(0, 100).forEach(entry => {
+                const rank = Math.max(1, Number(entry.rank) || 1);
+                const row = document.createElement('li');
+                row.className = `kotodama-cup-entry${rank <= 3 ? ` rank-${rank}` : ''}`;
+                if (entry.isMe === true || (profile && entry.playerId === profile.playerId)) row.classList.add('is-me');
+
+                const rankEl = document.createElement('span');
+                rankEl.className = 'kotodama-cup-rank';
+                rankEl.textContent = rank === 1 ? '🥇 1' : (rank === 2 ? '🥈 2' : (rank === 3 ? '🥉 3' : `${rank}位`));
+                const nameEl = document.createElement('span');
+                nameEl.className = 'kotodama-cup-name';
+                nameEl.textContent = String(entry.displayName || 'ななしのコトダマ');
+                const scoreEl = document.createElement('span');
+                scoreEl.className = 'kotodama-cup-score';
+                const wins = Math.max(0, Number(entry.wins) || 0);
+                scoreEl.textContent = `${wins}勝・ご縁${getRankingConnections(entry)}人`;
+                row.append(rankEl, nameEl, scoreEl);
+                entriesEl.appendChild(row);
+            });
+            if (entries.length === 0) {
+                const empty = document.createElement('li');
+                empty.className = 'kotodama-cup-entry';
+                empty.textContent = '今週はまだ記録がないよ。最初の一戦をしてみよう！';
+                entriesEl.appendChild(empty);
+            }
+
+            const me = data?.me;
+            const currentRank = Number(me?.rank);
+            const activeAward = seasonIsActive ? getAwardVisual(normalizeAwardRank(me?.activeAwardRank)) : null;
+            if (Number.isFinite(currentRank) && currentRank >= 1) {
+                meEl.textContent = `あなたは ${currentRank}位　${Math.max(0, Number(me.wins) || 0)}勝・ご縁${getRankingConnections(me)}人${activeAward ? `　${activeAward.label} 特典中！` : ''}`;
+            } else {
+                meEl.textContent = `あなたはまだ今週の対戦記録がないよ。${activeAward ? ` ${activeAward.label} 特典は今週も表示中！` : ''}`;
+            }
+
+            const awards = Array.isArray(data?.awards) ? data.awards : [];
+            const awardCounts = { 1: 0, 2: 0, 3: 0 };
+            awards.forEach(award => {
+                const rank = Number(award.rank ?? award.place);
+                if (awardCounts[rank] !== undefined) awardCounts[rank] += 1;
+            });
+            awardsEl.textContent = '';
+            const awardsTitle = document.createElement('span');
+            awardsTitle.className = 'kotodama-cup-awards-title';
+            awardsTitle.textContent = 'これまでの表彰（ずっと残るよ）';
+            const awardsSummary = document.createElement('span');
+            awardsSummary.textContent = awards.length
+                ? `🥇×${awardCounts[1]}　🥈×${awardCounts[2]}　🥉×${awardCounts[3]}`
+                : 'まだ表彰はありません。上位3位を目指そう！';
+            awardsEl.append(awardsTitle, awardsSummary);
+            setKotodamaCupStatus(cached ? 'オフラインのため、前に読み込んだ記録を表示しています。' : '最新のランキングです。');
+        }
+
+        function getCachedKotodamaCup() {
+            try { return JSON.parse(localStorage.getItem(KOTODAMA_CUP_CACHE_KEY) || 'null'); }
+            catch { return null; }
+        }
+
+        async function requestWeeklyKotodamaCup(profile) {
+            return onlineBattleRequest(`/v1/rankings/weekly?playerId=${encodeURIComponent(profile.playerId)}`, {
+                headers: { authorization: `Bearer ${profile.playerToken}` }
+            });
+        }
+
+        async function syncActiveAwardForProfile(profile) {
+            const requestGeneration = onlineDataGeneration;
+            const data = await requestWeeklyKotodamaCup(profile);
+            if (requestGeneration !== onlineDataGeneration) return null;
+            storeActiveAwardFromRanking(data);
+            localStorage.setItem(KOTODAMA_CUP_CACHE_KEY, JSON.stringify(data));
+            return data;
+        }
+
+        async function refreshKotodamaCup(shouldPlaySound = true) {
+            if (shouldPlaySound) playButtonSound();
+            setKotodamaCupStatus('ランキングを読み込んでいます…');
+            try {
+                const profile = await ensureOnlineProfile();
+                const profileEl = document.getElementById('kotodamaCupProfile');
+                if (profileEl) profileEl.textContent = getOnlineProfileLabel(profile);
+                const data = await syncActiveAwardForProfile(profile);
+                if (!data) return;
+                renderKotodamaCup(data);
+            } catch (error) {
+                const cached = getCachedKotodamaCup();
+                if (cached) {
+                    renderKotodamaCup(cached, { cached: true });
+                } else {
+                    setKotodamaCupStatus('いまはランキングにつながりません。通信できる時にもう一度ためしてね。');
+                    const profileEl = document.getElementById('kotodamaCupProfile');
+                    if (profileEl) profileEl.textContent = 'オフラインでも育成とCPU戦はそのまま遊べるよ。';
+                }
+                console.warn('コトダマ杯を読み込めませんでした。', error);
+            }
+        }
+
+        function openKotodamaCupMenu({ skipConsent = false } = {}) {
+            playButtonSound();
+            if (!skipConsent && !hasOnlineProfileConsent()) {
+                showOnlineProfileConsent('cup');
+                return;
+            }
+            document.getElementById('pvpMainMenu').style.display = 'none';
+            document.getElementById('onlineBattleMenu').style.display = 'none';
+            document.getElementById('kotodamaCupMenu').style.display = 'flex';
+            void refreshKotodamaCup(false);
+        }
+
+        function closeKotodamaCupMenu() {
+            playButtonSound();
+            document.getElementById('kotodamaCupMenu').style.display = 'none';
+            document.getElementById('pvpMainMenu').style.display = 'flex';
+        }
+
         function openOnlineBattleMenu() {
             playButtonSound();
             document.getElementById('pvpMainMenu').style.display = 'none';
+            document.getElementById('kotodamaCupMenu').style.display = 'none';
             document.getElementById('onlineBattleMenu').style.display = 'flex';
+            const consentDecision = getOnlineProfileConsentDecision();
+            if (consentDecision === null) {
+                onlineBattleStatus('ランキングに参加するか選んでね。参加しなくても対戦できます。');
+                showOnlineProfileConsent('online');
+                return;
+            }
+            if (consentDecision === 'declined') {
+                onlineBattleStatus('ランキングには参加せず、友だちと対戦できます。');
+                return;
+            }
             onlineBattleStatus(ONLINE_BATTLE_API_URL ? '部屋をつくるか、友だちのコードを入力してね。' : 'オンライン対戦サーバーを準備しています。');
+            if (ONLINE_BATTLE_API_URL) {
+                ensureOnlineProfile().then(profile => profile ? syncActiveAwardForProfile(profile) : null).catch((error) => {
+                    console.info('プロフィールまたは入賞特典の同期は、部屋を作る時に再試行します。', error);
+                });
+            }
         }
 
         function closeOnlineBattleMenu() {
             playButtonSound();
+            abandonWaitingOnlineBattle();
             document.getElementById('onlineBattleMenu').style.display = 'none';
             document.getElementById('pvpMainMenu').style.display = 'flex';
         }
 
+        function abandonWaitingOnlineBattle() {
+            onlineRoomRequestGeneration += 1;
+            onlineRoomRequestInFlight = false;
+            if (!onlineBattleSession || onlineBattleSession.started) return;
+            const socket = onlineBattleSession.socket;
+            onlineBattleSession = null;
+            if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) socket.close();
+        }
+
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+            const canAbort = typeof AbortController !== 'undefined' && !options.signal;
+            const controller = canAbort ? new AbortController() : null;
+            const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+            try {
+                return await fetch(url, {
+                    ...options,
+                    ...(controller ? { signal: controller.signal } : {})
+                });
+            } catch (error) {
+                if (error?.name === 'AbortError') throw new Error('通信がタイムアウトしました。もう一度ためしてね。');
+                throw error;
+            } finally {
+                if (timeoutId !== null) clearTimeout(timeoutId);
+            }
+        }
+
         async function onlineBattleRequest(path, options = {}) {
             if (!ONLINE_BATTLE_API_URL) throw new Error('オンライン対戦サーバーの接続設定がまだありません。');
-            const response = await fetch(`${ONLINE_BATTLE_API_URL}${path}`, {
+            const response = await fetchWithTimeout(`${ONLINE_BATTLE_API_URL}${path}`, {
                 ...options,
                 headers: { 'content-type': 'application/json', ...(options.headers || {}) }
             });
             const payload = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(payload.error || '通信に失敗しました。');
+            if (!response.ok) {
+                const error = new Error(payload.error || '通信に失敗しました。');
+                error.status = response.status;
+                throw error;
+            }
             return payload;
         }
 
         async function createOnlineBattleRoom() {
+            if (onlineRoomRequestInFlight) return;
+            playButtonSound();
+            abandonWaitingOnlineBattle();
+            const requestGeneration = ++onlineRoomRequestGeneration;
+            onlineRoomRequestInFlight = true;
             try {
-                playButtonSound();
                 onlineBattleStatus('部屋をつくっています…');
+                const profile = await getOnlineRoomProfile();
+                const requestBody = { snapshot: getOnlineBattleSnapshot() };
+                if (profile) requestBody.profile = profile;
                 const data = await onlineBattleRequest('/v1/rooms', {
-                    method: 'POST', body: JSON.stringify({ snapshot: getOnlineBattleSnapshot() })
+                    method: 'POST', body: JSON.stringify(requestBody)
                 });
+                if (requestGeneration !== onlineRoomRequestGeneration) return;
                 onlineBattleSession = { code: data.code, token: data.playerToken, seat: 'host', started: false, socket: null };
                 const codeInput = document.getElementById('onlineBattleCode');
                 if (codeInput) codeInput.value = data.code;
                 onlineBattleStatus(`招待コード: ${data.code}\n友だちに伝えて、入室を待ってね。`);
                 connectOnlineBattleSocket();
             } catch (error) {
-                onlineBattleStatus(error.message || '部屋をつくれませんでした。');
+                if (requestGeneration === onlineRoomRequestGeneration) onlineBattleStatus(error.message || '部屋をつくれませんでした。');
+            } finally {
+                if (requestGeneration === onlineRoomRequestGeneration) onlineRoomRequestInFlight = false;
             }
         }
 
         async function joinOnlineBattleRoom() {
+            if (onlineRoomRequestInFlight) return;
+            playButtonSound();
+            const code = String(document.getElementById('onlineBattleCode')?.value || '').trim().toUpperCase();
+            if (!/^[A-Z2-9]{6}$/.test(code)) {
+                onlineBattleStatus('6文字の招待コードを入力してね。');
+                return;
+            }
+            abandonWaitingOnlineBattle();
+            const requestGeneration = ++onlineRoomRequestGeneration;
+            onlineRoomRequestInFlight = true;
             try {
-                playButtonSound();
-                const code = String(document.getElementById('onlineBattleCode')?.value || '').trim().toUpperCase();
-                if (!/^[A-Z2-9]{6}$/.test(code)) throw new Error('6文字の招待コードを入力してね。');
                 onlineBattleStatus('部屋に入っています…');
+                const profile = await getOnlineRoomProfile();
+                const requestBody = { snapshot: getOnlineBattleSnapshot() };
+                if (profile) requestBody.profile = profile;
                 const data = await onlineBattleRequest(`/v1/rooms/${code}`, {
-                    method: 'POST', body: JSON.stringify({ snapshot: getOnlineBattleSnapshot() })
+                    method: 'POST', body: JSON.stringify(requestBody)
                 });
+                if (requestGeneration !== onlineRoomRequestGeneration) return;
                 onlineBattleSession = { code, token: data.playerToken, seat: 'guest', started: false, socket: null };
                 onlineBattleStatus('入室できたよ。対戦を始めます…');
                 connectOnlineBattleSocket();
             } catch (error) {
-                onlineBattleStatus(error.message || '入室できませんでした。');
+                if (requestGeneration === onlineRoomRequestGeneration) onlineBattleStatus(error.message || '入室できませんでした。');
+            } finally {
+                if (requestGeneration === onlineRoomRequestGeneration) onlineRoomRequestInFlight = false;
             }
         }
 
@@ -3654,6 +4156,14 @@
                 battleMessageEl.style.display = 'block';
                 return;
             }
+            if (message.type === 'stamp') {
+                const senderSeat = message.seat ?? message.from;
+                if (senderSeat !== onlineBattleSession.seat && POST_MATCH_STAMP_LABELS[message.stamp]) {
+                    onlineBattleSession.opponentStamp = message.stamp;
+                    updateOpponentStampMessage();
+                }
+                return;
+            }
             if (message.type === 'result') {
                 onlineBattleSession.finished = true;
                 runOnlineBattleSequence(message.result, onlineBattleSession.seat);
@@ -3661,10 +4171,23 @@
         }
 
         function startOnlineBattle(room) {
+            const mine = onlineBattleSession.seat === 'host' ? room.host : room.guest;
             const opponent = onlineBattleSession.seat === 'host' ? room.guest : room.host;
             if (!opponent) return;
             onlineBattleSession.started = true;
-            startBattle(false, { f: opponent.form, w: opponent.wins, h: 100, a: 10, e: 5, c: 5 });
+            onlineBattleSession.opponentDisplayName = String(opponent.displayName || '対戦相手');
+            onlineBattleSession.myAwardRank = normalizeAwardRank(mine?.awardRank);
+            onlineBattleSession.opponentAwardRank = normalizeAwardRank(opponent.awardRank);
+            startBattle(false, {
+                f: opponent.form,
+                w: opponent.wins,
+                h: 100,
+                a: 10,
+                e: 5,
+                c: 5,
+                myAwardRank: onlineBattleSession.myAwardRank,
+                awardRank: onlineBattleSession.opponentAwardRank
+            });
             if (pendingBattleOptions) pendingBattleOptions.online = true;
         }
 
@@ -3676,6 +4199,52 @@
                 return;
             }
             socket.send(JSON.stringify({ type: 'choose', action }));
+        }
+
+        function updateOpponentStampMessage() {
+            const status = document.getElementById('postMatchStampStatus');
+            if (!status || !onlineBattleSession?.opponentStamp) return;
+            const label = POST_MATCH_STAMP_LABELS[onlineBattleSession.opponentStamp];
+            const name = onlineBattleSession.opponentDisplayName || '相手';
+            status.textContent = `${name}から「${label}」が届いたよ！`;
+        }
+
+        function showPostMatchStampPanel() {
+            const panel = document.getElementById('postMatchStamps');
+            const status = document.getElementById('postMatchStampStatus');
+            if (!panel || !status) return;
+            panel.classList.add('visible');
+            panel.setAttribute('aria-hidden', 'false');
+            panel.querySelectorAll('.post-match-stamp-buttons button').forEach(button => {
+                button.disabled = !!onlineBattleSession?.sentStamp;
+            });
+            status.textContent = onlineBattleSession?.sentStamp
+                ? `「${POST_MATCH_STAMP_LABELS[onlineBattleSession.sentStamp]}」を送ったよ！`
+                : '自由入力はないから、安心して送れるよ。';
+            updateOpponentStampMessage();
+        }
+
+        function hidePostMatchStampPanel() {
+            const panel = document.getElementById('postMatchStamps');
+            if (!panel) return;
+            panel.classList.remove('visible');
+            panel.setAttribute('aria-hidden', 'true');
+        }
+
+        function sendPostMatchStamp(stamp) {
+            if (!POST_MATCH_STAMP_LABELS[stamp] || !onlineBattleSession?.finished || onlineBattleSession.sentStamp) return;
+            const socket = onlineBattleSession.socket;
+            const status = document.getElementById('postMatchStampStatus');
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                if (status) status.textContent = '通信が切れて送れませんでした。';
+                return;
+            }
+            socket.send(JSON.stringify({ type: 'stamp', stamp }));
+            onlineBattleSession.sentStamp = stamp;
+            document.querySelectorAll('#postMatchStamps .post-match-stamp-buttons button').forEach(button => {
+                button.disabled = true;
+            });
+            if (status) status.textContent = `「${POST_MATCH_STAMP_LABELS[stamp]}」を送ったよ！`;
         }
 
         function runOnlineBattleSequence(result, seat) {
@@ -3725,6 +4294,11 @@
 
         function startBattle(forceMiracle = false, challengerData = null) {
             closePvpMenu(); // メニューが開いていれば閉じる
+            hidePostMatchStampPanel();
+            if (postMatchAutoCloseTimer) {
+                window.clearTimeout(postMatchAutoCloseTimer);
+                postMatchAutoCloseTimer = null;
+            }
             selectedBattleAction = null;
             pendingBattleOptions = { forceMiracle, challengerData };
             const battleCommandPanel = document.getElementById('battleCommandPanel');
@@ -3747,6 +4321,8 @@
 
             const myAuraEl = document.getElementById('myAuraEffect');
             const enemyAuraEl = document.getElementById('enemyAuraEffect');
+            const myAwardBadgeEl = document.getElementById('myAwardBadge');
+            const enemyAwardBadgeEl = document.getElementById('enemyAwardBadge');
             if (myAuraEl) myAuraEl.className = 'aura-effect';
             if (enemyAuraEl) enemyAuraEl.className = 'aura-effect';
 
@@ -3762,6 +4338,11 @@
                 else if (challengerData.w >= 50) enemyAuraEl.classList.add('aura-50');
                 else if (challengerData.w >= 10) enemyAuraEl.classList.add('aura-10');
             }
+            const myAwardRank = challengerData && Object.prototype.hasOwnProperty.call(challengerData, 'myAwardRank')
+                ? challengerData.myAwardRank
+                : getStoredActiveAwardRank();
+            applyAwardVisual(myAuraEl, myAwardBadgeEl, myAwardRank);
+            applyAwardVisual(enemyAuraEl, enemyAwardBadgeEl, challengerData?.awardRank);
             myHpBarEl.style.width = '100%';
             enemyHpBarEl.style.width = '100%';
             
@@ -4169,18 +4750,43 @@
             
             if (recordOnlineResult) saveState(); // 人とのオンライン対戦だけ戦績を保存
             updateUI(); // メイン画面の戦績を更新
-            
-            setTimeout(() => {
-                // バトル終了、元に戻る
-                battleOverlayEl.classList.remove('visible');
-                myCharEl.className = 'battle-character mine';
-                enemyCharEl.className = 'battle-character enemy';
-                selectedBattleAction = null;
-                
-                // キャンバスのアニメーションタイマーを停止して軽くする
-                if (myCanvasCtx.canvas.animTimer) clearInterval(myCanvasCtx.canvas.animTimer);
-                if (enemyCanvasCtx.canvas.animTimer) clearInterval(enemyCanvasCtx.canvas.animTimer);
-            }, 4000);
+
+            if (recordOnlineResult) {
+                if (typeof localStorage !== 'undefined') localStorage.removeItem(KOTODAMA_CUP_CACHE_KEY);
+                const stampPanel = document.getElementById('postMatchStamps');
+                if (stampPanel?.setAttribute) showPostMatchStampPanel();
+                if (typeof postMatchAutoCloseTimer !== 'undefined' && postMatchAutoCloseTimer) clearTimeout(postMatchAutoCloseTimer);
+                postMatchAutoCloseTimer = setTimeout(closeBattleOverlay, 20000);
+            } else {
+                setTimeout(closeBattleOverlay, 4000);
+            }
+        }
+
+        function closeBattleOverlay() {
+            if (postMatchAutoCloseTimer) {
+                clearTimeout(postMatchAutoCloseTimer);
+                postMatchAutoCloseTimer = null;
+            }
+            hidePostMatchStampPanel();
+            battleOverlayEl.classList.remove('visible');
+            myCharEl.className = 'battle-character mine';
+            enemyCharEl.className = 'battle-character enemy';
+            selectedBattleAction = null;
+
+            // キャンバスのアニメーションタイマーを停止して軽くする
+            if (myCanvasCtx.canvas.animTimer) clearInterval(myCanvasCtx.canvas.animTimer);
+            if (enemyCanvasCtx.canvas.animTimer) clearInterval(enemyCanvasCtx.canvas.animTimer);
+
+            if (onlineBattleSession?.finished) {
+                const socket = onlineBattleSession.socket;
+                onlineBattleSession = null;
+                if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) socket.close();
+            }
+        }
+
+        function closePostMatchBattle() {
+            playButtonSound();
+            closeBattleOverlay();
         }
 
         function setupBattleMessage(isWin) {
@@ -4206,10 +4812,12 @@
             document.getElementById('pvpMenuOverlay').classList.add('visible');
             document.getElementById('pvpMainMenu').style.display = 'flex';
             document.getElementById('onlineBattleMenu').style.display = 'none';
+            document.getElementById('kotodamaCupMenu').style.display = 'none';
         }
 
         function closePvpMenu() {
             playButtonSound();
+            abandonWaitingOnlineBattle();
             document.getElementById('pvpMenuOverlay').classList.remove('visible');
         }
 

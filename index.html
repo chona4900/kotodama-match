@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>コトダマっち</title>
-    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -24,13 +23,14 @@
                     会: 0%<br>
                     陰徳: 0
                 </div>
-                <div class="battle-record-display" id="battleRecordDisplay" style="position: absolute; top: 30px; right: 12px; font-size: 1.15rem; line-height: 1.5; color: #0f380f; z-index: 10; font-family: 'DotGothic16', sans-serif; font-weight: bold; text-align: right;">
+                <div class="battle-record-display" id="battleRecordDisplay" style="position: absolute; top: 30px; right: 12px; font-size: 1.15rem; line-height: 1.5; color: #0f380f; z-index: 10; font-family: 'Yu Gothic UI', Meiryo, sans-serif; font-weight: bold; text-align: right;">
                     戦歴<br>0勝<br>0敗
                 </div>
                 
                 <div class="art-container" id="artContainer">
                     <!-- オーラエフェクト用コンテナ -->
                     <div id="auraEffect" class="aura-effect"></div>
+                    <div id="mainAwardBadge" class="award-badge main-award-badge" aria-hidden="true"></div>
                     <!-- 24x24 px のドット絵を描画するキャンバス -->
                     <canvas id="pixelCanvas" width="24" height="24"></canvas>
                     <!-- ピクセルアートトロフィー表示用 -->
@@ -71,6 +71,7 @@
                     <div id="pvpMainMenu" style="width:100%; display:flex; flex-direction:column; align-items:center;">
                         <button class="pvp-btn" onclick="startBattle()">修行する（CPU戦）</button>
                         <button class="pvp-btn" type="button" onclick="openOnlineBattleMenu()">友だちと対戦</button>
+                        <button class="pvp-btn kotodama-cup-button" type="button" onclick="openKotodamaCupMenu()">🏆 コトダマ杯</button>
                         <button class="pvp-btn" onclick="closePvpMenu()" style="margin-top:15px;">もどる</button>
                     </div>
                     <div id="onlineBattleMenu" style="width:100%; display:none; flex-direction:column; align-items:center;">
@@ -82,6 +83,39 @@
                         <button class="pvp-btn" type="button" onclick="joinOnlineBattleRoom()">コードで入室</button>
                         <div id="onlineBattleStatus" class="online-battle-status" role="status" aria-live="polite"></div>
                         <button class="pvp-btn" type="button" onclick="closeOnlineBattleMenu()" style="margin-top:10px;">もどる</button>
+                    </div>
+                    <section id="kotodamaCupMenu" class="kotodama-cup-menu" aria-labelledby="kotodamaCupTitle">
+                        <div class="kotodama-cup-heading" id="kotodamaCupTitle">🏆 コトダマ杯</div>
+                        <p class="kotodama-cup-lead">今週のオンライン対戦の勝利数を競うよ！<br>いろいろな相手と対戦して「ご縁」も広げよう。</p>
+                        <p class="kotodama-cup-rule">※同じ相手から数える勝ちは、日本時間で1日3回まで。</p>
+                        <div id="kotodamaCupProfile" class="kotodama-cup-profile">なまえを準備しています…</div>
+                        <div id="kotodamaCupSeason" class="kotodama-cup-season"></div>
+                        <div id="kotodamaCupStatus" class="kotodama-cup-status" role="status" aria-live="polite">ランキングを読み込んでいます…</div>
+                        <ol id="kotodamaCupEntries" class="kotodama-cup-entries" aria-label="今週のランキング"></ol>
+                        <div id="kotodamaCupMe" class="kotodama-cup-me"></div>
+                        <div id="kotodamaCupAwards" class="kotodama-cup-awards"></div>
+                        <div class="kotodama-cup-actions">
+                            <button class="pvp-btn" type="button" onclick="refreshKotodamaCup()">こうしん</button>
+                            <button class="pvp-btn" type="button" onclick="closeKotodamaCupMenu()">もどる</button>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="online-consent-overlay" id="onlineProfileConsent" role="dialog" aria-modal="true" aria-labelledby="onlineConsentTitle" aria-hidden="true">
+                    <div class="online-consent-card">
+                        <div class="online-consent-title" id="onlineConsentTitle">コトダマ杯に参加する前に</div>
+                        <p>ランキングに参加すると、次の情報を端末と対戦サーバーに保存します。</p>
+                        <ul>
+                            <li>自動でつくる安全な名前と問い合わせ用ID（対戦相手には自動の名前と前回の王冠を表示）</li>
+                            <li>サーバーが確認した対戦結果と、週の勝利数・ご縁・順位</li>
+                            <li>上位100名には、自動の名前・順位・勝利数・ご縁を表示</li>
+                        </ul>
+                        <p>本名やメールアドレスは使いません。Bの「リセット」でサーバーの記録も削除します。</p>
+                        <p>参加しない場合も、友だちとの対戦ではキャラクター・対戦用ステータス・作戦を一時的に送り、部屋と定型スタンプは15分以内に削除します。</p>
+                        <div class="online-consent-actions">
+                            <button type="button" id="onlineConsentAccept" onclick="acceptOnlineProfileConsent()">同意して参加する</button>
+                            <button type="button" onclick="declineOnlineProfileConsent()">同意せず対戦だけ使う</button>
+                        </div>
                     </div>
                 </div>
 
@@ -187,10 +221,12 @@
                         </div>
                         <div class="battle-character enemy" id="enemyChar">
                             <div id="enemyAuraEffect" class="aura-effect"></div>
+                            <div id="enemyAwardBadge" class="award-badge battle-award-badge" aria-hidden="true"></div>
                             <canvas id="enemyCanvas" width="24" height="24"></canvas>
                         </div>
                         <div class="battle-character mine" id="myChar">
                             <div id="myAuraEffect" class="aura-effect"></div>
+                            <div id="myAwardBadge" class="award-badge battle-award-badge" aria-hidden="true"></div>
                             <canvas id="myCanvas" width="24" height="24"></canvas>
                         </div>
                         <div class="battle-message" id="battleMessage">BATTLE!</div>
@@ -207,6 +243,16 @@
                                     <span>祈る</span><small>会心・神器率アップ</small>
                                 </button>
                             </div>
+                        </div>
+                        <div class="post-match-stamps" id="postMatchStamps" role="group" aria-labelledby="postMatchStampsTitle" aria-hidden="true">
+                            <div class="post-match-stamps-title" id="postMatchStampsTitle">相手にひとこと送ろう！</div>
+                            <div class="post-match-stamp-buttons">
+                                <button type="button" onclick="sendPostMatchStamp('thanks')">ありがとう</button>
+                                <button type="button" onclick="sendPostMatchStamp('nice')">ナイス！</button>
+                                <button type="button" onclick="sendPostMatchStamp('again')">また遊ぼう</button>
+                            </div>
+                            <div class="post-match-stamp-status" id="postMatchStampStatus" role="status" aria-live="polite"></div>
+                            <button class="post-match-close" type="button" onclick="closePostMatchBattle()">おわる</button>
                         </div>
 
                         <!-- 神器カットイン専用演出レイヤー -->
@@ -538,7 +584,7 @@
     <script src="state-migrations.js?v=2"></script>
     <script src="noon-ritual.js?v=1"></script>
     <script src="online-battle-config.js?v=1"></script>
-    <script src="main.js?v=28"></script>
+    <script src="main.js?v=31"></script>
     
     <!-- 画像の白背景を透過し、黒線を液晶緑色にするSVGフィルター -->
     <svg width="0" height="0" style="position:absolute; width:0; height:0;">
