@@ -16,6 +16,7 @@
     {
       "binding": "RANKINGS_DB",
       "database_name": "kotodama-match-rankings",
+      "database_id": "ca9cc0ed-c8dc-4622-bdf4-80e6d07c982f",
       "migrations_dir": "migrations"
     }
   ],
