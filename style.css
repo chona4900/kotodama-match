@@ -967,6 +967,7 @@
         .noon-phrase-text { font-size: 0.68rem; font-weight: bold; line-height: 1.35; }
         .noon-phrase-progress { min-width: 38px; font-size: 0.82rem; font-weight: bold; text-align: right; }
         .noon-ritual-status { min-height: 1.25em; margin: 4px 0; font-size: 0.64rem; font-weight: bold; }
+        .noon-notification-status { min-height: 2.7em; width: 92%; margin: 1px 0 6px; color: #745b20; font-size: 0.6rem; line-height: 1.42; }
         .noon-mic-button {
             min-width: 132px; min-height: 34px; padding: 5px 14px;
             border: 2px solid var(--screen-text); border-radius: 18px;

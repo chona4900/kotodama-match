@@ -226,10 +226,12 @@ test('iOS audio output can recover after mute, interruption, or app resume', () 
   assert.match(dataSource, /document\.addEventListener\('touchstart', recoverAudioOutput/);
   assert.match(dataSource, /document\.addEventListener\('click', recoverAudioOutput\)/);
   assert.match(dataSource, /visibilitychange/);
+  assert.match(dataSource, /refreshNativeAudioSession\(\)\.then\(startPlayback, startPlayback\)/);
   assert.doesNotMatch(dataSource, /touchstart', unlockAudio, \{ once: true \}/);
 
   assert.match(speechPluginSource, /CAPPluginMethod\(name: "refreshAudioSession"/);
-  assert.match(speechPluginSource, /try configurePlaybackSession\(AVAudioSession\.sharedInstance\(\)\)/);
+  assert.match(speechPluginSource, /try configurePlaybackSession\(session, resetOutput: true\)/);
+  assert.match(speechPluginSource, /try session\.setActive\(false, options: \[\.notifyOthersOnDeactivation\]\)/);
   assert.match(speechPluginSource, /try configureRecordingSession\(session\)/);
   assert.match(appDelegateSource, /func applicationDidBecomeActive/);
   assert.match(appDelegateSource, /activatePlaybackAudioSession\(\)/);

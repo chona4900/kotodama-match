@@ -704,6 +704,7 @@
         const noonRitualOverlayEl = document.getElementById('noonRitualOverlay');
         const noonRitualMicButtonEl = document.getElementById('noonRitualMicButton');
         const noonRitualStatusEl = document.getElementById('noonRitualStatus');
+        const noonNotificationStatusEl = document.getElementById('noonNotificationStatus');
         const noonThanksProgressEl = document.getElementById('noonThanksProgress');
         const noonFutureProgressEl = document.getElementById('noonFutureProgress');
         const noonThanksCardEl = document.getElementById('noonThanksCard');
@@ -718,6 +719,7 @@
         const NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
         let noonRitualState = window.KotodamaNoonRitual.createState();
         let noonNotificationListenersReady = false;
+        let noonNotificationStatusRequest = 0;
         let noonRitualAvailabilityTimer = null;
 
         const REBIRTH_STAGE3_DELAY_MS = 3 * 24 * 60 * 60 * 1000;
@@ -1091,6 +1093,32 @@
             return window.Capacitor.Plugins?.LocalNotifications || null;
         }
 
+        async function refreshNoonNotificationStatus() {
+            if (!noonNotificationStatusEl) return;
+            const requestId = ++noonNotificationStatusRequest;
+            const notifications = getLocalNotificationsPlugin();
+            if (!notifications) {
+                noonNotificationStatusEl.textContent = '通知はiPhone・iPad・Android版で利用できます';
+                return;
+            }
+
+            try {
+                const permission = await notifications.checkPermissions();
+                if (requestId !== noonNotificationStatusRequest) return;
+                if (permission.display === 'granted') {
+                    noonNotificationStatusEl.textContent = '通知は許可済みです（iPhoneの「設定 ＞ 通知 ＞ コトダマっち」から変更できます）';
+                } else if (permission.display === 'denied') {
+                    noonNotificationStatusEl.textContent = '通知はオフです。iPhoneの「設定 ＞ 通知 ＞ コトダマっち」でオンにしてください';
+                } else {
+                    noonNotificationStatusEl.textContent = '「通知を設定」をタップして許可すると、iPhoneの通知一覧にコトダマっちが表示されます';
+                }
+            } catch (error) {
+                if (requestId === noonNotificationStatusRequest) {
+                    noonNotificationStatusEl.textContent = '通知の状態を確認できませんでした。もう一度「通知を設定」を試してください';
+                }
+            }
+        }
+
         function loadNoonRitualState() {
             let stored = null;
             try {
@@ -1167,6 +1195,7 @@
             renderNoonRitual();
             noonRitualOverlayEl.classList.add('visible');
             noonRitualOverlayEl.setAttribute('aria-hidden', 'false');
+            refreshNoonNotificationStatus();
             startNoonRitualAvailabilityTimer();
         }
 
@@ -1281,6 +1310,7 @@
 
             const permission = await notifications.checkPermissions();
             if (permission.display === 'granted') await scheduleNoonNotification();
+            refreshNoonNotificationStatus();
         }
 
         function maybeShowNoonNotificationPrompt() {
@@ -1321,6 +1351,7 @@
                 } else {
                     noonRitualStatusEl.textContent = '端末の設定で「通知」を許可してください';
                 }
+                refreshNoonNotificationStatus();
             } catch (error) {
                 console.warn('通知設定に失敗しました。', error);
                 openNoonRitual(false);
@@ -1331,7 +1362,10 @@
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState !== 'visible') return;
             loadNoonRitualState();
-            if (noonRitualOverlayEl.classList.contains('visible')) renderNoonRitual();
+            if (noonRitualOverlayEl.classList.contains('visible')) {
+                renderNoonRitual();
+                refreshNoonNotificationStatus();
+            }
         });
 
         function renderCanvasArt(key, targetCtx) {

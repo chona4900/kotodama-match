@@ -115,7 +115,10 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
             if audioEngine?.isRunning == true {
                 try configureRecordingSession(session)
             } else {
-                try configurePlaybackSession(session)
+                // 消音スイッチの解除後など、Web Audioが動作中でも出力先だけが
+                // 古い状態になることがある。いったん非アクティブにしてから
+                // playback セッションを作り直すと、アプリ再起動なしで復帰できる。
+                try configurePlaybackSession(session, resetOutput: true)
             }
             call.resolve(["listening": audioEngine?.isRunning == true])
         } catch {
@@ -183,7 +186,10 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
         try session.setActive(true, options: .notifyOthersOnDeactivation)
     }
 
-    private func configurePlaybackSession(_ session: AVAudioSession) throws {
+    private func configurePlaybackSession(_ session: AVAudioSession, resetOutput: Bool = false) throws {
+        if resetOutput {
+            try session.setActive(false, options: [.notifyOthersOnDeactivation])
+        }
         try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
     }
@@ -200,7 +206,7 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
         speechRecognizer = nil
 
         do {
-            try configurePlaybackSession(AVAudioSession.sharedInstance())
+            try configurePlaybackSession(AVAudioSession.sharedInstance(), resetOutput: true)
         } catch {
             print("Failed to restore playback audio session: \(error)")
         }

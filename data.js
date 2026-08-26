@@ -36,18 +36,19 @@
             const ctx = initAudio();
             if (!ctx) return;
 
-            if (ctx.state === 'running') {
-                playback(ctx);
-                return;
-            }
-
-            Promise.resolve(ctx.resume())
+            // iPhoneの消音スイッチを切り替えた直後は、Web Audioだけが
+            // running のままでも、ネイティブの出力先が古い状態になることがある。
+            // 音を鳴らす操作ごとに出力セッションを再接続してから再生する。
+            const startPlayback = () => Promise.resolve(ctx.resume())
                 .then(() => {
                     if (ctx.state === 'running') {
+                        nudgeWebAudioOutput();
                         playback(ctx);
                     }
                 })
                 .catch((error) => console.warn('Audio playback resume failed:', error));
+
+            refreshNativeAudioSession().then(startPlayback, startPlayback);
         }
         
         function nudgeWebAudioOutput() {
