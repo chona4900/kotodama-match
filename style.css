@@ -254,6 +254,23 @@
         .save-protection-status {
             text-align: center; font-size: 0.65rem; font-weight: bold;
         }
+        .speech-recognition-log-panel {
+            margin-top: 10px; padding: 7px;
+            border: 1px dashed var(--screen-shadow); border-radius: 4px;
+            font-size: 0.65rem;
+        }
+        .speech-recognition-log-panel summary { cursor: pointer; font-weight: bold; }
+        .speech-recognition-log-panel p { margin: 6px 0; line-height: 1.45; }
+        .speech-recognition-log-list { display: grid; gap: 4px; max-height: 115px; overflow-y: auto; }
+        .speech-recognition-log-row {
+            padding: 4px; border-radius: 3px; background: rgba(255,255,255,0.35);
+            overflow-wrap: anywhere;
+        }
+        .speech-recognition-log-clear {
+            display: block; margin: 7px auto 0; padding: 4px 8px;
+            border: 1px solid var(--screen-text); border-radius: 3px;
+            background: transparent; color: var(--screen-text); font: inherit; font-weight: bold;
+        }
 
         .tutorial-coachmark {
             position: absolute; left: 20px; right: 20px; bottom: 116px; z-index: 500;

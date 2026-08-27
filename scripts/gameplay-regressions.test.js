@@ -103,7 +103,7 @@ test('本人のランキング履歴はBearer認証し、専用操作で同意�
   assert.match(rankingRequestSource, /authorization: `Bearer \$\{profile\.playerToken\}`/);
 });
 
-test('Bリセットはキャラクターの進化だけをタマゴへ戻し、累計記録は残す', () => {
+test('Bリセットは心のごはんと進化を戻し、魂のおやつなどの記録は残す', () => {
   const resetSource = sourceBetween(
     'function resetGame()',
     'async function deleteKotodamaCupData()',
@@ -112,9 +112,10 @@ test('Bリセットはキャラクターの進化だけをタマゴへ戻し、�
   assert.match(resetSource, /currentStage = 0/);
   assert.match(resetSource, /currentForm = 'egg'/);
   assert.match(resetSource, /totalCount = 0/);
+  assert.match(resetSource, /KOKORO_GO_HAN_WORDS\.forEach\(w => wordCounts\[w\] = 0\)/);
   assert.match(resetSource, /cycleWordCounts\[w\] = 0/);
   assert.doesNotMatch(resetSource, /deleteOnlineProfileForReset/);
-  assert.doesNotMatch(resetSource, /wordCounts\[w\] = 0/);
+  assert.doesNotMatch(resetSource, /OYATSU_WORDS\.forEach\(w => wordCounts\[w\] = 0\)/);
   assert.doesNotMatch(resetSource, /intokuPower = 0/);
   assert.doesNotMatch(resetSource, /battleWins = 0/);
   assert.doesNotMatch(resetSource, /battleLosses = 0/);
@@ -236,7 +237,7 @@ test('the normal gratitude phrase does not match the bare word 感謝', () => {
   assert.deepEqual(additions, [{ word: '感謝してます', amount: 1 }]);
 });
 
-test('楽しいとツイてるは、よくある音声認識の表記ゆれでも反応する', () => {
+test('心のごはん8種類は、よくある音声認識の表記ゆれでも反応する', () => {
   const aliasesSource = sourceBetween(
     'const WORD_ALIASES = {',
     'const OYATSU_WORDS = [',
@@ -247,8 +248,18 @@ test('楽しいとツイてるは、よくある音声認識の表記ゆれで�
   );
   let now = 1_000;
   const additions = [];
+  const expectedPhrases = [
+    ['愛してる', '愛してます'],
+    ['許してます', 'ゆるします'],
+    ['ありがとー', 'ありがとう'],
+    ['嬉しー', 'うれしい'],
+    ['たのしー', '楽しい'],
+    ['感謝してる', '感謝してます'],
+    ['幸せだよ', 'しあわせ'],
+    ['運がいい', 'ツイてる'],
+  ];
   const context = vm.createContext({
-    allWords: ['楽しい', 'ツイてる'],
+    allWords: expectedPhrases.map(([, word]) => word),
     Date: { now: () => now },
     addWordLog(word, amount) { additions.push({ word, amount }); },
     currentStage: 0,
@@ -260,14 +271,85 @@ test('楽しいとツイてるは、よくある音声認識の表記ゆれで�
     context,
   );
 
-  context.processTranscript('たのしー', true, {});
-  now += 700;
-  context.processTranscript('運がいい', true, {});
+  expectedPhrases.forEach(([phrase]) => {
+    context.processTranscript(phrase, true, {});
+    now += 700;
+  });
 
-  assert.deepEqual(additions, [
-    { word: '楽しい', amount: 1 },
-    { word: 'ツイてる', amount: 1 },
-  ]);
+  assert.deepEqual(
+    additions,
+    expectedPhrases.map(([, word]) => ({ word, amount: 1 })),
+  );
+});
+
+test('音声認識の複数候補から、言霊に一致する候補を選ぶ', () => {
+  const aliasesSource = sourceBetween(
+    'const WORD_ALIASES = {',
+    'const OYATSU_WORDS = [',
+  );
+  const speechSource = sourceBetween(
+    'let lastWordMatchTime = {};',
+    'async function toggleMic()',
+  );
+  const context = vm.createContext({
+    allWords: ['ありがとう'],
+    currentStage: 0,
+    statusTextEl: { textContent: '' },
+    addWordLog() {},
+  });
+
+  vm.runInContext(
+    `${aliasesSource}\n${speechSource}\nthis.selectBestSpeechTranscript = selectBestSpeechTranscript;`,
+    context,
+  );
+
+  assert.equal(
+    context.selectBestSpeechTranscript(['蟻が十匹', 'ありがとー', 'ありがとうございません']),
+    'ありがとー',
+  );
+});
+
+test('魂のおやつ6種類も音声認識の表記ゆれに反応する', () => {
+  const aliasesSource = sourceBetween(
+    'const WORD_ALIASES = {',
+    'const OYATSU_WORDS = [',
+  );
+  const speechSource = sourceBetween(
+    'let lastWordMatchTime = {};',
+    'async function toggleMic()',
+  );
+  const expectedPhrases = [
+    ['この事がダイアモンドに変わります', 'このことがダイヤモンドにかわります'],
+    ['段々良くなる未来は明るい', 'だんだんよくなる未来はあかるい'],
+    ['宇宙の平和に感謝します', '宇宙の調和に感謝します'],
+    ['自分は凄いんだ', '自分はすごいんだ'],
+    ['もっと自分を愛しますもっと自分を許します', 'もっと自分を愛しますもっと自分をゆるします'],
+    ['どうでもいいどっちでもいいどうせ上手く行くから', 'どうでもいいどっちでもいいどうせうまくいくから'],
+  ];
+  let now = 1_000;
+  const additions = [];
+  const context = vm.createContext({
+    allWords: expectedPhrases.map(([, word]) => word),
+    Date: { now: () => now },
+    addWordLog(word, amount) { additions.push({ word, amount }); },
+    currentStage: 0,
+    statusTextEl: { textContent: '' },
+  });
+
+  vm.runInContext(
+    `${aliasesSource}\n${speechSource}\nthis.processTranscript = processTranscript;`,
+    context,
+  );
+
+  expectedPhrases.forEach(([phrase]) => {
+    context.processTranscript(phrase, true, {});
+    now += 700;
+  });
+
+  assert.deepEqual(
+    additions,
+    expectedPhrases.map(([, word]) => ({ word, amount: 1 })),
+  );
 });
 
 test('word feedback is louder than the deliberately reduced battle BGM', () => {
@@ -288,6 +370,7 @@ test('iOS audio output can recover after mute, interruption, or app resume', () 
   assert.match(speechPluginSource, /try configurePlaybackSession\(session, resetOutput: true\)/);
   assert.match(speechPluginSource, /try session\.setActive\(false, options: \[\.notifyOthersOnDeactivation\]\)/);
   assert.match(speechPluginSource, /try configureRecordingSession\(session\)/);
+  assert.match(speechPluginSource, /"isFinal": result\.isFinal/);
   assert.match(appDelegateSource, /func applicationDidBecomeActive/);
   assert.match(appDelegateSource, /activatePlaybackAudioSession\(\)/);
 });

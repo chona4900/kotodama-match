@@ -164,25 +164,26 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
 
     @Override
     public void onResults(Bundle results) {
-        emitMatches("partialResults", results);
+        emitMatches("partialResults", results, true);
         stopAndNotify();
     }
 
     @Override
     public void onPartialResults(Bundle partial) {
         if (partialResults) {
-            emitMatches("partialResults", partial);
+            emitMatches("partialResults", partial, false);
         }
     }
 
     @Override
     public void onEvent(int eventType, Bundle params) {}
 
-    private void emitMatches(String eventName, Bundle bundle) {
+    private void emitMatches(String eventName, Bundle bundle, boolean isFinal) {
         ArrayList<String> matches = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         if (matches == null || matches.isEmpty()) return;
         JSObject data = new JSObject();
         data.put("matches", new JSArray(matches));
+        data.put("isFinal", isFinal);
         notifyListeners(eventName, data);
     }
 

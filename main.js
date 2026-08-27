@@ -7,17 +7,37 @@
 
         // 音声認識のゆらぎ吸収用（漢字変換や送り仮名の違いをカバー）
         const WORD_ALIASES = {
-            '愛してます': ['愛しています', 'あいしています', 'あいしてます', '愛します', 'アイシテマス'],
-            'ゆるします': ['許します', '赦します', 'ユルシマス'],
-            'ありがとう': ['有難う', '有り難う', '有難うございます', 'ありがとうございます', 'ありがと', 'アリガトウ'],
-            'うれしい': ['嬉しい', 'ウレシイ'],
+            '愛してます': [
+                '愛しています', '愛してる', '愛してるよ', '愛してますよ', '愛してまーす',
+                'あいしています', 'あいしてます', 'あいしてる', 'あいしてるよ',
+                'アイシテマス', 'アイシテル', '愛します'
+            ],
+            'ゆるします': [
+                '許します', '赦します', 'ゆるす', '許す', '許してます', '許しています',
+                'ゆるしますよ', '許しますよ', 'ユルシマス', 'ユルス'
+            ],
+            'ありがとう': [
+                '有難う', '有り難う', '有難うございます', 'ありがとうございます',
+                'ありがと', 'ありがとー', 'ありがとーございます', 'アリガトウ', 'アリガトー'
+            ],
+            'うれしい': [
+                '嬉しい', 'うれしー', '嬉しー', 'うれしいです', '嬉しいです',
+                'うれしいよ', '嬉しいよ', 'うれしかった', '嬉しかった', 'ウレシイ', 'ウレシー'
+            ],
             '楽しい': [
                 'たのしい', 'たのしー', 'たのし〜', 'たのしいです', 'たのしいね', 'たのしいよ',
                 '楽しいです', '楽しいね', '楽しいよ', '楽しかった', '楽しくて', '楽し',
                 'タノシイ', 'タノシー', 'タノシイデス'
             ],
-            '感謝してます': ['感謝しています', 'かんしゃしています', 'かんしゃしてます'],
-            'しあわせ': ['幸せ', '仕合わせ', 'シアワセ', '幸せです'],
+            '感謝してます': [
+                '感謝しています', '感謝してる', '感謝してますよ', '感謝していますよ',
+                'かんしゃしています', 'かんしゃしてます', 'かんしゃしてる',
+                'カンシャシテマス', 'カンシャシテイマス'
+            ],
+            'しあわせ': [
+                '幸せ', '仕合わせ', 'しあわせです', '幸せです', 'しあわせだ', '幸せだ',
+                'しあわせだよ', '幸せだよ', 'しあわせー', 'シアワセ', 'シアワセデス'
+            ],
             'ツイてる': [
                 'ついてる', 'ついてます', 'ついてまーす', 'ついています', 'ついている',
                 'ついてるよ', 'ついてるね', '付いてる', '付いてます', '付いています',
@@ -81,7 +101,10 @@
             return rewardPool[Math.floor(random() * rewardPool.length)].id;
         }
 
-        const allWords = [...WORD_GROUPS.A.words, ...WORD_GROUPS.B.words, ...WORD_GROUPS.C.words, ...OYATSU_WORDS];
+        const KOKORO_GO_HAN_WORDS = [...WORD_GROUPS.A.words, ...WORD_GROUPS.B.words, ...WORD_GROUPS.C.words];
+        const allWords = [...KOKORO_GO_HAN_WORDS, ...OYATSU_WORDS];
+        const SPEECH_RECOGNITION_LOG_STORAGE_KEY = 'kotodama_speech_recognition_log_v1';
+        const SPEECH_RECOGNITION_LOG_LIMIT = 20;
 
         let wordCounts = {};
         allWords.forEach(w => wordCounts[w] = 0);
@@ -2139,7 +2162,10 @@
             oyatsuOverlayEl.classList.toggle('visible', nextPage === 2);
             zukanOverlayEl.classList.toggle('visible', nextPage === 3);
 
-            if (nextPage === 1) updateStatsList();
+            if (nextPage === 1) {
+                updateStatsList();
+                renderSpeechRecognitionLog();
+            }
             if (nextPage === 2) updateOyatsuList();
             if (nextPage === 3) renderZukan();
             updateRebirthCountdown();
@@ -2831,10 +2857,11 @@
                 alert('対戦中はリセットできません。対戦が終わってから、もう一度ためしてください。');
                 return;
             }
-            if(confirm("キャラクターをタマゴに戻しますか？\n戦歴・魂のおやつ・図鑑・言霊の累計・コトダマ杯の記録は残ります。")){
+            if(confirm("キャラクターをタマゴに戻しますか？\n心のごはんと今回の進化回数は0に戻ります。\n魂のおやつ・戦歴・図鑑・神器・コトダマ杯は残ります。")){
                 currentStage = 0;
                 currentForm = 'egg';
                 totalCount = 0;
+                KOKORO_GO_HAN_WORDS.forEach(w => wordCounts[w] = 0);
                 allWords.forEach(w => cycleWordCounts[w] = 0);
                 ultimateAttemptCount = 0;
                 isEvolutionInProgress = false;
@@ -2843,7 +2870,7 @@
                 lastInteractionTimestamp = Date.now();
                 finalEvolutionTimestamp = null;
                 canvas.classList.remove('bouncing');
-                statusTextEl.textContent = "タマゴに戻ったよ。累計の記録はそのまま！";
+                statusTextEl.textContent = "タマゴに戻ったよ。心のごはんは0からスタート！";
                 renderCanvasArt(currentForm, ctx);
                 updateUI();
                 closeOverlays();
@@ -2865,7 +2892,7 @@
                 return;
             }
 
-            if (!confirm('コトダマ杯の匿名プロフィール、週間戦績、対戦記録、入賞・受賞履歴を削除しますか？\nキャラクター・通常の戦歴・魂のおやつ・図鑑は残ります。')) return;
+            if (!confirm('コトダマ杯のサーバーデータ（匿名プロフィール、週間戦績、対戦記録、入賞・受賞履歴）を削除しますか？\nBリセットとは別の操作です。キャラクター・心のごはん・通常の戦歴・魂のおやつ・図鑑は残ります。')) return;
 
             let allowUnconsentedDeletion = false;
             if (!hasOnlineProfileConsent()) {
@@ -3028,6 +3055,7 @@
             webRecognition.lang = 'ja-JP';
             webRecognition.continuous = true;
             webRecognition.interimResults = true;
+            webRecognition.maxAlternatives = 3;
 
             let lastResultIndex = -1;
             let interimMatchCounts = {};
@@ -3045,7 +3073,8 @@
                     lastResultIndex = event.resultIndex;
                 }
                 const currentResult = event.results[event.resultIndex];
-                let transcript = currentResult[0].transcript;
+                const alternatives = Array.from(currentResult, result => result.transcript);
+                const transcript = selectBestSpeechTranscript(alternatives);
                 processTranscript(transcript, currentResult.isFinal, interimMatchCounts);
             };
 
@@ -3064,15 +3093,121 @@
         // 共通の認識文字列処理
         let lastWordMatchTime = {};
         const WORD_MATCH_COOLDOWN_MS = 600;
+
+        function normalizeSpeechTranscript(rawTranscript) {
+            return String(rawTranscript || '')
+                .normalize('NFKC')
+                .replace(/[\s　、。！？,.!?…・「」『』（）()]/g, '');
+        }
+
+        function escapeRecognitionPattern(value) {
+            return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function getRecognitionRegex(word, flags = 'g') {
+            const variants = [word, ...(WORD_ALIASES[word] || [])]
+                .sort((a, b) => b.length - a.length)
+                .map(escapeRecognitionPattern);
+            return new RegExp(`(?:${variants.join('|')})`, flags);
+        }
+
+        function getSpeechMatchScore(rawTranscript) {
+            const normalized = normalizeSpeechTranscript(rawTranscript);
+            return allWords.reduce((score, word) => {
+                const matches = normalized.match(getRecognitionRegex(word));
+                if (!matches) return score;
+                return score + (matches.length * 1000) + matches.reduce((sum, match) => sum + match.length, 0);
+            }, 0);
+        }
+
+        function selectBestSpeechTranscript(matches) {
+            const candidates = Array.isArray(matches) ? matches.filter(Boolean) : [];
+            if (candidates.length === 0) return '';
+            return candidates.reduce((best, candidate) => (
+                getSpeechMatchScore(candidate) > getSpeechMatchScore(best) ? candidate : best
+            ), candidates[0]);
+        }
+
+        function getSpeechRecognitionLog() {
+            if (typeof localStorage === 'undefined') return [];
+            try {
+                const stored = JSON.parse(localStorage.getItem(SPEECH_RECOGNITION_LOG_STORAGE_KEY) || '[]');
+                return Array.isArray(stored) ? stored.slice(0, SPEECH_RECOGNITION_LOG_LIMIT) : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function renderSpeechRecognitionLog() {
+            if (typeof document === 'undefined') return;
+            const container = document.getElementById('speechRecognitionLogList');
+            if (!container) return;
+            const entries = getSpeechRecognitionLog();
+            container.innerHTML = '';
+            if (entries.length === 0) {
+                container.textContent = 'まだ記録はありません';
+                return;
+            }
+            entries.forEach(entry => {
+                const row = document.createElement('div');
+                row.className = 'speech-recognition-log-row';
+                const heard = document.createElement('span');
+                heard.textContent = `「${entry.heard}」`;
+                const result = document.createElement('strong');
+                result.textContent = entry.matchedWords.length > 0
+                    ? ` → ${entry.matchedWords.join('・')}`
+                    : ' → 反応なし';
+                row.append(heard, result);
+                container.appendChild(row);
+            });
+        }
+
+        function recordSpeechRecognitionResult(rawTranscript, matchedWords) {
+            if (typeof localStorage === 'undefined') return;
+            const heard = String(rawTranscript || '').trim().slice(0, 80);
+            if (!heard) return;
+            const entries = getSpeechRecognitionLog();
+            const entry = {
+                at: Date.now(),
+                heard,
+                matchedWords: [...new Set(matchedWords)]
+            };
+            const previous = entries[0];
+            if (previous && previous.heard === entry.heard
+                && JSON.stringify(previous.matchedWords) === JSON.stringify(entry.matchedWords)
+                && entry.at - previous.at < 2000) {
+                entries[0] = entry;
+            } else {
+                entries.unshift(entry);
+            }
+            try {
+                localStorage.setItem(
+                    SPEECH_RECOGNITION_LOG_STORAGE_KEY,
+                    JSON.stringify(entries.slice(0, SPEECH_RECOGNITION_LOG_LIMIT))
+                );
+            } catch (error) {
+                console.warn('聞き取り記録を保存できませんでした。', error);
+            }
+            renderSpeechRecognitionLog();
+        }
+
+        function clearSpeechRecognitionLog() {
+            playButtonSound();
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem(SPEECH_RECOGNITION_LOG_STORAGE_KEY);
+            }
+            renderSpeechRecognitionLog();
+        }
+
         function processTranscript(rawTranscript, isFinal, interimMatchCounts) {
-            let transcript = rawTranscript.replace(/[\s　、。！？,!?]/g, '');
+            let transcript = normalizeSpeechTranscript(rawTranscript);
             const sortedWords = [...allWords].sort((a, b) => b.length - a.length);
+            const matchedWords = [];
 
             sortedWords.forEach(w => {
-                let pattern = w;
-                if (WORD_ALIASES[w]) pattern = `(?:${w}|${WORD_ALIASES[w].join('|')})`;
-                const regex = new RegExp(pattern, 'g');
+                const regex = getRecognitionRegex(w);
                 const matches = transcript.match(regex);
+                if (matches) matchedWords.push(w);
                 
                 const currentMatchCount = matches ? matches.length : 0;
                 // ネイティブ音声認識は、無音を挟むと同じ認識セッション内でも
@@ -3103,6 +3238,7 @@
             });
 
             const hasAnyMatchInSentence = Object.values(interimMatchCounts).some(v => v > 0);
+            if (isFinal) recordSpeechRecognitionResult(rawTranscript, matchedWords);
             if (isFinal && !hasAnyMatchInSentence && currentStage < 3) {
                 statusTextEl.textContent = "おしい";
             }
@@ -3222,7 +3358,8 @@
                     await speechPlugin.removeAllListeners();
                     await speechPlugin.addListener('partialResults', (data) => {
                         if (data && data.matches && data.matches.length > 0) {
-                            processTranscript(data.matches[0], false, nativeInterimMatchCounts);
+                            const transcript = selectBestSpeechTranscript(data.matches);
+                            processTranscript(transcript, Boolean(data.isFinal), nativeInterimMatchCounts);
                         }
                     });
                     await speechPlugin.addListener('listeningState', (data) => {
@@ -3263,7 +3400,7 @@
                 await prepareNativeSpeech();
                 await speechPlugin.start({
                     language: "ja-JP",
-                    maxResults: 1,
+                    maxResults: 3,
                     prompt: "言霊を唱えてください",
                     partialResults: true,
                     popup: false

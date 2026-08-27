@@ -75,7 +75,10 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
                 if let result {
                     let matches = Array(result.transcriptions.prefix(maxResults)).map(\.formattedString)
                     if partialResults {
-                        self.notifyListeners("partialResults", data: ["matches": matches])
+                        self.notifyListeners("partialResults", data: [
+                            "matches": matches,
+                            "isFinal": result.isFinal
+                        ])
                     } else if result.isFinal {
                         call.resolve(["matches": matches])
                     }

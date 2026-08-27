@@ -46,6 +46,12 @@
                 <div class="stats-overlay" id="statsOverlay">
                     <div style="text-align:center; margin-bottom:5px; font-weight:bold; font-size:1.2rem;">★心のごはん★</div>
                     <div id="statsList"></div>
+                    <details class="speech-recognition-log-panel">
+                        <summary>ききとり記録（この端末だけ）</summary>
+                        <p>音声そのものは保存しません。端末が文字にした直近20件と、反応した言霊を表示します。</p>
+                        <div id="speechRecognitionLogList" class="speech-recognition-log-list">まだ記録はありません</div>
+                        <button type="button" class="speech-recognition-log-clear" onclick="clearSpeechRecognitionLog()">ききとり記録を消す</button>
+                    </details>
                     <div class="quick-settings" aria-label="保存設定">
                         <div class="save-protection-status">保存データ：自動予備保存 ON</div>
                     </div>
@@ -96,7 +102,7 @@
                         <div id="kotodamaCupAwards" class="kotodama-cup-awards"></div>
                         <div class="kotodama-cup-actions">
                             <button class="pvp-btn" type="button" onclick="refreshKotodamaCup()">こうしん</button>
-                            <button class="pvp-btn" type="button" onclick="deleteKotodamaCupData()">ランキングの記録を削除</button>
+                            <button class="pvp-btn" type="button" onclick="deleteKotodamaCupData()">コトダマ杯のデータを削除</button>
                             <button class="pvp-btn" type="button" onclick="closeKotodamaCupMenu()">もどる</button>
                         </div>
                     </section>
@@ -111,7 +117,7 @@
                             <li>サーバーが確認した対戦結果と、週の勝利数・ご縁・順位</li>
                             <li>上位100名には、自動の名前・順位・勝利数・ご縁を表示</li>
                         </ul>
-                        <p>本名やメールアドレスは使いません。Bの「リセット」はキャラクターをタマゴへ戻すだけです。サーバーの記録は、コトダマ杯の「ランキングの記録を削除」からいつでも削除できます。</p>
+                        <p>本名やメールアドレスは使いません。Bの「リセット」はキャラクターをタマゴへ戻し、心のごはんを0にするだけです。コトダマ杯のサーバーデータは、コトダマ杯画面の専用ボタンからいつでも削除できます。</p>
                         <p>参加しない場合も、友だちとの対戦ではキャラクター・対戦用ステータス・作戦を一時的に送り、部屋と定型スタンプは15分以内に削除します。</p>
                         <div class="online-consent-actions">
                             <button type="button" id="onlineConsentAccept" onclick="acceptOnlineProfileConsent()">同意して参加する</button>
@@ -295,7 +301,7 @@
                 <div class="btn-label">じょうほう</div>
             </div>
             <div>
-                <button class="btn-round" style="background:#50E3C2; color:#1f5e50;" onclick="resetGame()" aria-label="育成データをリセットする">B</button>
+                <button class="btn-round" style="background:#50E3C2; color:#1f5e50;" onclick="resetGame()" aria-label="キャラクターをタマゴへ戻し、心のごはんをリセットする">B</button>
                 <div class="btn-label">リセット</div>
             </div>
             <div>
