@@ -87,8 +87,8 @@ test('コトダマ杯は明示同意なしに匿名プロフィールを送信�
   assert.match(profileSource, /localStorage\.setItem\(ONLINE_PROFILE_CONSENT_STORAGE_KEY, 'declined'\)/);
 });
 
-test('本人のランキング履歴はBearer認証し、Bリセットで同意も撤回する', () => {
-  const resetSource = sourceBetween(
+test('本人のランキング履歴はBearer認証し、専用操作で同意を撤回できる', () => {
+  const deletionSource = sourceBetween(
     'async function deleteOnlineProfileForReset(',
     'function recoverFromSick()',
   );
@@ -97,9 +97,30 @@ test('本人のランキング履歴はBearer認証し、Bリセットで同意�
     'function openKotodamaCupMenu(',
   );
 
-  assert.match(resetSource, /localStorage\.removeItem\(ONLINE_PROFILE_CONSENT_STORAGE_KEY\)/);
-  assert.match(resetSource, /if \(!onlineDataDeleted\) \{/);
+  assert.match(deletionSource, /localStorage\.removeItem\(ONLINE_PROFILE_CONSENT_STORAGE_KEY\)/);
+  assert.match(deletionSource, /async function deleteKotodamaCupData\(\)/);
+  assert.match(deletionSource, /if \(!onlineDataDeleted\) \{/);
   assert.match(rankingRequestSource, /authorization: `Bearer \$\{profile\.playerToken\}`/);
+});
+
+test('Bリセットはキャラクターの進化だけをタマゴへ戻し、累計記録は残す', () => {
+  const resetSource = sourceBetween(
+    'function resetGame()',
+    'async function deleteKotodamaCupData()',
+  );
+
+  assert.match(resetSource, /currentStage = 0/);
+  assert.match(resetSource, /currentForm = 'egg'/);
+  assert.match(resetSource, /totalCount = 0/);
+  assert.match(resetSource, /cycleWordCounts\[w\] = 0/);
+  assert.doesNotMatch(resetSource, /deleteOnlineProfileForReset/);
+  assert.doesNotMatch(resetSource, /wordCounts\[w\] = 0/);
+  assert.doesNotMatch(resetSource, /intokuPower = 0/);
+  assert.doesNotMatch(resetSource, /battleWins = 0/);
+  assert.doesNotMatch(resetSource, /battleLosses = 0/);
+  assert.doesNotMatch(resetSource, /unlockedForms = \['egg'\]/);
+  assert.doesNotMatch(resetSource, /unlockedItems = \[\]/);
+  assert.doesNotMatch(resetSource, /resetKotodamaCupView/);
 });
 
 test('soul snack phrases can be recognized in consecutive utterances', () => {
@@ -213,6 +234,40 @@ test('the normal gratitude phrase does not match the bare word 感謝', () => {
   now += 700;
   context.processTranscript('感謝しています', true, {});
   assert.deepEqual(additions, [{ word: '感謝してます', amount: 1 }]);
+});
+
+test('楽しいとツイてるは、よくある音声認識の表記ゆれでも反応する', () => {
+  const aliasesSource = sourceBetween(
+    'const WORD_ALIASES = {',
+    'const OYATSU_WORDS = [',
+  );
+  const speechSource = sourceBetween(
+    'let lastWordMatchTime = {};',
+    'async function toggleMic()',
+  );
+  let now = 1_000;
+  const additions = [];
+  const context = vm.createContext({
+    allWords: ['楽しい', 'ツイてる'],
+    Date: { now: () => now },
+    addWordLog(word, amount) { additions.push({ word, amount }); },
+    currentStage: 0,
+    statusTextEl: { textContent: '' },
+  });
+
+  vm.runInContext(
+    `${aliasesSource}\n${speechSource}\nthis.processTranscript = processTranscript;`,
+    context,
+  );
+
+  context.processTranscript('たのしー', true, {});
+  now += 700;
+  context.processTranscript('運がいい', true, {});
+
+  assert.deepEqual(additions, [
+    { word: '楽しい', amount: 1 },
+    { word: 'ツイてる', amount: 1 },
+  ]);
 });
 
 test('word feedback is louder than the deliberately reduced battle BGM', () => {

@@ -11,10 +11,19 @@
             'ゆるします': ['許します', '赦します', 'ユルシマス'],
             'ありがとう': ['有難う', '有り難う', '有難うございます', 'ありがとうございます', 'ありがと', 'アリガトウ'],
             'うれしい': ['嬉しい', 'ウレシイ'],
-            '楽しい': ['たのしい', '楽し', 'タノシイ'],
+            '楽しい': [
+                'たのしい', 'たのしー', 'たのし〜', 'たのしいです', 'たのしいね', 'たのしいよ',
+                '楽しいです', '楽しいね', '楽しいよ', '楽しかった', '楽しくて', '楽し',
+                'タノシイ', 'タノシー', 'タノシイデス'
+            ],
             '感謝してます': ['感謝しています', 'かんしゃしています', 'かんしゃしてます'],
             'しあわせ': ['幸せ', '仕合わせ', 'シアワセ', '幸せです'],
-            'ツイてる': ['ついてる', '付いてる', '就いてる', '憑いてる', 'ツキがある', 'ツイテル', 'ついている'],
+            'ツイてる': [
+                'ついてる', 'ついてます', 'ついてまーす', 'ついています', 'ついている',
+                'ついてるよ', 'ついてるね', '付いてる', '付いてます', '付いています',
+                '就いてる', '憑いてる', 'ツキがある', 'つきがある', '運がいい', '運が良い',
+                'ツイテル', 'ツイテマス', 'ツイテイル'
+            ],
             
             // 魂のおやつ（長い言霊）のゆらぎ吸収
             'このことがダイヤモンドにかわります': [
@@ -2816,52 +2825,66 @@
             }
         }
 
-        async function resetGame() {
+        function resetGame() {
             playButtonSound();
             if (onlineRoomRequestInFlight || onlineBattleSession || document.getElementById('battleOverlay')?.classList.contains('visible')) {
                 alert('対戦中はリセットできません。対戦が終わってから、もう一度ためしてください。');
                 return;
             }
-            if(confirm("すべての育成データを削除して、タマゴからやり直しますか？")){
-                const storedOnlineProfile = getStoredOnlineProfile();
-                let allowUnconsentedDeletion = false;
-                if (storedOnlineProfile && !hasOnlineProfileConsent()) {
-                    allowUnconsentedDeletion = confirm('サーバーの記録も削除するため、問い合わせIDと削除用の鍵を、削除リクエストにだけ送ります。よいですか？');
-                    if (!allowUnconsentedDeletion) {
-                        alert('リセットを中止しました。サーバーの記録は送信も削除もしていません。');
-                        return;
-                    }
-                }
-                const onlineDataDeleted = await deleteOnlineProfileForReset({ allowUnconsentedDeletion });
-                if (!onlineDataDeleted) {
-                    alert('通信できなかったため、コトダマ杯の記録はまだ削除されていません。通信を確認して、もう一度リセットしてください。');
-                    return;
-                }
+            if(confirm("キャラクターをタマゴに戻しますか？\n戦歴・魂のおやつ・図鑑・言霊の累計・コトダマ杯の記録は残ります。")){
                 currentStage = 0;
                 currentForm = 'egg';
                 totalCount = 0;
-                allWords.forEach(w => wordCounts[w] = 0);
                 allWords.forEach(w => cycleWordCounts[w] = 0);
                 ultimateAttemptCount = 0;
                 isEvolutionInProgress = false;
-                intokuPower = 0;
-                battleWins = 0;
-                battleLosses = 0;
                 isSick = false;
                 sickRecoveryCount = 0;
                 lastInteractionTimestamp = Date.now();
                 finalEvolutionTimestamp = null;
-                unlockedForms = ['egg'];
-                unlockedItems = [];
                 canvas.classList.remove('bouncing');
-                statusTextEl.textContent = "マイクをオンにしてね";
+                statusTextEl.textContent = "タマゴに戻ったよ。累計の記録はそのまま！";
                 renderCanvasArt(currentForm, ctx);
                 updateUI();
                 closeOverlays();
                 document.getElementById('pvpMenuOverlay')?.classList.remove('visible');
-                resetKotodamaCupView();
                 saveState();
             }
+        }
+
+        async function deleteKotodamaCupData() {
+            playButtonSound();
+            if (onlineRoomRequestInFlight || onlineBattleSession || document.getElementById('battleOverlay')?.classList.contains('visible')) {
+                alert('対戦中はコトダマ杯の記録を削除できません。対戦が終わってから、もう一度ためしてください。');
+                return;
+            }
+
+            const storedOnlineProfile = getStoredOnlineProfile();
+            if (!storedOnlineProfile) {
+                alert('削除するコトダマ杯の記録はありません。');
+                return;
+            }
+
+            if (!confirm('コトダマ杯の匿名プロフィール、週間戦績、対戦記録、入賞・受賞履歴を削除しますか？\nキャラクター・通常の戦歴・魂のおやつ・図鑑は残ります。')) return;
+
+            let allowUnconsentedDeletion = false;
+            if (!hasOnlineProfileConsent()) {
+                allowUnconsentedDeletion = confirm('サーバーの記録を削除するため、問い合わせIDと削除用の鍵を、削除リクエストにだけ送ります。よいですか？');
+                if (!allowUnconsentedDeletion) {
+                    alert('削除を中止しました。サーバーの記録は送信も削除もしていません。');
+                    return;
+                }
+            }
+
+            const onlineDataDeleted = await deleteOnlineProfileForReset({ allowUnconsentedDeletion });
+            if (!onlineDataDeleted) {
+                alert('通信できなかったため、コトダマ杯の記録はまだ削除されていません。通信を確認して、もう一度ためしてください。');
+                return;
+            }
+
+            resetKotodamaCupView();
+            closeKotodamaCupMenu();
+            alert('コトダマ杯の記録を削除しました。');
         }
 
         function recoverFromSick() {
