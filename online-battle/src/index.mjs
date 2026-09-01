@@ -1,18 +1,20 @@
 import { DurableObject } from 'cloudflare:workers';
 import { ACTIONS, sanitizeSnapshot, simulateBattle } from './battle-engine.mjs';
-import { createSafeDisplayName, isAllowedStamp } from './ranking-rules.mjs';
+import { createSafeDisplayName, isAllowedStamp, sanitizePlayerDisplayName } from './ranking-rules.mjs';
 import {
   createProfile,
   deleteProfile,
   getActiveAwardRank,
   getProfile,
   getWeeklyRankings,
-  recordRankedMatch
+  recordRankedMatch,
+  updateProfileDisplayName
 } from './ranking-store.mjs';
 
 const ROOM_TTL_MS = 15 * 60 * 1000;
 const RANKING_RETRY_MS = 30 * 1000;
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ROOM_CODE_LENGTH = 4;
+const ROOM_CREATE_ATTEMPTS = 12;
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 const HTML_HEADERS = {
   'content-type': 'text/html; charset=utf-8',
@@ -51,24 +53,24 @@ const SUPPORT_PAGE = legalPage('コトダマっち サポート', `
 
 const PRIVACY_PAGE = legalPage('コトダマっち プライバシーポリシー', `
   <h1>コトダマっち プライバシーポリシー</h1>
-  <p class="updated">最終更新日: 2026年8月27日</p>
+  <p class="updated">最終更新日: 2026年9月1日</p>
   <h2>収集する情報</h2>
   <p>コトダマっちは、育成の進行状況、発話した言霊の回数、戦績などのゲームデータを端末内に保存します。聞き取り状況を本人が確認できるよう、端末が文字に変換した直近20件の音声認識結果と、反応した言霊も端末内だけに保存します。音声そのものは保存しません。聞き取り記録はアプリ内の情報画面からいつでも削除できます。通常プレイでは、開発者が運営するサーバーへ、これらのゲームデータ、音声、音声認識結果を送信・保存することはありません。オンライン対戦や「コトダマ杯」を利用する場合だけの通信内容は、下記「オンライン対戦とコトダマ杯」をご確認ください。</p>
   <h2>マイクと音声認識</h2>
-  <p>言霊の判定のため、利用者が許可した場合に限りマイクと端末の音声認識機能を使用します。音声認識の処理にはAppleが提供する機能が使用される場合があります。Appleによる情報の取扱いについては、<a href="https://www.apple.com/legal/privacy/" rel="noopener">Appleのプライバシーポリシー</a>をご確認ください。</p>
+  <p>言霊の判定のため、利用者が許可した場合に限りマイクと端末の音声認識機能を使用します。MICをオンにした間は、ほかのアプリを開いている時も言霊をききとります。iPhone・iPadではマイク使用中を示すシステム表示が出ます。Androidでは、ききとり中であることを示す通知が表示されます。停止するにはコトダマっちを開いてMICをもう一度押します。音声認識の処理にはAppleが提供する機能が使用される場合があります。Appleによる情報の取扱いについては、<a href="https://www.apple.com/legal/privacy/" rel="noopener">Appleのプライバシーポリシー</a>をご確認ください。</p>
   <h2>通知と正午のことだま</h2>
-  <p>利用者が許可した場合、毎日の「正午のことだま」をお知らせするローカル通知を端末上で予約します。2つの言霊の達成回数と、その日の徳の受取状況は端末内だけに保存され、開発者のサーバーへ送信されません。</p>
+  <p>利用者が許可した場合、毎日の「正午のことだま」と、毎月1日・15日の「祈り合わせのことだま」をお知らせするローカル通知を端末上で予約します。2つの言霊の達成回数と、その日の徳の受取状況は端末内だけに保存され、開発者のサーバーへ送信されません。</p>
   <h2>第三者提供・広告・解析</h2>
   <p>本アプリは、広告SDK、行動解析SDK、利用者の識別を目的としたトラッキングを使用しません。利用者の情報を販売しません。また、サービスの運営に必要な通信・保管と、下記のランキング表示を除き、利用者の情報を第三者へ提供しません。</p>
   <p>オンライン対戦とランキングの通信・保管基盤にはCloudflareのサービスを利用します。送信された情報は、オンライン対戦とランキングの提供、安全確保、不正防止のためだけに取り扱い、広告や行動追跡には利用しません。</p>
   <h2>データの削除</h2>
   <p>ゲーム画面の「B リセット」は、キャラクターをタマゴの状態へ戻し、「心のごはん」とその回の進化回数をリセットします。魂のおやつ、戦歴、図鑑、神器などの解放状況、コトダマ杯の記録、聞き取り記録は残ります。</p>
-  <p>オンライン対戦とランキングのためのデータ保存への同意は、コトダマ杯の画面にある「コトダマ杯のデータを削除」からいつでも取り消せます。この操作では、サーバーへ削除を要求し、匿名プロフィール、週間戦績、対戦記録、入賞・受賞履歴と端末内のランキング表示用キャッシュを削除します。通信できない状態や通信エラーのときは、サーバー側の削除が完了しないことがあります。通信できる状態で、もう一度この操作を行ってください。アプリを削除すると端末内のアプリデータは削除されますが、サーバーへは通知できないため、サーバー側の情報は自動では削除されません。再操作できない場合や、削除できたか確認したい場合は、下記のお問い合わせ先までご連絡ください。</p>
+  <p>オンライン対戦とランキングのためのデータ保存への同意は、コトダマ杯の画面にある「コトダマ杯のデータを削除」からいつでも取り消せます。この操作では、サーバーへ削除を要求し、表示名、匿名プロフィール、週間戦績、対戦記録、入賞・受賞履歴と端末内のランキング表示用キャッシュを削除します。通信できない状態や通信エラーのときは、サーバー側の削除が完了しないことがあります。通信できる状態で、もう一度この操作を行ってください。アプリを削除すると端末内のアプリデータは削除されますが、サーバーへは通知できないため、サーバー側の情報は自動では削除されません。再操作できない場合や、削除できたか確認したい場合は、下記のお問い合わせ先までご連絡ください。</p>
   <h2>オンライン対戦とコトダマ杯</h2>
-  <p>オンライン対戦またはコトダマ杯を初めて利用するときは、保存する情報と、ほかの利用者へ表示する情報をアプリ内で説明します。コトダマ杯への参加に同意すると、サーバーは無作為なプレイヤーIDと認証用トークンを発行します。認証用トークンそのものは端末内だけに保存し、サーバーには元へ戻せない形に変換した値を保存します。ランキングとオンライン対戦で表示する名前も、安全な言葉の一覧からサーバーが自動で作ります。コトダマ杯への参加に同意しない場合も、匿名プロフィールを使わない一時的なオンライン対戦、育成、CPU戦は遊べます。</p>
-  <p>招待コードを使う対戦では、コトダマ杯への参加の有無にかかわらず、対戦の進行に必要なキャラクターの見た目、対戦用ステータス、選択した作戦、招待コードをサーバーへ送信します。対戦用の部屋は2人限定で、部屋の情報と対戦後に送った定型スタンプは、作成から15分以内に削除されます。自由入力の名前、文章、画像、チャットを送る機能はありません。</p>
+  <p>オンライン対戦またはコトダマ杯を初めて利用するときは、保存する情報と、ほかの利用者へ表示する情報をアプリ内で説明します。コトダマ杯への参加に同意すると、サーバーは無作為なプレイヤーIDと認証用トークンを発行します。認証用トークンそのものは端末内だけに保存し、サーバーには元へ戻せない形に変換した値を保存します。ランキングとオンライン対戦で表示する名前は、利用者がコトダマ杯画面で設定できます。表示名には本名、連絡先、住所などの個人情報を入力しないでください。コトダマ杯への参加に同意しない場合も、匿名プロフィールを使わない一時的なオンライン対戦、育成、CPU戦は遊べます。</p>
+  <p>招待コードを使う対戦では、コトダマ杯への参加の有無にかかわらず、対戦の進行に必要なキャラクターの見た目、対戦用ステータス、選択した作戦、招待コードをサーバーへ送信します。コトダマ杯参加者は、設定した表示名も対戦相手へ表示されます。対戦用の部屋は2人限定で、部屋の情報と対戦後に送った定型スタンプは、作成から15分以内に削除されます。自由入力の文章、画像、チャットを送る機能はありません。</p>
   <p>週間ランキング「コトダマ杯」の運営と不正防止のため、サーバーが確認した対戦記録（対戦した2人の匿名プレイヤーID、勝敗、対戦日時）を保存します。この記録から、週間の勝利数・対戦した相手の人数と順位を集計します。匿名プロフィール、過去の対戦記録、週間集計、上位3名の入賞記録は、利用者が削除するまで保存します。</p>
-  <p>コトダマ杯の画面では、今週の上位100名について、順位、自動生成された表示名、勝利数、対戦した相手の人数（ご縁）をほかの利用者にも表示します。オンライン対戦では、コトダマ杯参加者の自動生成された表示名と、直前大会で上位3名になったことを表す王冠・オーラを対戦相手にも表示します。匿名プレイヤーIDや認証用トークンは対戦相手へ送りません。毎週の集計が終わると新しい週の勝利数は0から始まり、過去の金・銀・銅の入賞回数は本人の画面に残ります。王冠とオーラの表示は次の大会期間中だけです。</p>
+  <p>コトダマ杯の画面では、今週の上位100名について、順位、利用者が設定した表示名、勝利数、対戦した相手の人数（ご縁）をほかの利用者にも表示します。オンライン対戦では、コトダマ杯参加者の設定した表示名と、直前大会で上位3名になったことを表す王冠・オーラを対戦相手にも表示します。匿名プレイヤーIDや認証用トークンは対戦相手へ送りません。毎週の集計が終わると新しい週の勝利数は0から始まり、過去の金・銀・銅の入賞回数は本人の画面に残ります。王冠とオーラの表示は次の大会期間中だけです。</p>
   <p>通信できないときにも前回の結果を確認できるよう、最後に読み込んだランキングを端末内に一時保存します。この情報は「コトダマ杯のデータを削除」またはアプリの削除で端末から削除されます。</p>
   <p>音声、音声認識結果、マイク録音、利用者が入力した名前・文章・画像、Apple AccountまたはGoogleアカウントの情報、メールアドレス、連絡先、位置情報は、オンライン対戦やランキングのためにサーバーへ送信・保存しません。</p>
   <h2>お問い合わせ</h2>
@@ -77,9 +79,9 @@ const PRIVACY_PAGE = legalPage('コトダマっち プライバシーポリシ�
   <p>本ポリシーを変更した場合は、このページを更新してお知らせします。</p>
   <p><a href="/support">サポートページへ</a></p>`);
 
-function randomString(length) {
+function randomDigits(length) {
   const bytes = crypto.getRandomValues(new Uint8Array(length));
-  return Array.from(bytes, (byte) => CODE_ALPHABET[byte % CODE_ALPHABET.length]).join('');
+  return Array.from(bytes, (byte) => String(byte % 10)).join('');
 }
 
 function randomHex(byteLength) {
@@ -389,7 +391,7 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: {
         ...cors,
-        'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+        'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
         'access-control-allow-headers': 'content-type, authorization'
       }});
     }
@@ -397,7 +399,7 @@ export default {
 
     const profileMatch = url.pathname.match(/^\/v1\/profiles(?:\/([^/]+))?$/);
     const isWeeklyRankings = url.pathname === '/v1/rankings/weekly';
-    const match = url.pathname.match(/^\/v1\/rooms(?:\/([A-Z2-9]{6})(\/socket)?)?$/);
+    const match = url.pathname.match(new RegExp(`^/v1/rooms(?:/(\\d{${ROOM_CODE_LENGTH}})(/socket)?)?$`));
 
     try {
       if (profileMatch && !profileMatch[1] && request.method === 'POST') {
@@ -420,6 +422,18 @@ export default {
         return withCors(new Response(null, { status: 204 }), request, env);
       }
 
+      if (profileMatch?.[1] && request.method === 'PATCH') {
+        const playerId = decodeURIComponent(profileMatch[1]);
+        await authenticateProfile(env, playerId, bearerToken(request), { notFoundStatus: 404 });
+        const body = await readJson(request);
+        const displayName = sanitizePlayerDisplayName(body.displayName);
+        if (!displayName) {
+          throw new ApiError(400, '名前は1〜16文字で、文字・数字・空白・「・」「ー」「_」「!」「?」だけを使って入力してください。');
+        }
+        const updated = await updateProfileDisplayName(env.RANKINGS_DB, playerId, displayName);
+        return withCors(json(updated), request, env);
+      }
+
       if (profileMatch) {
         return withCors(json({ error: 'method not allowed' }, 405), request, env);
       }
@@ -440,28 +454,33 @@ export default {
 
       if (!code && request.method === 'POST') {
         const body = await readJson(request);
-        const roomCode = randomString(6);
-        const playerToken = randomString(48);
         const profile = await optionalRoomProfile(env, body.profile);
-        const stub = env.BATTLE_ROOM.getByName(roomCode);
-        const response = await stub.fetch('https://room/internal/create', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            code: roomCode,
-            matchId: crypto.randomUUID(),
-            snapshot: body.snapshot,
-            tokenHash: await tokenHash(playerToken),
-            profile
-          })
-        });
-        const data = await response.json();
-        return withCors(json({ ...data, playerToken }, response.status), request, env);
+        const playerToken = randomHex(32);
+        const playerTokenHash = await tokenHash(playerToken);
+        for (let attempt = 0; attempt < ROOM_CREATE_ATTEMPTS; attempt += 1) {
+          const roomCode = randomDigits(ROOM_CODE_LENGTH);
+          const stub = env.BATTLE_ROOM.getByName(roomCode);
+          const response = await stub.fetch('https://room/internal/create', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              code: roomCode,
+              matchId: crypto.randomUUID(),
+              snapshot: body.snapshot,
+              tokenHash: playerTokenHash,
+              profile
+            })
+          });
+          const data = await response.json();
+          if (response.status === 409) continue;
+          return withCors(json({ ...data, playerToken }, response.status), request, env);
+        }
+        return withCors(json({ error: '部屋を作れませんでした。もう一度試してください。' }, 503), request, env);
       }
 
       if (code && !socketPath && request.method === 'POST') {
         const body = await readJson(request);
-        const playerToken = randomString(48);
+        const playerToken = randomHex(32);
         const profile = await optionalRoomProfile(env, body.profile);
         const stub = env.BATTLE_ROOM.getByName(code);
         const response = await stub.fetch('https://room/internal/join', {

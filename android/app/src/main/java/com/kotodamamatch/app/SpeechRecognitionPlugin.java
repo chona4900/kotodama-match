@@ -3,6 +3,8 @@ package com.kotodamamatch.app;
 import android.Manifest;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -31,7 +33,11 @@ import java.util.Set;
 public class SpeechRecognitionPlugin extends Plugin implements RecognitionListener {
     private SpeechRecognizer recognizer;
     private boolean listening = false;
+    private boolean listeningRequested = false;
     private boolean partialResults = true;
+    private String language = "ja-JP";
+    private int maxResults = 1;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @PluginMethod
     public void available(PluginCall call) {
@@ -55,30 +61,32 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
             return;
         }
 
-        String language = call.getString("language", "ja-JP");
+        language = call.getString("language", "ja-JP");
         partialResults = call.getBoolean("partialResults", true);
+        maxResults = call.getInt("maxResults", 1);
 
         getActivity().runOnUiThread(() -> {
-            destroyRecognizer();
-            recognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
-            recognizer.setRecognitionListener(this);
-
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language);
-            intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, partialResults);
-            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, call.getInt("maxResults", 1));
-
-            listening = true;
-            recognizer.startListening(intent);
-            notifyListeningState("started");
-            call.resolve();
+            try {
+                // ユーザーがMICをオンにした直後だけ開始する。Android 14以降は
+                // バックグラウンドからマイク用サービスを起動できないため、ここで維持する。
+                BackgroundListeningService.start(getContext());
+                listeningRequested = true;
+                startRecognizer();
+                notifyListeningState("started");
+                call.resolve();
+            } catch (Exception error) {
+                listeningRequested = false;
+                BackgroundListeningService.stop(getContext());
+                call.reject("Failed to start background listening: " + error.getMessage());
+            }
         });
     }
 
     @PluginMethod
     public void stop(PluginCall call) {
         getActivity().runOnUiThread(() -> {
+            listeningRequested = false;
+            mainHandler.removeCallbacksAndMessages(null);
             if (recognizer != null) {
                 recognizer.stopListening();
             }
@@ -159,13 +167,13 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
 
     @Override
     public void onError(int error) {
-        stopAndNotify();
+        restartRecognizer();
     }
 
     @Override
     public void onResults(Bundle results) {
         emitMatches("partialResults", results, true);
-        stopAndNotify();
+        restartRecognizer();
     }
 
     @Override
@@ -195,11 +203,44 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
 
     private void stopAndNotify() {
         boolean wasListening = listening;
+        listeningRequested = false;
+        mainHandler.removeCallbacksAndMessages(null);
         listening = false;
         destroyRecognizer();
+        BackgroundListeningService.stop(getContext());
         if (wasListening) {
             notifyListeningState("stopped");
         }
+    }
+
+    private void startRecognizer() {
+        destroyRecognizer();
+        recognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
+        recognizer.setRecognitionListener(this);
+
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language);
+        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, partialResults);
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, maxResults);
+        listening = true;
+        recognizer.startListening(intent);
+    }
+
+    private void restartRecognizer() {
+        if (!listeningRequested) {
+            stopAndNotify();
+            return;
+        }
+        destroyRecognizer();
+        mainHandler.postDelayed(() -> {
+            if (!listeningRequested) return;
+            try {
+                startRecognizer();
+            } catch (Exception error) {
+                stopAndNotify();
+            }
+        }, 250);
     }
 
     private void destroyRecognizer() {
@@ -212,7 +253,10 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
 
     @Override
     protected void handleOnDestroy() {
+        listeningRequested = false;
+        mainHandler.removeCallbacksAndMessages(null);
         destroyRecognizer();
+        BackgroundListeningService.stop(getContext());
         super.handleOnDestroy();
     }
 }

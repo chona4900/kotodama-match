@@ -2,59 +2,64 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const ritual = require('../noon-ritual.js');
 
-const DAY_ONE = new Date(2026, 7, 20, 12, 0, 0);
-const DAY_TWO = new Date(2026, 7, 21, 9, 0, 0);
+const DAY_ONE = new Date(2026, 7, 1, 12, 0, 0);
+const DAY_TWO = new Date(2026, 7, 2, 9, 0, 0);
 const [THANKS, FUTURE] = ritual.PHRASES;
 
 test('正午のことだまは12時00分から12時00分59秒までだけ開始できる', () => {
-    assert.equal(ritual.isWithinNoonWindow(new Date(2026, 7, 20, 11, 59, 59)), false);
-    assert.equal(ritual.isWithinNoonWindow(new Date(2026, 7, 20, 12, 0, 0)), true);
-    assert.equal(ritual.isWithinNoonWindow(new Date(2026, 7, 20, 12, 0, 59)), true);
-    assert.equal(ritual.isWithinNoonWindow(new Date(2026, 7, 20, 12, 1, 0)), false);
+    assert.equal(ritual.getAvailableSlot(new Date(2026, 7, 20, 11, 59, 59)), null);
+    assert.equal(ritual.getAvailableSlot(new Date(2026, 7, 20, 12, 0, 0)), ritual.NOON_SLOT);
+    assert.equal(ritual.getAvailableSlot(new Date(2026, 7, 20, 12, 0, 59)), ritual.NOON_SLOT);
+    assert.equal(ritual.getAvailableSlot(new Date(2026, 7, 20, 12, 1, 0)), null);
 });
 
-test('正午以外の時間には言霊を加算しない', () => {
-    const beforeNoon = new Date(2026, 7, 20, 11, 59, 59);
-    let state = ritual.createState(DAY_ONE);
-    state = ritual.recordPhrase(state, THANKS, 1, beforeNoon);
-    assert.equal(state.counts[THANKS], 0);
+test('1日と15日は19時00分から19時00分59秒まで祈り合わせができる', () => {
+    assert.equal(ritual.getAvailableSlot(new Date(2026, 7, 1, 19, 0, 0)), ritual.PRAYER_SLOT);
+    assert.equal(ritual.getAvailableSlot(new Date(2026, 7, 15, 19, 0, 59)), ritual.PRAYER_SLOT);
+    assert.equal(ritual.getAvailableSlot(new Date(2026, 7, 1, 19, 1, 0)), null);
+    assert.equal(ritual.getAvailableSlot(new Date(2026, 7, 2, 19, 0, 0)), null);
 });
 
-test('2つの言霊をそれぞれ3回まで数える', () => {
+test('各時間の2つの言霊をそれぞれ3回まで数え、報酬もそれぞれ一度だけ受け取れる', () => {
+    const evening = new Date(2026, 7, 1, 19, 0, 0);
     let state = ritual.createState(DAY_ONE);
     state = ritual.recordPhrase(state, THANKS, 5, DAY_ONE);
-    state = ritual.recordPhrase(state, FUTURE, 2, DAY_ONE);
-
-    assert.equal(state.counts[THANKS], 3);
-    assert.equal(state.counts[FUTURE], 2);
-    assert.equal(ritual.isComplete(state, DAY_ONE), false);
-
-    state = ritual.recordPhrase(state, FUTURE, 1, DAY_ONE);
-    assert.equal(ritual.isComplete(state, DAY_ONE), true);
-});
-
-test('徳の報酬は同じ日に一度だけ受け取れる', () => {
-    let state = ritual.createState(DAY_ONE);
-    state = ritual.recordPhrase(state, THANKS, 3, DAY_ONE);
     state = ritual.recordPhrase(state, FUTURE, 3, DAY_ONE);
+    const noonReward = ritual.claimReward(state, DAY_ONE);
 
-    const first = ritual.claimReward(state, DAY_ONE);
-    const second = ritual.claimReward(first.state, DAY_ONE);
+    assert.equal(noonReward.didReward, true);
+    state = ritual.recordPhrase(noonReward.state, THANKS, 3, evening);
+    state = ritual.recordPhrase(state, FUTURE, 3, evening);
+    const eveningReward = ritual.claimReward(state, evening);
 
-    assert.equal(first.didReward, true);
-    assert.equal(second.didReward, false);
-    assert.equal(second.state.rewarded, true);
+    assert.equal(ritual.getSlotState(eveningReward.state, ritual.NOON_SLOT, evening).rewarded, true);
+    assert.equal(eveningReward.didReward, true);
+    assert.equal(ritual.claimReward(eveningReward.state, evening).didReward, false);
 });
 
-test('日付が変わると進捗と報酬状態をリセットする', () => {
+test('旧版の正午進捗を新しい言霊表記へ引き継ぐ', () => {
+    const legacyState = {
+        date: '2026-08-01',
+        counts: {
+            [THANKS]: 2,
+            'だんだんよくなる未来はあかるい': 3
+        },
+        rewarded: false
+    };
+    const state = ritual.normalizeState(legacyState, DAY_ONE);
+
+    assert.equal(ritual.getSlotState(state, ritual.NOON_SLOT, DAY_ONE).counts[THANKS], 2);
+    assert.equal(ritual.getSlotState(state, ritual.NOON_SLOT, DAY_ONE).counts[FUTURE], 3);
+});
+
+test('日付が変わると各時間の進捗と報酬状態をリセットする', () => {
     let state = ritual.createState(DAY_ONE);
     state = ritual.recordPhrase(state, THANKS, 3, DAY_ONE);
     state = ritual.recordPhrase(state, FUTURE, 3, DAY_ONE);
     state = ritual.claimReward(state, DAY_ONE).state;
 
     const nextDay = ritual.normalizeState(state, DAY_TWO);
-    assert.equal(nextDay.date, '2026-08-21');
-    assert.equal(nextDay.counts[THANKS], 0);
-    assert.equal(nextDay.counts[FUTURE], 0);
-    assert.equal(nextDay.rewarded, false);
+    assert.equal(nextDay.date, '2026-08-02');
+    assert.equal(ritual.getSlotState(nextDay, ritual.NOON_SLOT, DAY_TWO).counts[THANKS], 0);
+    assert.equal(ritual.getSlotState(nextDay, ritual.NOON_SLOT, DAY_TWO).rewarded, false);
 });

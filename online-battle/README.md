@@ -4,7 +4,7 @@
 
 ## 仕組み
 
-1. ホストが部屋を作成すると、6文字の招待コードと端末だけが持つ入室トークンを発行します。
+1. ホストが部屋を作成すると、4桁数字の招待コードと端末だけが持つ入室トークンを発行します。
 2. ゲストがコードを入力して入室します。部屋は2人で締め切られ、15分で自動削除されます。
 3. 両者が「攻める / 守る / 祈る」を選ぶと、サーバーが結果を1回だけ計算し、WebSocketで双方へ同じ結果を返します。
 4. 両者が有効な匿名プロフィールを使っていた場合だけ、サーバー確定結果をランキングに反映します。プロフィール未対応の旧クライアントも対戦できますが、ランキング対象外です。
@@ -22,6 +22,7 @@
 ```text
 POST   /v1/profiles
 GET    /v1/rankings/weekly?playerId=... Authorization: Bearer <playerToken>
+PATCH  /v1/profiles/:playerId    Authorization: Bearer <playerToken>
 DELETE /v1/profiles/:playerId    Authorization: Bearer <playerToken>
 POST   /v1/rooms
 POST   /v1/rooms/:code
@@ -29,7 +30,7 @@ GET    /v1/rooms/:code
 GET    /v1/rooms/:code/socket    WebSocket upgrade
 ```
 
-`POST /v1/profiles` は `{playerId, playerToken, displayName}` を返します。表示名はサーバー側の安全な語だけから自動生成され、自由入力は受け付けません。
+`POST /v1/profiles` は `{playerId, playerToken, displayName}` を返します。表示名はサーバー側の安全な語から自動生成されます。`PATCH /v1/profiles/:playerId` では、認証済みの本人が16文字以内の安全な表記で表示名を変更できます。
 
 プロフィール対応クライアントは、部屋作成・参加の既存JSONに次を追加します。
 

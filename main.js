@@ -59,7 +59,10 @@
                 'だんだん良くなる未来は明るい', 
                 '段々良くなる未来は明るい', 
                 'だんだんよくなる未来は明るい',
-                '段々よくなる未来は明るい'
+                '段々よくなる未来は明るい',
+                'だんだんよくなる明るい未来',
+                'だんだん良くなる明るい未来',
+                '段々良くなる明るい未来'
             ],
             '宇宙の調和に感謝します': [
                 '宇宙の調和に感謝しています',
@@ -734,6 +737,9 @@
         const micBtnEl = document.getElementById('micBtn');
         const rebirthCountdownEl = document.getElementById('rebirthCountdown');
         const noonRitualOverlayEl = document.getElementById('noonRitualOverlay');
+        const noonRitualTitleEl = document.getElementById('noonRitualTitle');
+        const noonRitualLeadEl = document.getElementById('noonRitualLead');
+        const noonRitualSpecialMessageEl = document.getElementById('noonRitualSpecialMessage');
         const noonRitualMicButtonEl = document.getElementById('noonRitualMicButton');
         const noonRitualStatusEl = document.getElementById('noonRitualStatus');
         const noonNotificationStatusEl = document.getElementById('noonNotificationStatus');
@@ -747,8 +753,11 @@
         const NOON_RITUAL_STORAGE_KEY = 'kotodama_noon_ritual_v1';
         const NOON_NOTIFICATION_PROMPTED_KEY = 'kotodama_noon_notification_prompted_v1';
         const NOON_NOTIFICATION_ID = 1159;
+        const PRAYER_NOTIFICATION_FIRST_ID = 1901;
+        const PRAYER_NOTIFICATION_FIFTEENTH_ID = 1915;
         const NOON_THANKS_PHRASE = '宇宙の調和に感謝します';
-        const NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
+        const NOON_FUTURE_PHRASE = 'だんだんよくなる明るい未来';
+        const LEGACY_NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
         let noonRitualState = window.KotodamaNoonRitual.createState();
         let noonNotificationListenersReady = false;
         let noonNotificationStatusRequest = 0;
@@ -1171,7 +1180,12 @@
         }
 
         function isNoonRitualAvailable() {
-            return window.KotodamaNoonRitual.isWithinNoonWindow(new Date());
+            return Boolean(window.KotodamaNoonRitual.getAvailableSlot(new Date()));
+        }
+
+        function getDisplayedNoonRitualSlot(date = new Date()) {
+            return window.KotodamaNoonRitual.getAvailableSlot(date)
+                || window.KotodamaNoonRitual.getDisplaySlot(date);
         }
 
         function startNoonRitualAvailabilityTimer() {
@@ -1198,22 +1212,31 @@
                 noonRitualState = normalized;
             }
 
-            const thanksCount = noonRitualState.counts[NOON_THANKS_PHRASE] || 0;
-            const futureCount = noonRitualState.counts[NOON_FUTURE_PHRASE] || 0;
+            const now = new Date();
+            const slot = getDisplayedNoonRitualSlot(now);
+            const slotState = window.KotodamaNoonRitual.getSlotState(noonRitualState, slot, now);
+            const isPrayerTime = slot === window.KotodamaNoonRitual.PRAYER_SLOT;
+            const thanksCount = slotState.counts[NOON_THANKS_PHRASE] || 0;
+            const futureCount = slotState.counts[NOON_FUTURE_PHRASE] || 0;
             noonThanksProgressEl.textContent = `${thanksCount} / 3`;
             noonFutureProgressEl.textContent = `${futureCount} / 3`;
             noonThanksCardEl.classList.toggle('complete', thanksCount >= 3);
             noonFutureCardEl.classList.toggle('complete', futureCount >= 3);
+            if (noonRitualTitleEl) noonRitualTitleEl.textContent = isPrayerTime ? '🌙 祈り合わせのことだま 🌙' : '☀ 正午のことだま ☀';
+            if (noonRitualLeadEl) noonRitualLeadEl.textContent = 'MICを押して、2つの言霊を3回ずつ言おう';
+            if (noonRitualSpecialMessageEl) noonRitualSpecialMessageEl.hidden = !isPrayerTime;
 
             const isAvailable = isNoonRitualAvailable();
-            if (noonRitualState.rewarded) {
-                noonRitualStatusEl.textContent = '本日達成！ 徳が1たまりました';
+            if (slotState.rewarded) {
+                noonRitualStatusEl.textContent = `${isPrayerTime ? '祈り合わせ' : '正午のことだま'}達成！ 徳が1たまりました`;
             } else if (!isAvailable) {
-                noonRitualStatusEl.textContent = '正午のことだまは毎日12:00〜12:00:59だけできます';
-            } else if (window.KotodamaNoonRitual.isComplete(noonRitualState)) {
+                noonRitualStatusEl.textContent = window.KotodamaNoonRitual.isSpecialPrayerDay(now)
+                    ? '毎日12:00〜12:00:59、1日・15日は19:00〜19:00:59にもできます'
+                    : '正午のことだまは毎日12:00〜12:00:59だけできます';
+            } else if (window.KotodamaNoonRitual.isComplete(noonRitualState, now)) {
                 noonRitualStatusEl.textContent = '達成！ 徳をためています…';
             } else {
-                noonRitualStatusEl.textContent = `本日の進み具合 ${thanksCount + futureCount} / 6`;
+                noonRitualStatusEl.textContent = `${isPrayerTime ? '祈り合わせ' : '本日'}の進み具合 ${thanksCount + futureCount} / 6`;
             }
             updateNoonRitualMicButton();
         }
@@ -1247,21 +1270,24 @@
 
         async function toggleNoonRitualMic() {
             renderNoonRitual();
-            if (noonRitualState.rewarded || !isNoonRitualAvailable()) return;
+            const slot = window.KotodamaNoonRitual.getAvailableSlot(new Date());
+            if (!slot || window.KotodamaNoonRitual.getSlotState(noonRitualState, slot).rewarded) return;
             await toggleMic();
             updateNoonRitualMicButton();
         }
 
         function updateNoonRitualMicButton() {
             if (!noonRitualMicButtonEl) return;
-            const completed = noonRitualState?.rewarded === true;
+            const now = new Date();
+            const slot = getDisplayedNoonRitualSlot(now);
+            const completed = window.KotodamaNoonRitual.getSlotState(noonRitualState, slot, now).rewarded === true;
             const isAvailable = isNoonRitualAvailable();
             noonRitualMicButtonEl.disabled = completed || !isAvailable;
             noonRitualMicButtonEl.classList.toggle('listening', isListening);
             if (completed) {
-                noonRitualMicButtonEl.textContent = '本日達成済み';
+                noonRitualMicButtonEl.textContent = 'この時間は達成済み';
             } else if (!isAvailable) {
-                noonRitualMicButtonEl.textContent = '12:00〜12:00:59だけ開始できます';
+                noonRitualMicButtonEl.textContent = '決まった時間だけ開始できます';
             } else if (isStartingMic) {
                 noonRitualMicButtonEl.textContent = 'マイク準備中…';
             } else if (isListening) {
@@ -1273,14 +1299,15 @@
 
         function recordNoonRitualPhrase(word, count) {
             if (!noonRitualOverlayEl.classList.contains('visible')) return;
-            if (![NOON_THANKS_PHRASE, NOON_FUTURE_PHRASE].includes(word)) return;
+            const ritualWord = word === LEGACY_NOON_FUTURE_PHRASE ? NOON_FUTURE_PHRASE : word;
+            if (![NOON_THANKS_PHRASE, NOON_FUTURE_PHRASE].includes(ritualWord)) return;
             if (!isNoonRitualAvailable()) {
                 if (isListening || isStartingMic) stopMic();
                 renderNoonRitual();
                 return;
             }
 
-            noonRitualState = window.KotodamaNoonRitual.recordPhrase(noonRitualState, word, count);
+            noonRitualState = window.KotodamaNoonRitual.recordPhrase(noonRitualState, ritualWord, count);
             saveNoonRitualState();
             renderNoonRitual();
 
@@ -1307,22 +1334,56 @@
             const notifications = getLocalNotificationsPlugin();
             if (!notifications) return false;
 
-            await notifications.cancel({ notifications: [{ id: NOON_NOTIFICATION_ID }] });
+            await notifications.cancel({ notifications: [
+                { id: NOON_NOTIFICATION_ID },
+                { id: PRAYER_NOTIFICATION_FIRST_ID },
+                { id: PRAYER_NOTIFICATION_FIFTEENTH_ID }
+            ] });
             await notifications.schedule({
-                notifications: [{
-                    id: NOON_NOTIFICATION_ID,
-                    title: '正午のことだま',
-                    body: '12時に2つの言霊を3回ずつ唱えて、徳を積みましょう。',
-                    sound: 'default',
-                    foreground: true,
-                    autoCancel: true,
-                    schedule: {
-                        on: { hour: 11, minute: 59 },
-                        repeats: true,
-                        allowWhileIdle: true
+                notifications: [
+                    {
+                        id: NOON_NOTIFICATION_ID,
+                        title: '正午のことだま',
+                        body: '12時に2つの言霊を3回ずつ唱えて、徳を積みましょう。',
+                        sound: 'default',
+                        foreground: true,
+                        autoCancel: true,
+                        schedule: {
+                            on: { hour: 11, minute: 59 },
+                            repeats: true,
+                            allowWhileIdle: true
+                        },
+                        extra: { route: 'noon-ritual' }
                     },
-                    extra: { route: 'noon-ritual' }
-                }]
+                    {
+                        id: PRAYER_NOTIFICATION_FIRST_ID,
+                        title: '祈り合わせのことだま',
+                        body: '今日は1日。19時に2つの言霊を3回ずつ唱えましょう。',
+                        sound: 'default',
+                        foreground: true,
+                        autoCancel: true,
+                        schedule: {
+                            on: { day: 1, hour: 18, minute: 59 },
+                            repeats: true,
+                            allowWhileIdle: true
+                        },
+                        extra: { route: 'noon-ritual' }
+                    },
+                    {
+                        id: PRAYER_NOTIFICATION_FIFTEENTH_ID,
+                        title: '祈り合わせのことだま',
+                        body: '今日は15日。19時に2つの言霊を3回ずつ唱えましょう。',
+                        sound: 'default',
+                        foreground: true,
+                        autoCancel: true,
+                        schedule: {
+                            on: { day: 15, hour: 18, minute: 59 },
+                            repeats: true,
+                            allowWhileIdle: true
+                        },
+                        extra: { route: 'noon-ritual' }
+                    }
+                ]
             });
             return true;
         }
@@ -2201,6 +2262,7 @@
         }
 
         const ZUKAN_DESCRIPTIONS = { 
+            egg: { text: 'このタマゴはあなたの波動によって、孵化します、あなたの愛の言葉で育てていきましょう。' },
             childA_1_4: { text: '限りない命を持つことから「無量寿如来」、阿弥陀如来は永遠のいのちをもち、まばゆい光で人々を照らし「無量光如来」とも呼ばれ「南無阿弥陀仏」と唱えるすべての人を、必ず極楽浄土へ導くといわれます。極楽浄土とは、宇宙の西の果てにある阿弥陀如来の住む世界のことで、西方極楽浄土ともいいます。苦しみのない理想の世界、この上なく楽しい世界です' },
             childA_2_4: { text: '本面（本来の顔）の周囲や頭上に11の顔（または10の顔と最頂部の仏面）を持ちます。これらはすべての方向を見渡すためのものであらゆる方向から人々を見守り、救いの手を差し伸べる仏教の菩薩（観音菩薩の変化身）病気治癒、財福授与、災難除けなどの現世利益があるとされます。' },
             childB_2_1: { text: '四神で朱雀は南方を守護する神獣です。火の象徴。南方を守護します。。美しい赤い翼を持ち「太陽」「情熱」「発展」「名声」「カリスマ性」を象徴します。大きな翼で災厄を払い、幸運や平安、人気運を引き寄せる強力なエネルギーを持つとされています。' },
@@ -3959,11 +4021,18 @@
 
         function resetKotodamaCupView() {
             const profileEl = document.getElementById('kotodamaCupProfile');
+            const nameInput = document.getElementById('kotodamaCupDisplayName');
+            const nameSaveButton = document.getElementById('kotodamaCupDisplayNameSave');
             const seasonEl = document.getElementById('kotodamaCupSeason');
             const entriesEl = document.getElementById('kotodamaCupEntries');
             const meEl = document.getElementById('kotodamaCupMe');
             const awardsEl = document.getElementById('kotodamaCupAwards');
             if (profileEl) profileEl.textContent = 'なまえを準備しています…';
+            if (nameInput) {
+                nameInput.value = '';
+                nameInput.disabled = true;
+            }
+            if (nameSaveButton) nameSaveButton.disabled = true;
             if (seasonEl) seasonEl.textContent = '';
             if (entriesEl) entriesEl.textContent = '';
             if (meEl) meEl.textContent = '';
@@ -3976,12 +4045,65 @@
             return `あなたのなまえ：${profile.displayName}\n問い合わせID：${profile.playerId}`;
         }
 
+        function renderKotodamaCupProfile(profile, fallbackMessage = '') {
+            const profileEl = document.getElementById('kotodamaCupProfile');
+            const nameInput = document.getElementById('kotodamaCupDisplayName');
+            const nameSaveButton = document.getElementById('kotodamaCupDisplayNameSave');
+            if (profileEl) profileEl.textContent = profile ? getOnlineProfileLabel(profile) : (fallbackMessage || getOnlineProfileLabel(null));
+            if (nameInput) {
+                nameInput.disabled = !profile;
+                if (profile && document.activeElement !== nameInput) nameInput.value = profile.displayName;
+                if (!profile) nameInput.value = '';
+            }
+            if (nameSaveButton) nameSaveButton.disabled = !profile;
+        }
+
+        function normalizeKotodamaCupDisplayName(value) {
+            return String(value || '').normalize('NFKC').trim().replace(/\s+/g, ' ');
+        }
+
+        async function saveKotodamaCupDisplayName() {
+            playButtonSound();
+            const nameInput = document.getElementById('kotodamaCupDisplayName');
+            if (!nameInput) return;
+            const displayName = normalizeKotodamaCupDisplayName(nameInput.value);
+            if (Array.from(displayName).length < 1 || Array.from(displayName).length > 16) {
+                setKotodamaCupStatus('名前は1〜16文字で入力してね。');
+                return;
+            }
+
+            try {
+                const profile = await ensureOnlineProfile();
+                const updated = await onlineBattleRequest(`/v1/profiles/${encodeURIComponent(profile.playerId)}`, {
+                    method: 'PATCH',
+                    headers: { authorization: `Bearer ${profile.playerToken}` },
+                    body: JSON.stringify({ displayName })
+                });
+                const savedProfile = saveOnlineProfile({ ...profile, displayName: updated.displayName });
+                renderKotodamaCupProfile(savedProfile);
+                setKotodamaCupStatus('名前を保存しました。ランキングを更新しています…');
+                await refreshKotodamaCup(false);
+            } catch (error) {
+                console.warn('コトダマ杯の名前を保存できませんでした。', error);
+                setKotodamaCupStatus(error.message || '名前を保存できませんでした。通信状態を確認してね。');
+            }
+        }
+
         function formatKotodamaCupSeasonEnd(value) {
             const date = new Date(value);
             if (!Number.isFinite(date.getTime())) return '';
             return new Intl.DateTimeFormat('ja-JP', {
                 month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit'
             }).format(date);
+        }
+
+        function getKotodamaCupNumber(data) {
+            const serverNumber = Number(data?.seasonNumber);
+            if (Number.isInteger(serverNumber) && serverNumber >= 1) return serverNumber;
+            const seasonStart = Date.parse(`${String(data?.seasonKey || '')}T00:00:00+09:00`);
+            const firstSeasonStart = Date.parse('2026-08-24T00:00:00+09:00');
+            if (!Number.isFinite(seasonStart) || seasonStart < firstSeasonStart) return null;
+            return Math.floor((seasonStart - firstSeasonStart) / (7 * 24 * 60 * 60 * 1000)) + 1;
         }
 
         function getRankingConnections(entry) {
@@ -4052,6 +4174,7 @@
 
         function renderKotodamaCup(data, { cached = false } = {}) {
             const profile = getStoredOnlineProfile();
+            const titleEl = document.getElementById('kotodamaCupTitle');
             const profileEl = document.getElementById('kotodamaCupProfile');
             const seasonEl = document.getElementById('kotodamaCupSeason');
             const entriesEl = document.getElementById('kotodamaCupEntries');
@@ -4059,7 +4182,10 @@
             const awardsEl = document.getElementById('kotodamaCupAwards');
             if (!profileEl || !seasonEl || !entriesEl || !meEl || !awardsEl) return;
 
-            profileEl.textContent = getOnlineProfileLabel(profile);
+            const cupNumber = getKotodamaCupNumber(data);
+            if (titleEl) titleEl.textContent = cupNumber ? `🏆 第${cupNumber}回 コトダマ杯` : '🏆 コトダマ杯';
+
+            renderKotodamaCupProfile(profile);
             const seasonEndAt = new Date(data?.seasonEndsAt).getTime();
             const seasonEnd = formatKotodamaCupSeasonEnd(data?.seasonEndsAt);
             const seasonIsActive = Number.isFinite(seasonEndAt) && seasonEndAt > Date.now();
@@ -4091,7 +4217,10 @@
             if (entries.length === 0) {
                 const empty = document.createElement('li');
                 empty.className = 'kotodama-cup-entry';
-                empty.textContent = '今週はまだ記録がないよ。最初の一戦をしてみよう！';
+                const emptyText = document.createElement('span');
+                emptyText.className = 'kotodama-cup-empty';
+                emptyText.textContent = '今週はまだ記録がないよ。最初の一戦をしてみよう！';
+                empty.appendChild(emptyText);
                 entriesEl.appendChild(empty);
             }
 
@@ -4147,8 +4276,7 @@
             setKotodamaCupStatus('ランキングを読み込んでいます…');
             try {
                 const profile = await ensureOnlineProfile();
-                const profileEl = document.getElementById('kotodamaCupProfile');
-                if (profileEl) profileEl.textContent = getOnlineProfileLabel(profile);
+                renderKotodamaCupProfile(profile);
                 const data = await syncActiveAwardForProfile(profile);
                 if (!data) return;
                 renderKotodamaCup(data);
@@ -4158,8 +4286,7 @@
                     renderKotodamaCup(cached, { cached: true });
                 } else {
                     setKotodamaCupStatus('いまはランキングにつながりません。通信できる時にもう一度ためしてね。');
-                    const profileEl = document.getElementById('kotodamaCupProfile');
-                    if (profileEl) profileEl.textContent = 'オフラインでも育成とCPU戦はそのまま遊べるよ。';
+                    renderKotodamaCupProfile(null, 'オフラインでも育成とCPU戦はそのまま遊べるよ。');
                 }
                 console.warn('コトダマ杯を読み込めませんでした。', error);
             }
@@ -4284,9 +4411,9 @@
         async function joinOnlineBattleRoom() {
             if (onlineRoomRequestInFlight) return;
             playButtonSound();
-            const code = String(document.getElementById('onlineBattleCode')?.value || '').trim().toUpperCase();
-            if (!/^[A-Z2-9]{6}$/.test(code)) {
-                onlineBattleStatus('6文字の招待コードを入力してね。');
+            const code = String(document.getElementById('onlineBattleCode')?.value || '').replace(/\D/g, '').slice(0, 4);
+            if (!/^\d{4}$/.test(code)) {
+                onlineBattleStatus('4桁の数字の招待コードを入力してね。');
                 return;
             }
             abandonWaitingOnlineBattle();

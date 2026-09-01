@@ -1,5 +1,6 @@
 import {
   LEADERBOARD_LIMIT,
+  getKotodamaCupNumber,
   getJstDayKey,
   getSeasonWindow,
   isSeasonReadyToFinalize
@@ -108,6 +109,15 @@ export async function getProfile(db, playerId) {
     FROM profiles
     WHERE player_id = ?
   `).bind(playerId).first();
+}
+
+export async function updateProfileDisplayName(db, playerId, displayName) {
+  await db.prepare(`
+    UPDATE profiles
+    SET display_name = ?
+    WHERE player_id = ?
+  `).bind(displayName, playerId).run();
+  return { playerId, displayName };
 }
 
 export async function deleteProfile(db, playerId) {
@@ -259,6 +269,7 @@ export async function getWeeklyRankings(db, playerId, now = Date.now()) {
 
   return {
     seasonKey: season.seasonKey,
+    seasonNumber: getKotodamaCupNumber(season.seasonKey),
     seasonEndsAt: season.endsAt,
     entries,
     me,

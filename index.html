@@ -82,10 +82,10 @@
                     </div>
                     <div id="onlineBattleMenu" style="width:100%; display:none; flex-direction:column; align-items:center;">
                         <div style="font-size:1.1rem; font-weight:bold; margin-bottom:8px;">友だちと対戦</div>
-                        <p style="font-size:0.78rem; margin:0 0 12px; line-height:1.55;">招待コードで2人だけの部屋をつくるよ。<br>部屋は15分で自動的に消えるよ。</p>
+                        <p style="font-size:0.78rem; margin:0 0 12px; line-height:1.55;">4桁の数字コードで2人だけの部屋をつくるよ。<br>部屋は15分で自動的に消えるよ。</p>
                         <button class="pvp-btn" type="button" onclick="createOnlineBattleRoom()">部屋をつくる</button>
                         <label for="onlineBattleCode" style="font-size:0.78rem; margin-top:8px;">招待コードを入力</label>
-                        <input id="onlineBattleCode" class="online-battle-code" inputmode="latin" autocomplete="off" autocapitalize="characters" maxlength="6" placeholder="例: A2BC9D" aria-describedby="onlineBattleStatus">
+                        <input id="onlineBattleCode" class="online-battle-code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="4" placeholder="例: 1234" aria-describedby="onlineBattleStatus">
                         <button class="pvp-btn" type="button" onclick="joinOnlineBattleRoom()">コードで入室</button>
                         <div id="onlineBattleStatus" class="online-battle-status" role="status" aria-live="polite"></div>
                         <button class="pvp-btn" type="button" onclick="closeOnlineBattleMenu()" style="margin-top:10px;">もどる</button>
@@ -95,6 +95,14 @@
                         <p class="kotodama-cup-lead">今週のオンライン対戦の勝利数を競うよ！<br>いろいろな相手と対戦して「ご縁」も広げよう。</p>
                         <p class="kotodama-cup-rule">※同じ相手から数える勝ちは、日本時間で1日3回まで。</p>
                         <div id="kotodamaCupProfile" class="kotodama-cup-profile">なまえを準備しています…</div>
+                        <div class="kotodama-cup-name-editor">
+                            <label for="kotodamaCupDisplayName">自分の名前を入力する</label>
+                            <div class="kotodama-cup-name-editor-controls">
+                                <input id="kotodamaCupDisplayName" type="text" maxlength="16" autocomplete="nickname" placeholder="例：ことだま太郎" aria-describedby="kotodamaCupNameNote" disabled>
+                                <button type="button" id="kotodamaCupDisplayNameSave" onclick="saveKotodamaCupDisplayName()" disabled>保存</button>
+                            </div>
+                            <div id="kotodamaCupNameNote">ランキングと対戦相手に表示されます。本名・連絡先などの個人情報は入力しないでください。</div>
+                        </div>
                         <div id="kotodamaCupSeason" class="kotodama-cup-season"></div>
                         <div id="kotodamaCupStatus" class="kotodama-cup-status" role="status" aria-live="polite">ランキングを読み込んでいます…</div>
                         <ol id="kotodamaCupEntries" class="kotodama-cup-entries" aria-label="今週のランキング"></ol>
@@ -113,11 +121,11 @@
                         <div class="online-consent-title" id="onlineConsentTitle">コトダマ杯に参加する前に</div>
                         <p>ランキングに参加すると、次の情報を端末と対戦サーバーに保存します。</p>
                         <ul>
-                            <li>自動でつくる安全な名前と問い合わせ用ID（対戦相手には自動の名前と前回の王冠を表示）</li>
+                            <li>あなたが設定する表示名と問い合わせ用ID（表示名と前回の王冠は対戦相手・ランキング上位100名に表示）</li>
                             <li>サーバーが確認した対戦結果と、週の勝利数・ご縁・順位</li>
-                            <li>上位100名には、自動の名前・順位・勝利数・ご縁を表示</li>
+                            <li>上位100名には、設定した表示名・順位・勝利数・ご縁を表示</li>
                         </ul>
-                        <p>本名やメールアドレスは使いません。Bの「リセット」はキャラクターをタマゴへ戻し、心のごはんを0にするだけです。コトダマ杯のサーバーデータは、コトダマ杯画面の専用ボタンからいつでも削除できます。</p>
+                        <p>本名、メールアドレス、連絡先などの個人情報は表示名に入力しないでください。Bの「リセット」はキャラクターをタマゴへ戻し、心のごはんを0にするだけです。コトダマ杯のサーバーデータは、コトダマ杯画面の専用ボタンからいつでも削除できます。</p>
                         <p>参加しない場合も、友だちとの対戦ではキャラクター・対戦用ステータス・作戦を一時的に送り、部屋と定型スタンプは15分以内に削除します。</p>
                         <div class="online-consent-actions">
                             <button type="button" id="onlineConsentAccept" onclick="acceptOnlineProfileConsent()">同意して参加する</button>
@@ -147,15 +155,16 @@
 
                 <!-- 毎日11:59の通知から開く「正午のことだま」 -->
                 <div class="noon-ritual-overlay" id="noonRitualOverlay" aria-hidden="true">
-                    <div class="noon-ritual-header">☀ 正午のことだま ☀</div>
-                    <div class="noon-ritual-lead">MICを押して、2つの言霊を3回ずつ言おう</div>
+                    <div class="noon-ritual-header" id="noonRitualTitle">☀ 正午のことだま ☀</div>
+                    <div class="noon-ritual-lead" id="noonRitualLead">MICを押して、2つの言霊を3回ずつ言おう</div>
+                    <div class="noon-ritual-special-message" id="noonRitualSpecialMessage" hidden>斉藤一人さんと祈り合わせをしよう</div>
 
                     <div class="noon-phrase-card" id="noonThanksCard">
                         <div class="noon-phrase-text">宇宙の調和に感謝します</div>
                         <div class="noon-phrase-progress" id="noonThanksProgress">0 / 3</div>
                     </div>
                     <div class="noon-phrase-card" id="noonFutureCard">
-                        <div class="noon-phrase-text">だんだんよくなる未来は明るい</div>
+                        <div class="noon-phrase-text">だんだんよくなる明るい未来</div>
                         <div class="noon-phrase-progress" id="noonFutureProgress">0 / 3</div>
                     </div>
 
@@ -176,7 +185,7 @@
                 <div class="noon-notification-prompt" id="noonNotificationPrompt" aria-hidden="true">
                     <div class="noon-prompt-icon">🔔</div>
                     <div class="noon-prompt-title">正午のことだまをお知らせ</div>
-                    <p>毎日11:59に通知します。正午のことだまは、毎日12:00〜12:00:59だけ始められます。</p>
+                    <p>毎日11:59に通知します。正午のことだまは、毎日12:00〜12:00:59だけ始められます。1日と15日は18:59にも祈り合わせのお知らせが届きます。</p>
                     <div class="noon-prompt-actions">
                         <button type="button" onclick="enableNoonNotifications()">通知を受け取る</button>
                         <button type="button" onclick="dismissNoonNotificationPrompt()">あとで</button>

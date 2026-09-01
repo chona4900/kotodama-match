@@ -3,11 +3,13 @@ import test from 'node:test';
 import {
   canSendPostMatchStamp,
   createSafeDisplayName,
+  getKotodamaCupNumber,
   getJstDayKey,
   getSeasonWindow,
   isSeasonReadyToFinalize,
   isAllowedStamp,
   rankLeaderboardEntries,
+  sanitizePlayerDisplayName,
   shouldCountDailyWin
 } from '../src/ranking-rules.mjs';
 
@@ -21,6 +23,13 @@ test('JST月曜00:00で週と日付を切り替える', () => {
   assert.equal(after.endsAt, '2026-08-30T15:00:00.000Z');
   assert.equal(getJstDayKey('2026-08-23T14:59:59.999Z'), '2026-08-23');
   assert.equal(getJstDayKey('2026-08-23T15:00:00.000Z'), '2026-08-24');
+});
+
+test('コトダマ杯は公開開始週を第1回として毎週回数を増やす', () => {
+  assert.equal(getKotodamaCupNumber('2026-08-24'), 1);
+  assert.equal(getKotodamaCupNumber('2026-08-31'), 2);
+  assert.equal(getKotodamaCupNumber('2026-08-17'), null);
+  assert.equal(getKotodamaCupNumber('invalid'), null);
 });
 
 test('前週の表彰はルーム再試行猶予15分を過ぎてから確定する', () => {
@@ -54,6 +63,14 @@ test('勝利数、ご縁、到達時刻、playerIdの順で順位が安定する
 test('表示名はサーバー管理の安全な語だけから作る', () => {
   const name = createSafeDisplayName(new Uint8Array([4, 1, 0x12, 0x34]));
   assert.match(name, /^(あおぞら|おひさま|きらきら|そよかぜ|にじいろ|ほしぞら|まんまる|わくわく)の.+っち・\d{3}$/);
+});
+
+test('ユーザーが設定する表示名は安全な16文字以内の表記だけを受け付ける', () => {
+  assert.equal(sanitizePlayerDisplayName('  ことだま 太郎  '), 'ことだま 太郎');
+  assert.equal(sanitizePlayerDisplayName('コトダマっち・1'), 'コトダマっち・1');
+  assert.equal(sanitizePlayerDisplayName(''), null);
+  assert.equal(sanitizePlayerDisplayName('abcdefghijklmnopq'), null);
+  assert.equal(sanitizePlayerDisplayName('name@example.com'), null);
 });
 
 test('対戦後スタンプは固定3種だけを許可する', () => {

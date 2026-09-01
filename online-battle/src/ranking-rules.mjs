@@ -1,5 +1,6 @@
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const FIRST_KOTODAMA_CUP_START_MS = Date.parse('2026-08-24T00:00:00+09:00');
 
 export const DAILY_WIN_LIMIT = 3;
 export const LEADERBOARD_LIMIT = 100;
@@ -55,6 +56,13 @@ export function getJstDayKey(now = Date.now()) {
   return isoDateInJst(nowMs);
 }
 
+export function getKotodamaCupNumber(seasonKey) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(seasonKey))) return null;
+  const startsAtMs = Date.parse(`${seasonKey}T00:00:00+09:00`);
+  if (!Number.isFinite(startsAtMs) || startsAtMs < FIRST_KOTODAMA_CUP_START_MS) return null;
+  return Math.floor((startsAtMs - FIRST_KOTODAMA_CUP_START_MS) / WEEK_MS) + 1;
+}
+
 export function isSeasonReadyToFinalize(
   seasonKey,
   now = Date.now(),
@@ -101,4 +109,11 @@ export function createSafeDisplayName(bytes) {
   }
   const suffix = ((bytes[2] << 8) | bytes[3]) % 1000;
   return `${NAME_PREFIXES[bytes[0] % NAME_PREFIXES.length]}${NAME_CHARACTERS[bytes[1] % NAME_CHARACTERS.length]}・${String(suffix).padStart(3, '0')}`;
+}
+
+export function sanitizePlayerDisplayName(value) {
+  const name = String(value ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ');
+  if (Array.from(name).length < 1 || Array.from(name).length > 16) return null;
+  if (!/^[\p{L}\p{N} ・ー_!?！？-]+$/u.test(name)) return null;
+  return name;
 }
