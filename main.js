@@ -10,15 +10,17 @@
             '愛してます': [
                 '愛しています', '愛してる', '愛してるよ', '愛してますよ', '愛してまーす',
                 'あいしています', 'あいしてます', 'あいしてる', 'あいしてるよ',
-                'アイシテマス', 'アイシテル', '愛します'
+                'あいしてまーす', 'アイシテマス', 'アイシテル', 'アイシテマーース', '愛します'
             ],
             'ゆるします': [
                 '許します', '赦します', 'ゆるす', '許す', '許してます', '許しています',
-                'ゆるしますよ', '許しますよ', 'ユルシマス', 'ユルス'
+                'ゆるしてます', 'ゆるしています', 'ゆるしまーす', '許して', '赦して',
+                'ゆるしますよ', '許しますよ', 'ユルシマス', 'ユルシマース', 'ユルス'
             ],
             'ありがとう': [
                 '有難う', '有り難う', '有難うございます', 'ありがとうございます',
-                'ありがと', 'ありがとー', 'ありがとーございます', 'アリガトウ', 'アリガトー'
+                '有難う御座います', '有りがとう', 'ありがと', 'ありがとー', 'ありがとーございます',
+                'ありがどう', 'ありかとう', 'アリガトウ', 'アリガトー'
             ],
             'うれしい': [
                 '嬉しい', 'うれしー', '嬉しー', 'うれしいです', '嬉しいです',
@@ -31,8 +33,8 @@
             ],
             '感謝してます': [
                 '感謝しています', '感謝してる', '感謝してますよ', '感謝していますよ',
-                'かんしゃしています', 'かんしゃしてます', 'かんしゃしてる',
-                'カンシャシテマス', 'カンシャシテイマス'
+                '感謝してまーす', 'かんしゃしています', 'かんしゃしてます', 'かんしゃしてる',
+                'かんしゃしてまーす', 'カンシャシテマス', 'カンシャシテイマス', 'カンシャシテマース'
             ],
             'しあわせ': [
                 '幸せ', '仕合わせ', 'しあわせです', '幸せです', 'しあわせだ', '幸せだ',
@@ -67,9 +69,16 @@
             '宇宙の調和に感謝します': [
                 '宇宙の調和に感謝しています',
                 '宇宙の調和に感謝',
-                '宇宙の平和に感謝します'
+                '宇宙の調和に感謝してます',
+                '宇宙のちょうわに感謝します',
+                '宇宙のちょうわに感謝してます',
+                '宇宙の平和に感謝します',
+                '宇宙の平和に感謝してます'
             ],
-            '自分はすごいんだ': ['自分は凄いんだ', 'じぶんはすごいんだ', '自分はすごい'],
+            '自分はすごいんだ': [
+                '自分は凄いんだ', 'じぶんはすごいんだ', '自分はすごい',
+                '自分はすごいんだよ', '自分は凄いんだよ', 'じぶんはすごいんだよ'
+            ],
             'もっと自分を愛しますもっと自分をゆるします': [
                 'もっと自分を愛しますもっと自分を許します', 
                 'もっと自分を愛しますもっと自分を赦します'
@@ -852,7 +861,8 @@
                 lastInteractionTimestamp,
                 finalEvolutionTimestamp,
                 unlockedForms,
-                unlockedItems
+                unlockedItems,
+                pendingUltimateEvolution
             };
             const serializedState = JSON.stringify(state);
             try {
@@ -914,6 +924,7 @@
                     sickRecoveryCount = (state.sickRecoveryCount !== undefined) ? Number(state.sickRecoveryCount) : 0;
                     lastInteractionTimestamp = (state.lastInteractionTimestamp !== undefined) ? Number(state.lastInteractionTimestamp) : Date.now();
                     finalEvolutionTimestamp = (state.finalEvolutionTimestamp !== undefined) ? state.finalEvolutionTimestamp : null;
+                    pendingUltimateEvolution = state.pendingUltimateEvolution || null;
                     
                     unlockedForms = state.unlockedForms || [];
                     if (!unlockedForms.includes('egg')) unlockedForms.push('egg');
@@ -1004,6 +1015,7 @@
                 finalEvolutionTimestamp = null;
                 isSick = false;
                 sickRecoveryCount = 0;
+                lastInteractionTimestamp = Date.now();
                 
                 // 図鑑・アイテム・言霊別の累計・育成ステータスはそのまま！
                 saveState();
@@ -1036,6 +1048,7 @@
         function init() {
             loadState();
             loadNoonRitualState();
+            resolvePendingUltimateEvolution();
             checkRebirth({ announce: false });
             if (isSick) {
                 const remaining = Math.max(0, SICKNESS_RECOVERY_GOAL - sickRecoveryCount);
@@ -1455,6 +1468,7 @@
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState !== 'visible') return;
             loadNoonRitualState();
+            syncNativeSpeechState();
             if (noonRitualOverlayEl.classList.contains('visible')) {
                 renderNoonRitual();
                 refreshNoonNotificationStatus();
@@ -1709,9 +1723,10 @@
                 currentGoal = STAGE3_GOAL;
                 percentage = ((totalCount - STAGE2_GOAL) / (STAGE3_GOAL - STAGE2_GOAL)) * 100;
             } else if (currentStage === 3) {
-                currentGoal = getNextUltimateEvolutionGoal();
-                const progressStart = window.KotodamaProgression.getUltimateProgressStart(ultimateAttemptCount);
-                percentage = ((totalCount - progressStart) / (currentGoal - progressStart)) * 100;
+                const ultimateProgress = window.KotodamaProgression.getUltimateProgress(totalCount, ultimateAttemptCount);
+                currentGoal = ultimateProgress.displayGoal;
+                percentage = ((totalCount - ultimateProgress.progressStart)
+                    / (ultimateProgress.progressEnd - ultimateProgress.progressStart)) * 100;
             } else {
                 percentage = 100;
                 currentGoal = getNextUltimateEvolutionGoal();
@@ -1739,15 +1754,21 @@
             if (denominator === 'MAX') {
                 progressTextEl.textContent = `${totalCount} 回`;
             } else {
-                progressTextEl.textContent = `${totalCount} / ${denominator}`;
+                const displayCount = currentStage === 3
+                    ? window.KotodamaProgression.getUltimateProgress(totalCount, ultimateAttemptCount).displayCount
+                    : totalCount;
+                progressTextEl.textContent = `${displayCount} / ${denominator}`;
             }
             const progressContainer = document.getElementById('progressContainer');
             if (progressContainer) {
-                progressContainer.setAttribute('aria-valuenow', String(totalCount));
+                const displayCount = currentStage === 3
+                    ? window.KotodamaProgression.getUltimateProgress(totalCount, ultimateAttemptCount).displayCount
+                    : totalCount;
+                progressContainer.setAttribute('aria-valuenow', String(displayCount));
                 progressContainer.setAttribute('aria-valuemax', denominator === 'MAX' ? String(totalCount) : String(denominator));
                 progressContainer.setAttribute('aria-valuetext', denominator === 'MAX'
                     ? `${totalCount}回。最大進化済み`
-                    : `${totalCount}回。次の進化まであと${Math.max(0, denominator - totalCount)}回`);
+                    : `${displayCount}回。次の進化まであと${Math.max(0, denominator - displayCount)}回`);
             }
 
             // メイン画面のステータス表示を更新
@@ -1866,7 +1887,38 @@
             }
         }
 
-        function evolve(targetStage, { forcedUltimateSuccess = null } = {}) {
+        function rollUltimateEvolutionOutcome(forcedUltimateSuccess = null) {
+            const baseProb = 0.03;
+            const bonusProb = Math.floor((intokuPower || 0) / 49) * 0.01;
+            const totalProb = Math.min(1, baseProb + bonusProb);
+            const isSuccess = forcedUltimateSuccess === null
+                ? Math.random() < totalProb
+                : !!forcedUltimateSuccess;
+            if (!isSuccess) return { isSuccess: false, form: currentForm, name: charNames[currentForm] || '元のすがた' };
+
+            const random = Math.random();
+            if (random < 0.333) return { isSuccess: true, form: 'ultimate_1', name: '八大龍王っち' };
+            if (random < 0.666) return { isSuccess: true, form: 'ultimate_2', name: '天之御中主神っち' };
+            return { isSuccess: true, form: 'ultimate_3', name: 'バステトっち' };
+        }
+
+        function resolvePendingUltimateEvolution() {
+            const outcome = pendingUltimateEvolution;
+            if (!outcome?.isSuccess || !['ultimate_1', 'ultimate_2', 'ultimate_3'].includes(outcome.form)) {
+                pendingUltimateEvolution = null;
+                if (outcome) saveState();
+                return false;
+            }
+            currentStage = 4;
+            currentForm = outcome.form;
+            if (!unlockedForms.includes(currentForm)) unlockedForms.push(currentForm);
+            pendingUltimateEvolution = null;
+            saveState();
+            statusTextEl.textContent = outcome.name || charNames[currentForm] || '究極進化！';
+            return true;
+        }
+
+        function evolve(targetStage, { forcedUltimateSuccess = null, ultimateOutcome = null } = {}) {
             if (isEvolutionInProgress) return false;
 
             isEvolutionInProgress = true;
@@ -1960,30 +2012,9 @@
                 };
                 newName = names[evolutionType] || `${evolutionType}`;
             } else if(targetStage === 4) {
-                // 第5段階シークレット確率（基本3% + 陰徳パワー49毎に1%増加）
-                let baseProb = 0.03;
-                let bonusProb = Math.floor((intokuPower || 0) / 49) * 0.01;
-                let totalProb = Math.min(1, baseProb + bonusProb);
-                
-                const isSuccess = forcedUltimateSuccess === null
-                    ? Math.random() < totalProb
-                    : !!forcedUltimateSuccess;
-                if (isSuccess) {
-                    const rnd = Math.random();
-                    if (rnd < 0.333) {
-                        evolutionType = 'ultimate_1';
-                        newName = '八大龍王っち';
-                    } else if (rnd < 0.666) {
-                        evolutionType = 'ultimate_2';
-                        newName = '天之御中主神っち';
-                    } else {
-                        evolutionType = 'ultimate_3';
-                        newName = 'バステトっち';
-                    }
-                } else {
-                    evolutionType = currentForm; // 元の姿のまま
-                    newName = charNames[currentForm] || '元のすがた';
-                }
+                const outcome = ultimateOutcome || rollUltimateEvolutionOutcome(forcedUltimateSuccess);
+                evolutionType = outcome.form;
+                newName = outcome.name;
             }
 
             // エフェクト開始
@@ -1995,7 +2026,8 @@
                     saveState();
                     updateUI({ preserveStatus: true, checkEvolution: false });
                     canvas.classList.remove('bouncing');
-                    statusTextEl.textContent = `……しかし、何も起きなかった。次は ${getNextUltimateEvolutionGoal().toLocaleString('ja-JP')} 回で再挑戦！`;
+                    const remaining = Math.max(0, getNextUltimateEvolutionGoal() - totalCount);
+                    statusTextEl.textContent = `……しかし、何も起きなかった。次はあと ${remaining.toLocaleString('ja-JP')} 回で再挑戦！`;
                     setTimeout(() => checkRebirth(), 4000);
                     return; 
                 }
@@ -2011,6 +2043,7 @@
                 }
                 
                 isEvolutionInProgress = false;
+                if (targetStage === 4) pendingUltimateEvolution = null;
                 saveState(); // 進化状態を保存
                 renderCanvasArt(evolutionType, ctx);
                 updateUI({ preserveStatus: true, checkEvolution: false });
@@ -2033,10 +2066,12 @@
                 return false;
             }
 
-            // 判定開始時点で回数を保存し、アプリが暗転中に閉じても同じ回を再抽選しない。
+            // 判定開始時点で回数と当選結果を保存し、暗転中に閉じても当選を失わない。
             ultimateAttemptCount += 1;
+            const outcome = rollUltimateEvolutionOutcome();
+            pendingUltimateEvolution = outcome.isSuccess ? outcome : null;
             saveState();
-            return evolve(4);
+            return evolve(4, { ultimateOutcome: outcome });
         }
 
         function continueProgressionAfterEvolution() {
@@ -2119,6 +2154,8 @@
         }
 
         function addWordLog(word, count=1) {
+            // 転生期限を過ぎていたら、今回の発話を新しいタマゴの最初の回数として数える。
+            checkRebirth({ announce: false });
             const isSoulSnackWord = OYATSU_WORDS.includes(word);
             const oldOyatsuTotal = isSoulSnackWord ? getTotalOyatsuCount() : 0;
             wordCounts[word] += count;
@@ -2175,7 +2212,6 @@
                 }
             } else {
                 lastInteractionTimestamp = Date.now();
-                checkRebirth(); // 音声入力などの相互作用時にも転生チェック
                 saveState();
 
                 const randomMessages = ["大満足", "喜んでいる", "パワーアップ"];
@@ -2190,7 +2226,11 @@
                 const newOyatsuTotal = getTotalOyatsuCount();
                 if (Math.floor(newOyatsuTotal / OYATSU_REWARD_MILESTONE) > Math.floor(oldOyatsuTotal / OYATSU_REWARD_MILESTONE)) {
                     const itemId = getRandomSoulSnackRewardItemId();
-                    if (itemId) setTimeout(() => showItemPopup(itemId), 500);
+                    if (itemId) {
+                        // 付与は先に保存し、演出中の終了でも報酬を失わないようにする。
+                        unlockItem(itemId);
+                        setTimeout(() => showItemPopup(itemId), 500);
+                    }
                 }
             }
             
@@ -2767,6 +2807,13 @@
             requestAnimationFrame(fall);
         }
 
+        function unlockItem(itemId) {
+            if (!SECRET_ITEMS_DATA.some(item => item.id === itemId) || unlockedItems.includes(itemId)) return false;
+            unlockedItems.push(itemId);
+            saveState();
+            return true;
+        }
+
         function showItemPopup(itemId) {
             const itemObj = SECRET_ITEMS_DATA.find(i => i.id === itemId);
             if(!itemObj) return;
@@ -2776,11 +2823,7 @@
             
             playItemGetSound(); // すごいアイテムをゲットした超派手な音を鳴らす！
 
-            // 未取得なら取得済みにする
-            if (!unlockedItems.includes(itemId)) {
-                unlockedItems.push(itemId);
-                saveState();
-            }
+            unlockItem(itemId);
             
             // 初回・何度目に関わらずテスト用なので最高に派手な爆発を毎回出す
             createItemExplosion();
@@ -3154,7 +3197,8 @@
 
         // 共通の認識文字列処理
         let lastWordMatchTime = {};
-        const WORD_MATCH_COOLDOWN_MS = 600;
+        // 同じ中間結果の二重加算は防ぎつつ、続けて唱えた言霊は取りこぼさない。
+        const WORD_MATCH_COOLDOWN_MS = 250;
 
         function normalizeSpeechTranscript(rawTranscript) {
             return String(rawTranscript || '')
@@ -3167,7 +3211,9 @@
         }
 
         function getRecognitionRegex(word, flags = 'g') {
-            const variants = [word, ...(WORD_ALIASES[word] || [])]
+            const variants = [...new Set([word, ...(WORD_ALIASES[word] || [])]
+                .map(normalizeSpeechTranscript)
+                .filter(Boolean))]
                 .sort((a, b) => b.length - a.length)
                 .map(escapeRecognitionPattern);
             return new RegExp(`(?:${variants.join('|')})`, flags);
@@ -3310,7 +3356,7 @@
             playButtonSound();
             if (!useNativeSpeech && !webRecognition) return alert('この環境は音声認識に非対応です');
             if (isStartingMic) return;
-            if(isListening) {
+            if(isListening || (useNativeSpeech && nativeListeningRequested)) {
                 stopMic();
             } else {
                 isStartingMic = true;
@@ -3346,13 +3392,87 @@
         }
 
         let nativeInterimMatchCounts = {};
+        let nativeRecognitionSessionId = null;
         let nativeListenersReady = false;
         let nativePermissionGranted = false;
+        let nativeListeningRequested = false;
+        let nativeRestartTimer = null;
+        let nativeRestartAttempt = 0;
+        let nativeSpeechOperation = Promise.resolve();
+        let nativeLastErrorMessage = '';
         let nativePermissionState = {
             microphone: 'prompt',
             speechRecognition: 'prompt'
         };
         let nativePreparationPromise = null;
+
+        // data.js からも現在の録音状態を安全に参照できるようにする。
+        window.isKotodamaSpeechListening = () => Boolean(isListening);
+
+        function isIosNativeSpeech() {
+            return window.Capacitor?.getPlatform?.() === 'ios';
+        }
+
+        function clearNativeSpeechRestart() {
+            if (nativeRestartTimer) clearTimeout(nativeRestartTimer);
+            nativeRestartTimer = null;
+        }
+
+        function queueNativeSpeechOperation(operation) {
+            nativeSpeechOperation = nativeSpeechOperation
+                .catch(() => {})
+                .then(operation);
+            return nativeSpeechOperation;
+        }
+
+        function scheduleNativeSpeechRestart() {
+            if (!useNativeSpeech || !isIosNativeSpeech() || !nativeListeningRequested || nativeRestartTimer) return;
+            const retryDelay = Math.min(300 * (2 ** nativeRestartAttempt), 2400);
+            nativeRestartTimer = setTimeout(async () => {
+                nativeRestartTimer = null;
+                if (!nativeListeningRequested) return;
+                try {
+                    nativeRestartAttempt += 1;
+                    await startMic({ isRecovery: true });
+                } catch (error) {
+                    if (nativeRestartAttempt < 4 && nativeListeningRequested) {
+                        scheduleNativeSpeechRestart();
+                    } else {
+                        nativeListeningRequested = false;
+                        statusTextEl.textContent = '聞き取りを再開できません。MICを押してもう一度お試しください';
+                    }
+                }
+            }, retryDelay);
+        }
+
+        async function syncNativeSpeechState() {
+            if (!useNativeSpeech || document.visibilityState === 'hidden') return;
+            try {
+                const result = await window.Capacitor.Plugins.SpeechRecognition.isListening();
+                if (result?.listening) return;
+                if (nativeListeningRequested && isIosNativeSpeech()) {
+                    // iOSでは画面復帰時に音声セッションが止められていることがある。
+                    // ユーザーがMICをオンにした意思は保ち、次の発話を待ち直す。
+                    isListening = false;
+                    micBtnEl.classList.remove('mic-active');
+                    statusTextEl.textContent = '聞き取りを再開中...';
+                    scheduleNativeSpeechRestart();
+                    updateNoonRitualMicButton();
+                    return;
+                }
+                if (nativeListeningRequested && !isIosNativeSpeech() && !isListening) {
+                    // Androidはネイティブ側で再接続する。端末に止められた場合だけ
+                    // 状態を戻し、ユーザーが明示的に再開できるようにする。
+                    nativeListeningRequested = false;
+                    isListening = false;
+                    micBtnEl.classList.remove('mic-active');
+                    if (currentStage < 3) statusTextEl.textContent = '端末が聞き取りを停止しました。MICを押して再開してください';
+                    updateNoonRitualMicButton();
+                }
+            } catch (error) {
+                console.warn('音声認識の状態を確認できませんでした。', error);
+            }
+        }
 
         function updateNativePermissionState(permissions = {}) {
             nativePermissionState = {
@@ -3381,6 +3501,11 @@
         }
 
         function getNativeSpeechErrorMessage(error) {
+            const code = Number(error?.code);
+            if (code === 3 || code === 9) return '設定で「マイク」をオンにしてください';
+            if (code === 1 || code === 2 || code === 4 || code === 11) {
+                return '通信を確認して、聞き取りを再開しています';
+            }
             const message = String(error?.message || error || '').toLowerCase();
             if (message.includes('microphone permission')) {
                 return '設定で「マイク」をオンにしてください';
@@ -3420,6 +3545,12 @@
                     await speechPlugin.removeAllListeners();
                     await speechPlugin.addListener('partialResults', (data) => {
                         if (data && data.matches && data.matches.length > 0) {
+                            const sessionId = Number(data.sessionId);
+                            if (Number.isFinite(sessionId) && sessionId > 0
+                                && sessionId !== nativeRecognitionSessionId) {
+                                nativeRecognitionSessionId = sessionId;
+                                nativeInterimMatchCounts = {};
+                            }
                             const transcript = selectBestSpeechTranscript(data.matches);
                             processTranscript(transcript, Boolean(data.isFinal), nativeInterimMatchCounts);
                         }
@@ -3428,18 +3559,45 @@
                         if (data && data.status === 'started') {
                             isListening = true;
                             isStartingMic = false;
+                            nativeRestartAttempt = 0;
+                            nativeLastErrorMessage = '';
                             micBtnEl.classList.remove('mic-starting');
                             micBtnEl.classList.add('mic-active');
                             statusTextEl.textContent = 'ききとり中...';
+                            updateNoonRitualMicButton();
+                        } else if (data && data.status === 'recovering') {
+                            isListening = true;
+                            micBtnEl.classList.remove('mic-starting');
+                            micBtnEl.classList.add('mic-active');
+                            statusTextEl.textContent = '聞き取りを再開中...';
                             updateNoonRitualMicButton();
                         } else if (data && data.status === 'stopped') {
                             isListening = false;
                             isStartingMic = false;
                             micBtnEl.classList.remove('mic-starting', 'mic-active');
-                            if (currentStage < 3) statusTextEl.textContent = 'マイクがオフです';
+                            if (nativeListeningRequested && isIosNativeSpeech()) {
+                                statusTextEl.textContent = '次の言霊を聞く準備中...';
+                                scheduleNativeSpeechRestart();
+                            } else if (currentStage < 3) {
+                                statusTextEl.textContent = nativeLastErrorMessage || 'マイクがオフです';
+                            }
                             updateNoonRitualMicButton();
                         }
                     });
+                    await speechPlugin.addListener('recognitionError', (data) => {
+                        nativeLastErrorMessage = getNativeSpeechErrorMessage(data);
+                        if (data?.willRetry) {
+                            statusTextEl.textContent = nativeLastErrorMessage;
+                        } else {
+                            nativeListeningRequested = false;
+                        }
+                    });
+                    const appPlugin = window.Capacitor?.Plugins?.App;
+                    if (appPlugin?.addListener) {
+                        await appPlugin.addListener('appStateChange', ({ isActive }) => {
+                            if (isActive) syncNativeSpeechState();
+                        });
+                    }
                     nativeListenersReady = true;
                 }
 
@@ -3455,24 +3613,34 @@
             return nativePreparationPromise;
         }
         
-        async function startMic(){ 
+        async function startMic({ isRecovery = false } = {}){
             if (useNativeSpeech) {
-                nativeInterimMatchCounts = {};
+                nativeListeningRequested = true;
+                clearNativeSpeechRestart();
+                if (!isRecovery) {
+                    nativeInterimMatchCounts = {};
+                    nativeRecognitionSessionId = null;
+                    nativeRestartAttempt = 0;
+                }
                 const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
                 await prepareNativeSpeech();
-                await speechPlugin.start({
-                    language: "ja-JP",
-                    maxResults: 3,
-                    prompt: "言霊を唱えてください",
-                    partialResults: true,
-                    popup: false
+                await queueNativeSpeechOperation(async () => {
+                    if (!nativeListeningRequested) return;
+                    await speechPlugin.start({
+                        language: "ja-JP",
+                        maxResults: 3,
+                        prompt: "言霊を唱えてください",
+                        partialResults: true,
+                        popup: false
+                    });
                 });
+                if (!nativeListeningRequested) return;
                 isListening = true;
                 micBtnEl.classList.remove('mic-starting');
                 micBtnEl.classList.add('mic-active');
                 statusTextEl.textContent = 'ききとり中...';
                 updateNoonRitualMicButton();
-                onMicrophoneStartedForTutorial();
+                if (!isRecovery) onMicrophoneStartedForTutorial();
                 // ネイティブ音声入力開始で中断されたWeb Audioを戻す
                 initAudio();
             } else if (webRecognition) {
@@ -3484,9 +3652,11 @@
             isListening = false; 
             isStartingMic = false;
             if (useNativeSpeech) {
+                nativeListeningRequested = false;
+                clearNativeSpeechRestart();
                 micBtnEl.classList.remove('mic-starting', 'mic-active');
                 try {
-                    await window.Capacitor.Plugins.SpeechRecognition.stop();
+                    await queueNativeSpeechOperation(() => window.Capacitor.Plugins.SpeechRecognition.stop());
                 } catch(e){}
             } else if (webRecognition) {
                 webRecognition.stop(); 
@@ -3848,6 +4018,7 @@
         let pendingBattleOptions = null;
         const ONLINE_BATTLE_API_URL = String(window.KOTODAMA_ONLINE_BATTLE_API_URL || '').replace(/\/$/, '');
         let onlineBattleSession = null;
+        const ONLINE_BATTLE_SESSION_STORAGE_KEY = 'kotodama_online_battle_session_v1';
         const ONLINE_PROFILE_STORAGE_KEY = 'kotodama_online_profile_v1';
         const ONLINE_PROFILE_CONSENT_STORAGE_KEY = 'kotodama_online_profile_consent_v1';
         const KOTODAMA_CUP_CACHE_KEY = 'kotodama_cup_cache_v1';
@@ -4043,6 +4214,39 @@
         function getOnlineProfileLabel(profile) {
             if (!profile) return '匿名プロフィールはオンラインになった時につくられます。';
             return `あなたのなまえ：${profile.displayName}\n問い合わせID：${profile.playerId}`;
+        }
+
+        function persistOnlineBattleSession() {
+            if (!onlineBattleSession || onlineBattleSession.finished) return;
+            try {
+                localStorage.setItem(ONLINE_BATTLE_SESSION_STORAGE_KEY, JSON.stringify({
+                    code: onlineBattleSession.code,
+                    token: onlineBattleSession.token,
+                    seat: onlineBattleSession.seat,
+                    expiresAt: onlineBattleSession.expiresAt || (Date.now() + 15 * 60 * 1000)
+                }));
+            } catch (error) {
+                console.warn('対戦の再接続情報を保存できませんでした。', error);
+            }
+        }
+
+        function clearPersistedOnlineBattleSession() {
+            try { localStorage.removeItem(ONLINE_BATTLE_SESSION_STORAGE_KEY); } catch (error) {}
+        }
+
+        function restoreOnlineBattleSession() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(ONLINE_BATTLE_SESSION_STORAGE_KEY) || 'null');
+                if (!saved || !/^\d{4}$/.test(String(saved.code || '')) || typeof saved.token !== 'string'
+                    || !['host', 'guest'].includes(saved.seat) || Number(saved.expiresAt) <= Date.now()) {
+                    clearPersistedOnlineBattleSession();
+                    return null;
+                }
+                return { code: saved.code, token: saved.token, seat: saved.seat, expiresAt: Number(saved.expiresAt), started: false, socket: null, reconnectAttempts: 0 };
+            } catch (error) {
+                clearPersistedOnlineBattleSession();
+                return null;
+            }
         }
 
         function renderKotodamaCupProfile(profile, fallbackMessage = '') {
@@ -4315,6 +4519,15 @@
             document.getElementById('pvpMainMenu').style.display = 'none';
             document.getElementById('kotodamaCupMenu').style.display = 'none';
             document.getElementById('onlineBattleMenu').style.display = 'flex';
+            if (ONLINE_BATTLE_API_URL && !onlineBattleSession) {
+                const recoveredSession = restoreOnlineBattleSession();
+                if (recoveredSession) {
+                    onlineBattleSession = recoveredSession;
+                    onlineBattleStatus('前の対戦に再接続しています…');
+                    connectOnlineBattleSocket();
+                    return;
+                }
+            }
             const consentDecision = getOnlineProfileConsentDecision();
             if (consentDecision === null) {
                 onlineBattleStatus('ランキングに参加するか選んでね。参加しなくても対戦できます。');
@@ -4346,6 +4559,7 @@
             if (!onlineBattleSession || onlineBattleSession.started) return;
             const socket = onlineBattleSession.socket;
             onlineBattleSession = null;
+            clearPersistedOnlineBattleSession();
             if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) socket.close();
         }
 
@@ -4396,7 +4610,8 @@
                     method: 'POST', body: JSON.stringify(requestBody)
                 });
                 if (requestGeneration !== onlineRoomRequestGeneration) return;
-                onlineBattleSession = { code: data.code, token: data.playerToken, seat: 'host', started: false, socket: null };
+                onlineBattleSession = { code: data.code, token: data.playerToken, seat: 'host', expiresAt: data.expiresAt, started: false, socket: null, reconnectAttempts: 0 };
+                persistOnlineBattleSession();
                 const codeInput = document.getElementById('onlineBattleCode');
                 if (codeInput) codeInput.value = data.code;
                 onlineBattleStatus(`招待コード: ${data.code}\n友だちに伝えて、入室を待ってね。`);
@@ -4428,7 +4643,8 @@
                     method: 'POST', body: JSON.stringify(requestBody)
                 });
                 if (requestGeneration !== onlineRoomRequestGeneration) return;
-                onlineBattleSession = { code, token: data.playerToken, seat: 'guest', started: false, socket: null };
+                onlineBattleSession = { code, token: data.playerToken, seat: 'guest', expiresAt: data.expiresAt, started: false, socket: null, reconnectAttempts: 0 };
+                persistOnlineBattleSession();
                 onlineBattleStatus('入室できたよ。対戦を始めます…');
                 connectOnlineBattleSocket();
             } catch (error) {
@@ -4440,31 +4656,50 @@
 
         function connectOnlineBattleSocket() {
             if (!onlineBattleSession || !ONLINE_BATTLE_API_URL) return;
-            const socketUrl = `${ONLINE_BATTLE_API_URL.replace(/^http/, 'ws')}/v1/rooms/${onlineBattleSession.code}/socket`;
+            const session = onlineBattleSession;
+            const socketUrl = `${ONLINE_BATTLE_API_URL.replace(/^http/, 'ws')}/v1/rooms/${session.code}/socket`;
             const socket = new WebSocket(socketUrl);
-            onlineBattleSession.socket = socket;
-            socket.addEventListener('open', () => socket.send(JSON.stringify({ type: 'auth', token: onlineBattleSession.token })));
-            socket.addEventListener('message', (event) => handleOnlineBattleMessage(event));
+            session.socket = socket;
+            socket.addEventListener('open', () => {
+                if (onlineBattleSession !== session) return socket.close();
+                session.reconnectAttempts = 0;
+                socket.send(JSON.stringify({ type: 'auth', token: session.token }));
+            });
+            socket.addEventListener('message', (event) => handleOnlineBattleMessage(event, session));
             socket.addEventListener('close', () => {
-                if (onlineBattleSession && !onlineBattleSession.finished) {
-                    onlineBattleStatus('通信が切れました。もう一度、部屋へ入り直してね。');
+                if (onlineBattleSession === session && !session.finished && Date.now() < session.expiresAt) {
+                    session.reconnectAttempts = (session.reconnectAttempts || 0) + 1;
+                    if (session.reconnectAttempts <= 4) {
+                        const delay = Math.min(800 * (2 ** (session.reconnectAttempts - 1)), 5000);
+                        onlineBattleStatus('通信が切れました。対戦へ再接続しています…');
+                        setTimeout(() => {
+                            if (onlineBattleSession === session && !session.finished) connectOnlineBattleSocket();
+                        }, delay);
+                    } else {
+                        onlineBattleStatus('通信を再開できませんでした。対戦画面を開き直して再接続してね。');
+                    }
                 }
             });
-            socket.addEventListener('error', () => onlineBattleStatus('通信を開始できませんでした。接続を確認してね。'));
+            socket.addEventListener('error', () => {
+                if (onlineBattleSession === session) onlineBattleStatus('通信を再接続しています…');
+            });
         }
 
-        function handleOnlineBattleMessage(event) {
+        function handleOnlineBattleMessage(event, session = onlineBattleSession) {
             let message;
             try { message = JSON.parse(event.data); } catch { return; }
-            if (!onlineBattleSession) return;
+            if (!onlineBattleSession || onlineBattleSession !== session) return;
             if (message.type === 'error') return onlineBattleStatus(message.message || '通信エラーが起きました。');
             if (message.type === 'expired') {
+                clearPersistedOnlineBattleSession();
                 onlineBattleStatus('この部屋は期限切れです。新しい部屋をつくってね。');
                 return;
             }
             if (message.type === 'room') {
                 if (message.seat) onlineBattleSession.seat = message.seat;
                 const room = message.room;
+                if (room.expiresAt) onlineBattleSession.expiresAt = room.expiresAt;
+                persistOnlineBattleSession();
                 if (room.phase === 'waiting') {
                     onlineBattleStatus(`招待コード: ${room.code}\n友だちの入室を待っています。`);
                 } else if (room.phase === 'choosing' && !onlineBattleSession.started) {
@@ -4487,6 +4722,7 @@
             }
             if (message.type === 'result') {
                 onlineBattleSession.finished = true;
+                clearPersistedOnlineBattleSession();
                 runOnlineBattleSequence(message.result, onlineBattleSession.seat);
             }
         }
@@ -4510,6 +4746,13 @@
                 awardRank: onlineBattleSession.opponentAwardRank
             });
             if (pendingBattleOptions) pendingBattleOptions.online = true;
+            if (mine?.selected) {
+                // 再接続前に送信済みの作戦は、二重送信せず相手を待つ。
+                selectedBattleAction = 'recovered';
+                document.getElementById('battleCommandPanel')?.classList.remove('visible');
+                battleMessageEl.textContent = '作戦は送信済みです。相手を待っています…';
+                battleMessageEl.style.display = 'block';
+            }
         }
 
         function submitOnlineBattleAction(action) {
@@ -5101,6 +5344,7 @@
             if (onlineBattleSession?.finished) {
                 const socket = onlineBattleSession.socket;
                 onlineBattleSession = null;
+                clearPersistedOnlineBattleSession();
                 if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) socket.close();
             }
         }

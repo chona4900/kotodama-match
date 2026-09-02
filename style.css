@@ -1093,6 +1093,21 @@ body, html { overflow-x: hidden; }
 
 .controls { flex-wrap: wrap !important; max-width: 320px !important; gap: 15px 20px !important; margin: 15px auto 0 auto !important; }
 
+/* iPhone SEなど高さが小さい端末でも、操作ボタンと画面内ダイアログを見切れさせない。 */
+@media (max-width: 600px) and (max-height: 667px) {
+    .device {
+        padding-top: max(38px, calc(env(safe-area-inset-top) + 8px)) !important;
+        padding-bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px)) !important;
+    }
+    .device-title { margin: 4px 0 !important; font-size: 1.45rem !important; }
+    .screen-container { margin: 8px 0 !important; }
+    .controls { max-width: 272px !important; gap: 8px 13px !important; margin: 2px auto 0 !important; }
+    .btn-round { width: 59px !important; height: 59px !important; font-size: 0.92rem !important; }
+    .btn-label { margin-top: 2px !important; font-size: 0.76rem !important; }
+    .noon-ritual-overlay,
+    .noon-notification-prompt { justify-content: flex-start !important; overflow-y: auto !important; }
+}
+
 
 .controls { justify-content: center !important; }
 

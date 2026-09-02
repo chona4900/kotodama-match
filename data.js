@@ -3,11 +3,14 @@
         let nativeAudioRefreshPromise = null;
         let lastAudioRecoveryAt = 0;
 
-        function refreshNativeAudioSession() {
+        function refreshNativeAudioSession({ force = false } = {}) {
             const speechPlugin = window.Capacitor?.Plugins?.SpeechRecognition;
             if (!window.Capacitor?.isNativePlatform?.() || !speechPlugin?.refreshAudioSession) {
                 return Promise.resolve();
             }
+            // 録音中にiOSのAudio Sessionを再設定すると、認識が終了する端末がある。
+            // 発話中はWeb Audioだけを鳴らし、再設定はマイク停止後に行う。
+            if (window.isKotodamaSpeechListening?.()) return Promise.resolve();
             if (nativeAudioRefreshPromise) return nativeAudioRefreshPromise;
 
             nativeAudioRefreshPromise = Promise.resolve(speechPlugin.refreshAudioSession())
@@ -74,7 +77,7 @@
 
             // Web Audioの再開はユーザー操作と同じ同期処理内でも実行する。
             nudgeWebAudioOutput();
-            refreshNativeAudioSession().then(nudgeWebAudioOutput);
+            refreshNativeAudioSession({ force }).then(nudgeWebAudioOutput);
         };
         document.addEventListener('touchstart', recoverAudioOutput, { passive: true });
         document.addEventListener('click', recoverAudioOutput);
@@ -313,6 +316,8 @@
         let unlockedForms = ['egg']; // 図鑑解放リスト
         let unlockedItems = []; // 獲得済み秘密のアイテムリスト
         let finalEvolutionTimestamp = null; // 最終進化に到達した時刻
+        // 究極進化の当選結果は、演出中にアプリが終了しても失わないよう保存する。
+        let pendingUltimateEvolution = null;
         
         const SECRET_ITEMS_DATA = [
             { id: 'yata_no_kagami', name: '八咫鏡', src: '八咫鏡.jpg', desc: '日本神話の三種の神器の一つ天照大神が岩戸に隠れたとき、外へ誘うために使われたとされる神器天照大御神の「御神体」としての「八咫鏡」は神宮の内宮にある秘宝です' },

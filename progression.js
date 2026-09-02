@@ -4,7 +4,9 @@
     const STAGE1_GOAL = 1000;
     const STAGE2_GOAL = 2000;
     const STAGE3_GOAL = 3000;
-    const ULTIMATE_ATTEMPT_INTERVAL = 4900;
+    const ULTIMATE_FIRST_ATTEMPT_GOAL = 4900;
+    const ULTIMATE_ATTEMPT_INTERVAL = 900;
+    const ULTIMATE_RETRY_DISPLAY_START = 4000;
 
     function getNextEvolutionStage(currentStage, totalCount) {
         const stage = Number(currentStage) || 0;
@@ -18,12 +20,37 @@
 
     function getUltimateAttemptGoal(attemptCount) {
         const attempts = Math.max(0, Math.floor(Number(attemptCount) || 0));
-        return (attempts + 1) * ULTIMATE_ATTEMPT_INTERVAL;
+        return ULTIMATE_FIRST_ATTEMPT_GOAL + (attempts * ULTIMATE_ATTEMPT_INTERVAL);
     }
 
     function getUltimateProgressStart(attemptCount) {
         const attempts = Math.max(0, Math.floor(Number(attemptCount) || 0));
-        return attempts === 0 ? STAGE3_GOAL : attempts * ULTIMATE_ATTEMPT_INTERVAL;
+        return attempts === 0 ? STAGE3_GOAL : getUltimateAttemptGoal(attempts - 1);
+    }
+
+    // 総回数は記録として残したまま、究極進化の再挑戦だけは
+    // 「4,000 / 4,900」から始まる900回の短いチャレンジとして見せる。
+    function getUltimateProgress(totalCount, attemptCount) {
+        const attempts = Math.max(0, Math.floor(Number(attemptCount) || 0));
+        const total = Math.max(0, Number(totalCount) || 0);
+        const goal = getUltimateAttemptGoal(attempts);
+        const start = getUltimateProgressStart(attempts);
+
+        if (attempts === 0) {
+            return {
+                displayCount: total,
+                displayGoal: ULTIMATE_FIRST_ATTEMPT_GOAL,
+                progressStart: STAGE3_GOAL,
+                progressEnd: goal
+            };
+        }
+
+        return {
+            displayCount: ULTIMATE_RETRY_DISPLAY_START + Math.max(0, total - start),
+            displayGoal: ULTIMATE_FIRST_ATTEMPT_GOAL,
+            progressStart: start,
+            progressEnd: goal
+        };
     }
 
     function isUltimateAttemptDue(currentStage, totalCount, attemptCount) {
@@ -35,10 +62,13 @@
         STAGE1_GOAL,
         STAGE2_GOAL,
         STAGE3_GOAL,
+        ULTIMATE_FIRST_ATTEMPT_GOAL,
         ULTIMATE_ATTEMPT_INTERVAL,
+        ULTIMATE_RETRY_DISPLAY_START,
         getNextEvolutionStage,
         getUltimateAttemptGoal,
         getUltimateProgressStart,
+        getUltimateProgress,
         isUltimateAttemptDue
     };
 

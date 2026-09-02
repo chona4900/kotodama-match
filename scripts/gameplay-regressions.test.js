@@ -11,6 +11,14 @@ const speechPluginSource = fs.readFileSync(
   path.join(root, 'plugins/kotodama-speech-recognition/ios/Sources/KotodamaSpeechRecognitionPlugin/SpeechRecognitionPlugin.swift'),
   'utf8',
 );
+const androidSpeechPluginSource = fs.readFileSync(
+  path.join(root, 'android/app/src/main/java/com/kotodamamatch/app/SpeechRecognitionPlugin.java'),
+  'utf8',
+);
+const androidManifestSource = fs.readFileSync(
+  path.join(root, 'android/app/src/main/AndroidManifest.xml'),
+  'utf8',
+);
 const appDelegateSource = fs.readFileSync(path.join(root, 'ios/App/App/AppDelegate.swift'), 'utf8');
 
 function sourceBetween(startMarker, endMarker) {
@@ -257,6 +265,10 @@ test('心のごはん8種類は、よくある音声認識の表記ゆれでも�
     ['感謝してる', '感謝してます'],
     ['幸せだよ', 'しあわせ'],
     ['運がいい', 'ツイてる'],
+    ['ありがどう', 'ありがとう'],
+    ['あいしてまーす', '愛してます'],
+    ['ゆるしまーす', 'ゆるします'],
+    ['感謝してまーす', '感謝してます'],
   ];
   const context = vm.createContext({
     allWords: expectedPhrases.map(([, word]) => word),
@@ -322,6 +334,7 @@ test('魂のおやつ6種類も音声認識の表記ゆれに反応する', () =
     ['この事がダイアモンドに変わります', 'このことがダイヤモンドにかわります'],
     ['段々良くなる未来は明るい', 'だんだんよくなる未来はあかるい'],
     ['宇宙の平和に感謝します', '宇宙の調和に感謝します'],
+    ['宇宙のちょうわに感謝してます', '宇宙の調和に感謝します'],
     ['自分は凄いんだ', '自分はすごいんだ'],
     ['もっと自分を愛しますもっと自分を許します', 'もっと自分を愛しますもっと自分をゆるします'],
     ['どうでもいいどっちでもいいどうせ上手く行くから', 'どうでもいいどっちでもいいどうせうまくいくから'],
@@ -359,7 +372,8 @@ test('word feedback is louder than the deliberately reduced battle BGM', () => {
 });
 
 test('iOS audio output can recover after mute, interruption, or app resume', () => {
-  assert.match(dataSource, /function refreshNativeAudioSession\(\)/);
+  assert.match(dataSource, /function refreshNativeAudioSession\(\{ force = false \} = \{\}\)/);
+  assert.match(dataSource, /if \(window\.isKotodamaSpeechListening\?\.\(\)\) return Promise\.resolve\(\);/);
   assert.match(dataSource, /document\.addEventListener\('touchstart', recoverAudioOutput/);
   assert.match(dataSource, /document\.addEventListener\('click', recoverAudioOutput\)/);
   assert.match(dataSource, /visibilitychange/);
@@ -373,6 +387,31 @@ test('iOS audio output can recover after mute, interruption, or app resume', () 
   assert.match(speechPluginSource, /"isFinal": result\.isFinal/);
   assert.match(appDelegateSource, /func applicationDidBecomeActive/);
   assert.match(appDelegateSource, /activatePlaybackAudioSession\(\)/);
+});
+
+test('Androidは発話ごとの認識終了後もMICを止めず、状況に応じて安全に再接続する', () => {
+  assert.match(androidSpeechPluginSource, /public void onResults\(Bundle results\)[\s\S]*?scheduleRecognizerRestart\(250, false, 0\);/);
+  assert.match(androidSpeechPluginSource, /ERROR_NO_MATCH:[\s\S]*?scheduleRecognizerRestart\(250, false, error\);/);
+  assert.match(androidSpeechPluginSource, /ERROR_RECOGNIZER_BUSY:[\s\S]*?scheduleRecognizerRestart\(1000, true, error\);/);
+  assert.match(androidSpeechPluginSource, /private void scheduleRecognizerRestart\(long baseDelayMillis, boolean recreateRecognizer, int errorCode\)[\s\S]*?if \(!listeningRequested \|\| restartScheduled\) return;/);
+  assert.match(androidSpeechPluginSource, /MAX_RECOVERY_ATTEMPTS = 4/);
+  assert.match(androidSpeechPluginSource, /notifyListeners\("recognitionError", data\)/);
+  assert.match(androidSpeechPluginSource, /if \(recognizer == null\) \{[\s\S]*?SpeechRecognizer\.createSpeechRecognizer/);
+  assert.match(androidSpeechPluginSource, /EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L/);
+  assert.match(androidSpeechPluginSource, /recognitionSessionId \+= 1/);
+  assert.match(androidSpeechPluginSource, /data\.put\("sessionId", recognitionSessionId\)/);
+  assert.match(mainSource, /sessionId !== nativeRecognitionSessionId[\s\S]*?nativeInterimMatchCounts = \{\}/);
+  assert.match(androidManifestSource, /android\.speech\.RecognitionService/);
+});
+
+test('iOSは発話ごとの終了後に次の言霊を待ち、画面復帰時に状態を同期する', () => {
+  assert.match(mainSource, /function scheduleNativeSpeechRestart\(\)/);
+  assert.match(mainSource, /nativeListeningRequested && isIosNativeSpeech\(\)[\s\S]*?scheduleNativeSpeechRestart\(\);/);
+  assert.match(mainSource, /function queueNativeSpeechOperation\(operation\)/);
+  assert.match(mainSource, /speechPlugin\.addListener\('recognitionError'/);
+  assert.match(mainSource, /function syncNativeSpeechState\(\)/);
+  assert.match(mainSource, /appStateChange/);
+  assert.match(mainSource, /const WORD_MATCH_COOLDOWN_MS = 250/);
 });
 
 test('転生しても累計の言霊回数を残し、今回の進化回数だけを戻す', () => {
@@ -398,6 +437,7 @@ test('転生しても累計の言霊回数を残し、今回の進化回数だ�
     statusTextEl: { textContent: '' },
     playRebirthSound() {},
     setTimeout() {},
+    Date: { now: () => 987654 },
   });
 
   vm.runInContext(`${reincarnationSource}\nthis.reincarnate = reincarnate;`, context);
@@ -407,6 +447,7 @@ test('転生しても累計の言霊回数を残し、今回の進化回数だ�
   assert.equal(context.currentForm, 'egg');
   assert.equal(context.totalCount, 0);
   assert.equal(context.ultimateAttemptCount, 0);
+  assert.equal(context.lastInteractionTimestamp, 987654);
   assert.deepEqual({ ...context.wordCounts }, { ありがとう: 10000, 愛してます: 2400 });
   assert.deepEqual({ ...context.cycleWordCounts }, { ありがとう: 0, 愛してます: 0 });
 });
@@ -424,9 +465,31 @@ test('究極進化の失敗で回数を4800へ巻き戻さず、二重抽選も�
   assert.match(addWordSource, /maybeStartUltimateEvolution\(\)/);
 });
 
+test('中断しても報酬と究極進化の当選結果を先に保存する', () => {
+  const addWordSource = sourceBetween(
+    'function addWordLog(word, count=1)',
+    '// --- 割合表示と図鑑画面 ---',
+  );
+
+  assert.match(mainSource, /pendingUltimateEvolution/);
+  assert.match(mainSource, /function resolvePendingUltimateEvolution\(\)/);
+  assert.match(mainSource, /pendingUltimateEvolution = outcome\.isSuccess \? outcome : null/);
+  assert.match(addWordSource, /unlockItem\(itemId\);[\s\S]*?setTimeout\(\(\) => showItemPopup\(itemId\), 500\)/);
+  assert.match(addWordSource, /checkRebirth\(\{ announce: false \}\);/);
+});
+
+test('オンライン対戦は通信断・再起動後にも本人トークンで再接続する', () => {
+  assert.match(mainSource, /ONLINE_BATTLE_SESSION_STORAGE_KEY/);
+  assert.match(mainSource, /function restoreOnlineBattleSession\(\)/);
+  assert.match(mainSource, /前の対戦に再接続しています/);
+  assert.match(mainSource, /const session = onlineBattleSession/);
+  assert.match(mainSource, /onlineBattleSession !== session/);
+  assert.match(mainSource, /対戦へ再接続しています/);
+});
+
 test('究極進化に失敗した結果文と次回目標が暗転後に残る', () => {
   const evolveSource = sourceBetween(
-    'function evolve(targetStage, { forcedUltimateSuccess = null } = {})',
+    'function rollUltimateEvolutionOutcome(forcedUltimateSuccess = null)',
     'function maybeStartUltimateEvolution()',
   );
   let updateOptions;
@@ -440,7 +503,7 @@ test('究極進化に失敗した結果文と次回目標が暗転後に残る',
     canvas: { classList: { add() {}, remove() {} } },
     charNames: { childA_1_1: '天照大御神っち' },
     createEvolutionEffect(callback) { callback(); },
-    getNextUltimateEvolutionGoal: () => 9800,
+    getNextUltimateEvolutionGoal: () => 5800,
     saveState() {},
     updateUI(options) { updateOptions = options; },
     setTimeout() {},
@@ -453,6 +516,6 @@ test('究極進化に失敗した結果文と次回目標が暗転後に残る',
   assert.equal(context.totalCount, 4900);
   assert.equal(context.currentStage, 3);
   assert.equal(context.isEvolutionInProgress, false);
-  assert.equal(context.statusTextEl.textContent, '……しかし、何も起きなかった。次は 9,800 回で再挑戦！');
+  assert.equal(context.statusTextEl.textContent, '……しかし、何も起きなかった。次はあと 900 回で再挑戦！');
   assert.deepEqual({ ...updateOptions }, { preserveStatus: true, checkEvolution: false });
 });

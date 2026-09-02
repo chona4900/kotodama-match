@@ -37,6 +37,10 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
     private boolean partialResults = true;
     private String language = "ja-JP";
     private int maxResults = 1;
+    private boolean restartScheduled = false;
+    private int recognitionSessionId = 0;
+    private int recoveryAttempt = 0;
+    private static final int MAX_RECOVERY_ATTEMPTS = 4;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @PluginMethod
@@ -151,7 +155,9 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
     }
 
     @Override
-    public void onReadyForSpeech(Bundle params) {}
+    public void onReadyForSpeech(Bundle params) {
+        recoveryAttempt = 0;
+    }
 
     @Override
     public void onBeginningOfSpeech() {}
@@ -167,13 +173,37 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
 
     @Override
     public void onError(int error) {
-        restartRecognizer();
+        if (!listeningRequested) return;
+
+        switch (error) {
+            case SpeechRecognizer.ERROR_NO_MATCH:
+            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+                // 無音・認識なしは通常の発話区切り。すぐ次を聞き始める。
+                scheduleRecognizerRestart(250, false, error);
+                break;
+            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+            case SpeechRecognizer.ERROR_SERVER_DISCONNECTED:
+            case SpeechRecognizer.ERROR_NETWORK:
+            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
+            case SpeechRecognizer.ERROR_SERVER:
+                // サービスとの接続が揺れた時は認識器を作り直して少し待つ。
+                scheduleRecognizerRestart(1000, true, error);
+                break;
+            default:
+                // マイク・権限など、再試行しても直らない可能性が高いエラーは
+                // ループせず、アプリ側へ理由を伝えて停止する。
+                notifySpeechError(error, false);
+                stopAndNotify();
+                break;
+        }
     }
 
     @Override
     public void onResults(Bundle results) {
         emitMatches("partialResults", results, true);
-        restartRecognizer();
+        // AndroidのSpeechRecognizerは1発話ごとに結果を返して終了する。
+        // これはユーザーがMICを止めた意味ではないので、同じ認識器を再開する。
+        scheduleRecognizerRestart(250, false, 0);
     }
 
     @Override
@@ -192,6 +222,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         JSObject data = new JSObject();
         data.put("matches", new JSArray(matches));
         data.put("isFinal", isFinal);
+        data.put("sessionId", recognitionSessionId);
         notifyListeners(eventName, data);
     }
 
@@ -205,6 +236,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         boolean wasListening = listening;
         listeningRequested = false;
         mainHandler.removeCallbacksAndMessages(null);
+        restartScheduled = false;
         listening = false;
         destroyRecognizer();
         BackgroundListeningService.stop(getContext());
@@ -213,34 +245,57 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         }
     }
 
+    private void notifySpeechError(int error, boolean willRetry) {
+        JSObject data = new JSObject();
+        data.put("code", error);
+        data.put("willRetry", willRetry);
+        notifyListeners("recognitionError", data);
+    }
+
     private void startRecognizer() {
-        destroyRecognizer();
-        recognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
-        recognizer.setRecognitionListener(this);
+        if (recognizer == null) {
+            recognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
+            recognizer.setRecognitionListener(this);
+        }
 
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language);
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, partialResults);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, maxResults);
+        // 長い言霊も途中で切れにくいよう、少し長めの無音を待つ。
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L);
         listening = true;
+        recognitionSessionId += 1;
         recognizer.startListening(intent);
     }
 
-    private void restartRecognizer() {
-        if (!listeningRequested) {
+    private void scheduleRecognizerRestart(long baseDelayMillis, boolean recreateRecognizer, int errorCode) {
+        if (!listeningRequested || restartScheduled) return;
+        if (recoveryAttempt >= MAX_RECOVERY_ATTEMPTS) {
+            notifySpeechError(errorCode, false);
             stopAndNotify();
             return;
         }
-        destroyRecognizer();
+
+        recoveryAttempt += 1;
+        restartScheduled = true;
+        listening = false;
+        if (recreateRecognizer) destroyRecognizer();
+        notifySpeechError(errorCode, true);
+        notifyListeningState("recovering");
+        long retryDelay = Math.min(baseDelayMillis * (1L << Math.min(recoveryAttempt - 1, 3)), 8000L);
         mainHandler.postDelayed(() -> {
+            restartScheduled = false;
             if (!listeningRequested) return;
             try {
                 startRecognizer();
             } catch (Exception error) {
-                stopAndNotify();
+                // 一時的な通信・認識サービスの揺れでは、間隔を広げて再試行する。
+                scheduleRecognizerRestart(1000, true, 0);
             }
-        }, 250);
+        }, retryDelay);
     }
 
     private void destroyRecognizer() {
@@ -255,6 +310,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
     protected void handleOnDestroy() {
         listeningRequested = false;
         mainHandler.removeCallbacksAndMessages(null);
+        restartScheduled = false;
         destroyRecognizer();
         BackgroundListeningService.stop(getContext());
         super.handleOnDestroy();
