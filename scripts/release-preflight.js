@@ -98,6 +98,7 @@ forbidText('main.js', "container.classList.add('word-received-pulse')");
 forbidText('main.js', 'renderCanvasArt(currentForm, ctx); // 少し揺らす');
 requireText('ios/App/App/Info.plist', 'NSSpeechRecognitionUsageDescription');
 requireText('ios/App/App/Info.plist', 'NSMicrophoneUsageDescription');
+requireText('.github/workflows/ios-build.yml', 'CURRENT_PROJECT_VERSION="$GITHUB_RUN_ID"');
 requireText('ios/App/App/Info.plist', 'UIInterfaceOrientationLandscapeLeft');
 requireText('ios/App/App/Info.plist', 'UIInterfaceOrientationLandscapeRight');
 requireText('plugins/kotodama-speech-recognition/Package.swift', 'KotodamaSpeechRecognition');

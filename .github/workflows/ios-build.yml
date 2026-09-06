@@ -93,7 +93,8 @@ jobs:
           # Use the exact UUID of the profile installed in the previous step.
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$RUNNER_TEMP/build_pp.plist")
           
-          # Build Archive
+          # Build Archive. Use the globally unique GitHub run ID so each upload is
+          # newer than every existing TestFlight build, including build 78.
           xcodebuild archive \
             -project App.xcodeproj \
             -scheme App \
@@ -104,8 +105,6 @@ jobs:
             DEVELOPMENT_TEAM="72SZ49GXQU" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            # TestFlightの既存1.0.10 build 78より必ず新しくする。workflow単位で
-            # 小さいrun_numberではなく、GitHub全体で一意なrun_idを使う。
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_ID"
           
           # Export ipa
