@@ -22,6 +22,7 @@ const androidManifestSource = fs.readFileSync(
   'utf8',
 );
 const appDelegateSource = fs.readFileSync(path.join(root, 'ios/App/App/AppDelegate.swift'), 'utf8');
+const onlineBattleWorkerSource = fs.readFileSync(path.join(root, 'online-battle/src/index.mjs'), 'utf8');
 
 function sourceBetween(startMarker, endMarker) {
   const start = mainSource.indexOf(startMarker);
@@ -553,6 +554,33 @@ test('オンライン対戦は通信断・再起動後にも本人トークン�
   assert.match(mainSource, /const session = onlineBattleSession/);
   assert.match(mainSource, /onlineBattleSession !== session/);
   assert.match(mainSource, /対戦へ再接続しています/);
+});
+
+test('オンライン対戦は新しい4桁コードと旧版の6桁コードを同じ入力・再接続経路で扱う', () => {
+  const onlineCodeSource = sourceBetween(
+    'const ONLINE_BATTLE_API_URL',
+    'const BATTLE_ACTIONS =',
+  );
+  const context = vm.createContext({ window: { KOTODAMA_ONLINE_BATTLE_API_URL: '' } });
+  vm.runInContext(`${onlineCodeSource}\nthis.normalizeOnlineBattleCode = normalizeOnlineBattleCode;`, context);
+
+  assert.equal(context.normalizeOnlineBattleCode('1234'), '1234');
+  assert.equal(context.normalizeOnlineBattleCode('123456'), '123456');
+  assert.equal(context.normalizeOnlineBattleCode('12 34'), '1234');
+  assert.equal(context.normalizeOnlineBattleCode('12345'), null);
+  assert.match(indexSource, /id="onlineBattleCode"[^>]*maxlength="6"/);
+  assert.match(mainSource, /4桁または6桁の数字の招待コードを入力してね。/);
+  assert.match(onlineBattleWorkerSource, /const ROOM_CODE_LENGTH = 4;/);
+  assert.match(onlineBattleWorkerSource, /const LEGACY_ROOM_CODE_LENGTH = 6;/);
+  assert.match(onlineBattleWorkerSource, /ROOM_CODE_PATTERN/);
+});
+
+test('祈り合わせの表記・通知案内・図鑑の護り神の説明を表示する', () => {
+  assert.match(indexSource, /斉藤ひとりさんとともに[\s\S]*祈り合わせ/);
+  assert.match(mainSource, /NOON_RITUAL_DISPLAY_NAME = '斉藤ひとりさんとともに\\n祈り合わせ'/);
+  assert.match(styleSource, /\.noon-notification-status \{[^}]*font-size: 0\.84rem;[^}]*font-weight: bold;/);
+  assert.match(mainSource, /childB_2_4: \{[\s\S]*?銀座まるかんの護り神/);
+  assert.match(mainSource, /childC_1_4: \{[\s\S]*?銀座まるかんの護り神/);
 });
 
 test('究極進化に失敗した結果文と次回目標が暗転後に残る', () => {

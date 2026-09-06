@@ -14,6 +14,8 @@ import {
 const ROOM_TTL_MS = 15 * 60 * 1000;
 const RANKING_RETRY_MS = 30 * 1000;
 const ROOM_CODE_LENGTH = 4;
+const LEGACY_ROOM_CODE_LENGTH = 6;
+const ROOM_CODE_PATTERN = `(?:\\d{${ROOM_CODE_LENGTH}}|\\d{${LEGACY_ROOM_CODE_LENGTH}})`;
 const ROOM_CREATE_ATTEMPTS = 12;
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 const HTML_HEADERS = {
@@ -399,7 +401,7 @@ export default {
 
     const profileMatch = url.pathname.match(/^\/v1\/profiles(?:\/([^/]+))?$/);
     const isWeeklyRankings = url.pathname === '/v1/rankings/weekly';
-    const match = url.pathname.match(new RegExp(`^/v1/rooms(?:/(\\d{${ROOM_CODE_LENGTH}})(/socket)?)?$`));
+    const match = url.pathname.match(new RegExp(`^/v1/rooms(?:/(${ROOM_CODE_PATTERN})(/socket)?)?$`));
 
     try {
       if (profileMatch && !profileMatch[1] && request.method === 'POST') {

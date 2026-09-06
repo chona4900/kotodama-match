@@ -767,6 +767,7 @@
         const NOON_THANKS_PHRASE = '宇宙の調和に感謝します';
         const NOON_FUTURE_PHRASE = 'だんだんよくなる明るい未来';
         const LEGACY_NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
+        const NOON_RITUAL_DISPLAY_NAME = '斉藤ひとりさんとともに\n祈り合わせ';
         let noonRitualState = window.KotodamaNoonRitual.createState();
         let noonNotificationListenersReady = false;
         let noonNotificationStatusRequest = 0;
@@ -1252,21 +1253,21 @@
             noonFutureProgressEl.textContent = `${futureCount} / 3`;
             noonThanksCardEl.classList.toggle('complete', thanksCount >= 3);
             noonFutureCardEl.classList.toggle('complete', futureCount >= 3);
-            if (noonRitualTitleEl) noonRitualTitleEl.textContent = isPrayerTime ? '🌙 祈り合わせのことだま 🌙' : '☀ 正午のことだま ☀';
+            if (noonRitualTitleEl) noonRitualTitleEl.textContent = NOON_RITUAL_DISPLAY_NAME;
             if (noonRitualLeadEl) noonRitualLeadEl.textContent = 'MICを押して、2つの言霊を3回ずつ言おう';
             if (noonRitualSpecialMessageEl) noonRitualSpecialMessageEl.hidden = !isPrayerTime;
 
             const isAvailable = isNoonRitualAvailable();
             if (slotState.rewarded) {
-                noonRitualStatusEl.textContent = `${isPrayerTime ? '祈り合わせ' : '正午のことだま'}達成！ 徳が1たまりました`;
+                noonRitualStatusEl.textContent = '祈り合わせ達成！ 徳が1たまりました';
             } else if (!isAvailable) {
                 noonRitualStatusEl.textContent = window.KotodamaNoonRitual.isSpecialPrayerDay(now)
                     ? '毎日12:00〜12:00:59、1日・15日は19:00〜19:00:59にもできます'
-                    : '正午のことだまは毎日12:00〜12:00:59だけできます';
+                    : '祈り合わせは毎日12:00〜12:00:59だけできます';
             } else if (window.KotodamaNoonRitual.isComplete(noonRitualState, now)) {
                 noonRitualStatusEl.textContent = '達成！ 徳をためています…';
             } else {
-                noonRitualStatusEl.textContent = `${isPrayerTime ? '祈り合わせ' : '本日'}の進み具合 ${thanksCount + futureCount} / 6`;
+                noonRitualStatusEl.textContent = `祈り合わせの進み具合 ${thanksCount + futureCount} / 6`;
             }
             updateNoonRitualMicButton();
         }
@@ -1373,7 +1374,7 @@
                 notifications: [
                     {
                         id: NOON_NOTIFICATION_ID,
-                        title: '正午のことだま',
+                        title: '斉藤ひとりさんとともに祈り合わせ',
                         body: '12時に2つの言霊を3回ずつ唱えて、徳を積みましょう。',
                         sound: 'default',
                         foreground: true,
@@ -1387,7 +1388,7 @@
                     },
                     {
                         id: PRAYER_NOTIFICATION_FIRST_ID,
-                        title: '祈り合わせのことだま',
+                        title: '斉藤ひとりさんとともに祈り合わせ',
                         body: '今日は1日。19時に2つの言霊を3回ずつ唱えましょう。',
                         sound: 'default',
                         foreground: true,
@@ -1401,7 +1402,7 @@
                     },
                     {
                         id: PRAYER_NOTIFICATION_FIFTEENTH_ID,
-                        title: '祈り合わせのことだま',
+                        title: '斉藤ひとりさんとともに祈り合わせ',
                         body: '今日は15日。19時に2つの言霊を3回ずつ唱えましょう。',
                         sound: 'default',
                         foreground: true,
@@ -2402,10 +2403,10 @@
                 text: '孔雀は、猛毒を持つサソリや蛇を好んで食べても美しい姿でパワフルで性質があります。そこから、「人間の心にある猛毒（煩悩や苦しみ）を喰らい尽くし、清浄な状態に変えてくれる」懐の深い神様'
             },
             childB_2_4: {
-                text: '現最強の軍神・雷神であり、剣の神実的な豊かさ＋見えない運の両方 地震は巨大な「大鯰（おおなまず）」が暴れて起こるものと信じられていましたが、タケミカヅチはその鯰を「要石（かなめいし）」で押さえつけて鎮めている神様'
+                text: '現最強の軍神・雷神であり、剣の神実的な豊かさ＋見えない運の両方 地震は巨大な「大鯰（おおなまず）」が暴れて起こるものと信じられていましたが、タケミカヅチはその鯰を「要石（かなめいし）」で押さえつけて鎮めている神様\n銀座まるかんの護り神'
             },
             childC_1_4: {
-                text: 'たけみかずちの神と兄弟　静かだけどめちゃ強い武神\n「戦う」よりも整えて勝つタイプ\n秩序・ルール・調和を司る　フツフツとひらめきがいただけるかも'
+                text: 'たけみかずちの神と兄弟　静かだけどめちゃ強い武神\n「戦う」よりも整えて勝つタイプ\n秩序・ルール・調和を司る　フツフツとひらめきがいただけるかも\n銀座まるかんの護り神'
             },
             childB_2: {
                 text: '鳳凰は「魂の完全な解放」と「祝福」のシンボルです\n過去の傷や深刻さを手放し「フワッと軽い心」明るい人のもとへ、圧倒的な幸運を運びます\nものごとを俯瞰できて、愛と豊かさを周りを笑顔にする調和のエネルギーです'
@@ -4057,6 +4058,7 @@
         let selectedBattleAction = null;
         let pendingBattleOptions = null;
         const ONLINE_BATTLE_API_URL = String(window.KOTODAMA_ONLINE_BATTLE_API_URL || '').replace(/\/$/, '');
+        const ONLINE_BATTLE_CODE_PATTERN = /^(?:\d{4}|\d{6})$/;
         let onlineBattleSession = null;
         const ONLINE_BATTLE_SESSION_STORAGE_KEY = 'kotodama_online_battle_session_v1';
         const ONLINE_PROFILE_STORAGE_KEY = 'kotodama_online_profile_v1';
@@ -4072,6 +4074,11 @@
         let postMatchAutoCloseTimer = null;
         let onlineDataGeneration = 0;
         let onlineRoomRequestInFlight = false;
+
+        function normalizeOnlineBattleCode(value) {
+            const code = String(value || '').replace(/\D/g, '');
+            return ONLINE_BATTLE_CODE_PATTERN.test(code) ? code : null;
+        }
         let onlineRoomRequestGeneration = 0;
         let pendingOnlineConsentTarget = null;
 
@@ -4277,12 +4284,13 @@
         function restoreOnlineBattleSession() {
             try {
                 const saved = JSON.parse(localStorage.getItem(ONLINE_BATTLE_SESSION_STORAGE_KEY) || 'null');
-                if (!saved || !/^\d{4}$/.test(String(saved.code || '')) || typeof saved.token !== 'string'
+                const code = normalizeOnlineBattleCode(saved?.code);
+                if (!saved || !code || typeof saved.token !== 'string'
                     || !['host', 'guest'].includes(saved.seat) || Number(saved.expiresAt) <= Date.now()) {
                     clearPersistedOnlineBattleSession();
                     return null;
                 }
-                return { code: saved.code, token: saved.token, seat: saved.seat, expiresAt: Number(saved.expiresAt), started: false, socket: null, reconnectAttempts: 0 };
+                return { code, token: saved.token, seat: saved.seat, expiresAt: Number(saved.expiresAt), started: false, socket: null, reconnectAttempts: 0 };
             } catch (error) {
                 clearPersistedOnlineBattleSession();
                 return null;
@@ -4650,11 +4658,15 @@
                     method: 'POST', body: JSON.stringify(requestBody)
                 });
                 if (requestGeneration !== onlineRoomRequestGeneration) return;
-                onlineBattleSession = { code: data.code, token: data.playerToken, seat: 'host', expiresAt: data.expiresAt, started: false, socket: null, reconnectAttempts: 0 };
+                const code = normalizeOnlineBattleCode(data.code);
+                if (!code || typeof data.playerToken !== 'string') {
+                    throw new Error('対戦コードを確認できませんでした。もう一度部屋をつくってね。');
+                }
+                onlineBattleSession = { code, token: data.playerToken, seat: 'host', expiresAt: data.expiresAt, started: false, socket: null, reconnectAttempts: 0 };
                 persistOnlineBattleSession();
                 const codeInput = document.getElementById('onlineBattleCode');
-                if (codeInput) codeInput.value = data.code;
-                onlineBattleStatus(`招待コード: ${data.code}\n友だちに伝えて、入室を待ってね。`);
+                if (codeInput) codeInput.value = code;
+                onlineBattleStatus(`招待コード: ${code}\n友だちに伝えて、入室を待ってね。`);
                 connectOnlineBattleSocket();
             } catch (error) {
                 if (requestGeneration === onlineRoomRequestGeneration) onlineBattleStatus(error.message || '部屋をつくれませんでした。');
@@ -4666,9 +4678,9 @@
         async function joinOnlineBattleRoom() {
             if (onlineRoomRequestInFlight) return;
             playButtonSound();
-            const code = String(document.getElementById('onlineBattleCode')?.value || '').replace(/\D/g, '').slice(0, 4);
-            if (!/^\d{4}$/.test(code)) {
-                onlineBattleStatus('4桁の数字の招待コードを入力してね。');
+            const code = normalizeOnlineBattleCode(document.getElementById('onlineBattleCode')?.value);
+            if (!code) {
+                onlineBattleStatus('4桁または6桁の数字の招待コードを入力してね。');
                 return;
             }
             abandonWaitingOnlineBattle();
