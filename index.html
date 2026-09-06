@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>コトダマっち</title>
-    <link rel="stylesheet" href="style.css?v=23">
+    <link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -601,7 +601,7 @@
     <script src="state-migrations.js?v=2"></script>
     <script src="noon-ritual.js?v=1"></script>
     <script src="online-battle-config.js?v=1"></script>
-    <script src="main.js?v=31"></script>
+    <script src="main.js?v=32"></script>
     
     <!-- 画像の白背景を透過し、黒線を液晶緑色にするSVGフィルター -->
     <svg width="0" height="0" style="position:absolute; width:0; height:0;">
@@ -621,9 +621,9 @@
         </filter>
     </svg>
                 <!-- Zukan Detail Overlay -->
-                <div class="zukan-detail-overlay" id="zukanDetailOverlay">
+                <div class="zukan-detail-overlay" id="zukanDetailOverlay" role="dialog" aria-modal="true" aria-label="図鑑の詳細" aria-hidden="true">
                     <div class="zukan-detail-container">
-                        <button id="closeZukanDetailBtn" class="close-zukan-detail-btn">×</button>
+                        <button id="closeZukanDetailBtn" class="close-zukan-detail-btn" aria-label="図鑑の詳細を閉じる">×</button>
                         <div class="zukan-detail-top">
                             <div class="zukan-detail-image-wrapper">
                                 <canvas id="zukanDetailCanvas" width="96" height="96"></canvas>

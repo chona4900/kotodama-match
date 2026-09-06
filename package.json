@@ -24,12 +24,12 @@
     "@capacitor/core": "^8.3.0",
     "@capacitor/ios": "^8.3.0",
     "@capacitor/local-notifications": "^8.0.0",
-    "@kotodama/speech-recognition": "file:plugins/kotodama-speech-recognition",
-    "jimp": "^1.6.1"
+    "@kotodama/speech-recognition": "file:plugins/kotodama-speech-recognition"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.3.0",
+    "jimp": "^1.6.1",
     "live-server": "^1.2.2",
     "wrangler": "^4.116.0"
   }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mobile Game Quality Audit"
+  short_description: "iOS・Androidゲームの横断バグ監査と再発防止"
+  default_prompt: "Use $mobile-game-quality-audit to audit this mobile game across iOS and Android."

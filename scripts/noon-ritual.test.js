@@ -1,6 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const ritual = require('../noon-ritual.js');
+
+const ROOT = path.resolve(__dirname, '..');
+const mainSource = fs.readFileSync(path.join(ROOT, 'main.js'), 'utf8');
+const androidManifest = fs.readFileSync(path.join(ROOT, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
 
 const DAY_ONE = new Date(2026, 7, 1, 12, 0, 0);
 const DAY_TWO = new Date(2026, 7, 2, 9, 0, 0);
@@ -62,4 +68,17 @@ test('日付が変わると各時間の進捗と報酬状態をリセットす�
     assert.equal(nextDay.date, '2026-08-02');
     assert.equal(ritual.getSlotState(nextDay, ritual.NOON_SLOT, DAY_TWO).counts[THANKS], 0);
     assert.equal(ritual.getSlotState(nextDay, ritual.NOON_SLOT, DAY_TWO).rewarded, false);
+});
+
+test('Androidの60秒イベント通知は正確なアラーム権限と設定状態を扱う', () => {
+    assert.match(androidManifest, /android\.permission\.SCHEDULE_EXACT_ALARM/);
+    assert.match(mainSource, /checkExactNotificationSetting/);
+    assert.match(mainSource, /changeExactNotificationSetting/);
+    assert.match(mainSource, /result\?\.warning/);
+    assert.match(mainSource, /アラームとリマインダー/);
+});
+
+test('通知設定の案内はiOS固定ではなく両OSで通じる表現になっている', () => {
+    assert.doesNotMatch(mainSource, /iPhoneの「設定 ＞ 通知 ＞ コトダマっち」/);
+    assert.match(mainSource, /端末の「設定 ＞ 通知 ＞ コトダマっち」/);
 });

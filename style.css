@@ -11,6 +11,10 @@
             overscroll-behavior: none;
         }
 
+        button {
+            touch-action: manipulation;
+        }
+
         body {
             font-family: var(--app-font);
             background: var(--device-bg);
@@ -1108,7 +1112,6 @@ body, html { overflow-x: hidden; }
     .noon-notification-prompt { justify-content: flex-start !important; overflow-y: auto !important; }
 }
 
-
 .controls { justify-content: center !important; }
 
 
@@ -1413,4 +1416,37 @@ html, body { max-width: 100vw; width: 100%; height: 100%; overflow: hidden; posi
         0% { transform: translateY(0); opacity: 1; }
         100% { transform: translateY(8px); opacity: 0.55; }
     }
+}
+
+/* Android・iPadの低い横画面でも、5つの主要操作を1列で画面内に保つ。 */
+@media (orientation: landscape) and (max-height: 500px) {
+    body { padding: 0 !important; }
+    .device {
+        width: 100vw !important;
+        max-width: none !important;
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        padding: max(6px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        justify-content: flex-start !important;
+    }
+    .device-title { margin: 0 0 3px !important; font-size: 1rem !important; line-height: 1.1; }
+    .screen-container {
+        flex: 1 !important;
+        min-height: 0 !important;
+        width: min(100%, 320px) !important;
+        margin: 0 auto 4px !important;
+        padding: 6px !important;
+    }
+    .screen { flex: 1 !important; min-height: 0 !important; height: auto !important; }
+    .controls {
+        width: 100% !important;
+        max-width: 430px !important;
+        flex-wrap: nowrap !important;
+        gap: clamp(5px, 2vw, 14px) !important;
+        margin: 2px auto 0 !important;
+    }
+    .btn-round { width: 58px !important; height: 58px !important; flex: 0 0 58px; font-size: 0.86rem !important; }
+    .btn-label { margin-top: 2px !important; font-size: 0.7rem !important; }
 }

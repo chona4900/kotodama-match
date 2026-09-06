@@ -21,9 +21,10 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
     private var audioEngine: AVAudioEngine?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
+    private var recognitionSessionId = 0
 
     @objc func available(_ call: CAPPluginCall) {
-        call.resolve(["available": SFSpeechRecognizer()?.isAvailable ?? false])
+        call.resolve(["available": SFSpeechRecognizer(locale: Locale(identifier: "ja-JP"))?.isAvailable ?? false])
     }
 
     @objc func start(_ call: CAPPluginCall) {
@@ -53,9 +54,12 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         speechRecognizer = recognizer
+        recognitionSessionId += 1
+        let sessionId = recognitionSessionId
         let engine = AVAudioEngine()
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = partialResults
+        request.taskHint = .dictation
         audioEngine = engine
         recognitionRequest = request
 
@@ -65,25 +69,28 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
 
             let inputNode = engine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-                self?.recognitionRequest?.append(buffer)
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self, request] buffer, _ in
+                guard let self, self.recognitionSessionId == sessionId else { return }
+                request.append(buffer)
             }
 
             recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                guard let self else { return }
+                guard let self, self.recognitionSessionId == sessionId else { return }
 
                 if let result {
                     let matches = Array(result.transcriptions.prefix(maxResults)).map(\.formattedString)
                     if partialResults {
                         self.notifyListeners("partialResults", data: [
                             "matches": matches,
-                            "isFinal": result.isFinal
+                            "isFinal": result.isFinal,
+                            "sessionId": sessionId
                         ])
                     } else if result.isFinal {
                         call.resolve(["matches": matches])
                     }
                     if result.isFinal {
                         self.stopRecognition(notify: true)
+                        return
                     }
                 }
 
@@ -199,6 +206,8 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private func stopRecognition(notify: Bool) {
         let wasRunning = audioEngine?.isRunning == true
+        // cancel()後に届く古いコールバックが、次の認識セッションを止めないよう無効化する。
+        recognitionSessionId += 1
         audioEngine?.stop()
         audioEngine?.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()

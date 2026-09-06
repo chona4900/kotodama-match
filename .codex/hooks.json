@@ -1,0 +1,18 @@
+{
+  "description": "Load the reusable mobile-game audit workflow only for relevant QA prompts.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/mobile-quality-context.mjs\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$projectRoot = git rev-parse --show-toplevel; node (Join-Path $projectRoot '.codex/hooks/mobile-quality-context.mjs')\"",
+            "timeout": 5,
+            "statusMessage": "Checking whether mobile QA guidance applies"
+          }
+        ]
+      }
+    ]
+  }
+}

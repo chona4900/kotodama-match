@@ -3,6 +3,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- 60秒間だけ有効な正午イベントへ、端末がスリープ中でも時刻どおり案内する。 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Android 11以降でも端末に入っている音声認識サービスを見つけられるようにする。 -->
     <queries>

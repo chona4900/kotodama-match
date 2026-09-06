@@ -7,6 +7,8 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const mainSource = fs.readFileSync(path.join(root, 'main.js'), 'utf8');
 const dataSource = fs.readFileSync(path.join(root, 'data.js'), 'utf8');
+const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const styleSource = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
 const speechPluginSource = fs.readFileSync(
   path.join(root, 'plugins/kotodama-speech-recognition/ios/Sources/KotodamaSpeechRecognitionPlugin/SpeechRecognitionPlugin.swift'),
   'utf8',
@@ -390,13 +392,21 @@ test('iOS audio output can recover after mute, interruption, or app resume', () 
 });
 
 test('Androidは発話ごとの認識終了後もMICを止めず、状況に応じて安全に再接続する', () => {
-  assert.match(androidSpeechPluginSource, /public void onResults\(Bundle results\)[\s\S]*?scheduleRecognizerRestart\(250, false, 0\);/);
-  assert.match(androidSpeechPluginSource, /ERROR_NO_MATCH:[\s\S]*?scheduleRecognizerRestart\(250, false, error\);/);
-  assert.match(androidSpeechPluginSource, /ERROR_RECOGNIZER_BUSY:[\s\S]*?scheduleRecognizerRestart\(1000, true, error\);/);
-  assert.match(androidSpeechPluginSource, /private void scheduleRecognizerRestart\(long baseDelayMillis, boolean recreateRecognizer, int errorCode\)[\s\S]*?if \(!listeningRequested \|\| restartScheduled\) return;/);
+  assert.match(androidSpeechPluginSource, /public void onResults\(Bundle results\)[\s\S]*?recoveryAttempt = 0;[\s\S]*?scheduleRecognizerRestart\(250, true, 0, false\);/);
+  assert.match(androidSpeechPluginSource, /ERROR_NO_MATCH:[\s\S]*?scheduleRecognizerRestart\(250, true, 0, false\);/);
+  assert.match(androidSpeechPluginSource, /ERROR_CLIENT:[\s\S]*?ERROR_RECOGNIZER_BUSY:[\s\S]*?scheduleRecognizerRestart\(1000, true, error, true\);/);
+  assert.match(androidSpeechPluginSource, /ERROR_TOO_MANY_REQUESTS:[\s\S]*?scheduleRecognizerRestart\(2000, true, error, true\);/);
+  assert.match(androidSpeechPluginSource, /private void scheduleRecognizerRestart\([\s\S]*?boolean countRecoveryAttempt[\s\S]*?if \(!listeningRequested \|\| restartScheduled\) return;/);
   assert.match(androidSpeechPluginSource, /MAX_RECOVERY_ATTEMPTS = 4/);
+  assert.match(androidSpeechPluginSource, /if \(countRecoveryAttempt\) recoveryAttempt \+= 1;/);
+  assert.match(androidSpeechPluginSource, /if \(countRecoveryAttempt\) notifySpeechError\(errorCode, true\);/);
+  assert.match(androidSpeechPluginSource, /result\.put\("listening", listeningRequested\)/);
   assert.match(androidSpeechPluginSource, /notifyListeners\("recognitionError", data\)/);
-  assert.match(androidSpeechPluginSource, /if \(recognizer == null\) \{[\s\S]*?SpeechRecognizer\.createSpeechRecognizer/);
+  assert.match(androidSpeechPluginSource, /recognizer = SpeechRecognizer\.createSpeechRecognizer/);
+  assert.match(androidSpeechPluginSource, /setRecognitionListener\(new SessionRecognitionListener\(sessionId\)\)/);
+  assert.match(androidSpeechPluginSource, /return listeningRequested && recognitionSessionId == sessionId/);
+  assert.match(androidSpeechPluginSource, /private void destroyRecognizer\(\) \{[\s\S]*?recognitionSessionId \+= 1/);
+  assert.match(androidSpeechPluginSource, /if \(listening \|\| listeningRequested \|\| restartScheduled\)/);
   assert.match(androidSpeechPluginSource, /EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L/);
   assert.match(androidSpeechPluginSource, /recognitionSessionId \+= 1/);
   assert.match(androidSpeechPluginSource, /data\.put\("sessionId", recognitionSessionId\)/);
@@ -412,6 +422,64 @@ test('iOSは発話ごとの終了後に次の言霊を待ち、画面復帰時�
   assert.match(mainSource, /function syncNativeSpeechState\(\)/);
   assert.match(mainSource, /appStateChange/);
   assert.match(mainSource, /const WORD_MATCH_COOLDOWN_MS = 250/);
+  assert.match(speechPluginSource, /private var recognitionSessionId = 0/);
+  assert.match(speechPluginSource, /self\.recognitionSessionId == sessionId/);
+  assert.match(speechPluginSource, /"sessionId": sessionId/);
+  assert.match(speechPluginSource, /\[weak self, request\][\s\S]*?self\.recognitionSessionId == sessionId[\s\S]*?request\.append\(buffer\)/);
+  assert.match(mainSource, /data\.matches\.length > 0[\s\S]{0,240}?nativeRestartAttempt = 0/);
+  assert.doesNotMatch(mainSource, /status === 'started'\) \{[\s\S]{0,240}?nativeRestartAttempt = 0/);
+});
+
+test('オンライン作戦の送信前に切断したら、自動再送せず再選択へ戻す', () => {
+  const submitSource = sourceBetween(
+    'function restoreOnlineBattleActionChoice(action, options)',
+    'function updateOpponentStampMessage()',
+  );
+  const visible = new Set();
+  const sent = [];
+  const panel = { classList: { add(value) { visible.add(value); } } };
+  const context = vm.createContext({
+    selectedBattleAction: 'attack',
+    pendingBattleOptions: null,
+    onlineBattleSession: { socket: { readyState: 0, send(value) { sent.push(value); } } },
+    WebSocket: { OPEN: 1 },
+    battleMessageEl: { textContent: '', style: {} },
+    document: { getElementById: () => panel },
+    console: { warn() {} },
+  });
+  vm.runInContext(`${submitSource}\nthis.submitOnlineBattleAction = submitOnlineBattleAction;`, context);
+
+  assert.equal(context.submitOnlineBattleAction('attack', { online: true, forceMiracle: false }), false);
+  assert.equal(context.selectedBattleAction, null);
+  assert.equal(context.pendingBattleOptions.online, true);
+  assert.equal(visible.has('visible'), true);
+  assert.equal(sent.length, 0);
+
+  context.selectedBattleAction = 'guard';
+  context.pendingBattleOptions = null;
+  context.onlineBattleSession.socket.readyState = 1;
+  assert.equal(context.submitOnlineBattleAction('guard', { online: true }), true);
+  assert.deepEqual(JSON.parse(sent[0]), { type: 'choose', action: 'guard' });
+  assert.equal(context.selectedBattleAction, 'guard');
+});
+
+test('モバイル画面はピンチ拡大を許可し、低い横画面でも主要操作を1列に保つ', () => {
+  assert.doesNotMatch(indexSource, /user-scalable\s*=\s*no|maximum-scale\s*=/i);
+  assert.doesNotMatch(mainSource, /preventViewportZoom|gesturestart|event\.touches\.length > 1/);
+  assert.match(styleSource, /button\s*\{[\s\S]*?touch-action:\s*manipulation/);
+  assert.match(styleSource, /@media \(orientation: landscape\) and \(max-height: 500px\)[\s\S]*?flex-wrap:\s*nowrap !important/);
+  assert.match(indexSource, /id="zukanDetailOverlay"[^>]*role="dialog"[^>]*aria-modal="true"[^>]*aria-hidden="true"/);
+  assert.match(indexSource, /id="closeZukanDetailBtn"[^>]*aria-label=/);
+});
+
+test('初回チュートリアル成功後もMICを止めず連続して言霊を待つ', () => {
+  const tutorialSuccessSource = sourceBetween(
+    'function handleTutorialWordRecognized(word)',
+    'function finishTutorial()',
+  );
+
+  assert.doesNotMatch(tutorialSuccessSource, /stopMic\(\)/);
+  assert.match(tutorialSuccessSource, /MICはそのまま聞き取り中/);
 });
 
 test('転生しても累計の言霊回数を残し、今回の進化回数だけを戻す', () => {

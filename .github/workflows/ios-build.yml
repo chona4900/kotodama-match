@@ -29,7 +29,10 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Run shared regression tests
+        run: npm test
 
       - name: Build Web Assets
         run: npm run build
@@ -112,7 +115,6 @@ jobs:
             -allowProvisioningUpdates
 
       - name: Upload IPA artifact
-        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: app-ipa

@@ -33,6 +33,13 @@ jobs:
       - name: Sync Capacitor for Android
         run: npx cap sync android
 
+      - name: Run web and Android regression checks
+        run: |
+          npm test
+          cd android
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest lintDebug --stacktrace
+
       - name: Restore Android upload key
         env:
           ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}

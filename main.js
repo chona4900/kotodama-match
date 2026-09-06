@@ -1119,10 +1119,9 @@
 
         function handleTutorialWordRecognized(word) {
             if (tutorialStep !== 2) return;
-            stopMic();
             clearTutorialHighlights();
             canvas.classList.add('tutorial-highlight');
-            showTutorialCoach(3, 'はじめの一歩、成功！', `「${word}」が届いたよ。次は10回の特別演出を目指そう！`, true);
+            showTutorialCoach(3, 'はじめの一歩、成功！', `「${word}」が届いたよ。MICはそのまま聞き取り中。次は10回の特別演出を目指そう！`, true);
         }
 
         function finishTutorial() {
@@ -1147,6 +1146,18 @@
             return window.Capacitor.Plugins?.LocalNotifications || null;
         }
 
+        function isAndroidNativePlatform() {
+            return window.Capacitor?.getPlatform?.() === 'android';
+        }
+
+        async function getExactAlarmSetting(notifications) {
+            if (!isAndroidNativePlatform() || typeof notifications?.checkExactNotificationSetting !== 'function') {
+                return 'granted';
+            }
+            const setting = await notifications.checkExactNotificationSetting();
+            return setting?.exact_alarm || 'prompt';
+        }
+
         async function refreshNoonNotificationStatus() {
             if (!noonNotificationStatusEl) return;
             const requestId = ++noonNotificationStatusRequest;
@@ -1160,11 +1171,17 @@
                 const permission = await notifications.checkPermissions();
                 if (requestId !== noonNotificationStatusRequest) return;
                 if (permission.display === 'granted') {
-                    noonNotificationStatusEl.textContent = '通知は許可済みです（iPhoneの「設定 ＞ 通知 ＞ コトダマっち」から変更できます）';
+                    const exactAlarm = await getExactAlarmSetting(notifications);
+                    if (requestId !== noonNotificationStatusRequest) return;
+                    if (isAndroidNativePlatform() && exactAlarm !== 'granted') {
+                        noonNotificationStatusEl.textContent = '通知は許可済みです。時刻どおり受け取るにはAndroid設定の「アラームとリマインダー」も許可してください';
+                    } else {
+                        noonNotificationStatusEl.textContent = '通知は許可済みです（端末の「設定 ＞ 通知 ＞ コトダマっち」から変更できます）';
+                    }
                 } else if (permission.display === 'denied') {
-                    noonNotificationStatusEl.textContent = '通知はオフです。iPhoneの「設定 ＞ 通知 ＞ コトダマっち」でオンにしてください';
+                    noonNotificationStatusEl.textContent = '通知はオフです。端末の「設定 ＞ 通知 ＞ コトダマっち」でオンにしてください';
                 } else {
-                    noonNotificationStatusEl.textContent = '「通知を設定」をタップして許可すると、iPhoneの通知一覧にコトダマっちが表示されます';
+                    noonNotificationStatusEl.textContent = '「通知を設定」をタップして許可すると、端末の通知一覧にコトダマっちが表示されます';
                 }
             } catch (error) {
                 if (requestId === noonNotificationStatusRequest) {
@@ -1345,14 +1362,14 @@
 
         async function scheduleNoonNotification() {
             const notifications = getLocalNotificationsPlugin();
-            if (!notifications) return false;
+            if (!notifications) return { scheduled: false, exact: false, warning: null };
 
             await notifications.cancel({ notifications: [
                 { id: NOON_NOTIFICATION_ID },
                 { id: PRAYER_NOTIFICATION_FIRST_ID },
                 { id: PRAYER_NOTIFICATION_FIFTEENTH_ID }
             ] });
-            await notifications.schedule({
+            const result = await notifications.schedule({
                 notifications: [
                     {
                         id: NOON_NOTIFICATION_ID,
@@ -1398,7 +1415,11 @@
                     }
                 ]
             });
-            return true;
+            return {
+                scheduled: true,
+                exact: !result?.warning,
+                warning: result?.warning || null
+            };
         }
 
         async function initNoonNotifications() {
@@ -1452,8 +1473,19 @@
                 if (permission.display !== 'granted') permission = await notifications.requestPermissions();
                 openNoonRitual(false);
                 if (permission.display === 'granted') {
-                    await scheduleNoonNotification();
-                    noonRitualStatusEl.textContent = '毎日11:59の通知を設定しました';
+                    let exactAlarm = await getExactAlarmSetting(notifications);
+                    if (isAndroidNativePlatform()
+                        && exactAlarm !== 'granted'
+                        && typeof notifications.changeExactNotificationSetting === 'function') {
+                        const changedSetting = await notifications.changeExactNotificationSetting();
+                        exactAlarm = changedSetting?.exact_alarm || exactAlarm;
+                    }
+                    const scheduleResult = await scheduleNoonNotification();
+                    if (isAndroidNativePlatform() && (exactAlarm !== 'granted' || !scheduleResult.exact)) {
+                        noonRitualStatusEl.textContent = '通知は設定しました。時刻どおり受け取るにはAndroid設定の「アラームとリマインダー」を許可してください';
+                    } else {
+                        noonRitualStatusEl.textContent = '毎日11:59の通知を設定しました';
+                    }
                 } else {
                     noonRitualStatusEl.textContent = '端末の設定で「通知」を許可してください';
                 }
@@ -1469,9 +1501,9 @@
             if (document.visibilityState !== 'visible') return;
             loadNoonRitualState();
             syncNativeSpeechState();
+            initNoonNotifications().catch(error => console.warn('通知の再確認に失敗しました。', error));
             if (noonRitualOverlayEl.classList.contains('visible')) {
                 renderNoonRitual();
-                refreshNoonNotificationStatus();
             }
         });
 
@@ -2496,7 +2528,10 @@
                             renderCanvasArt(key, detailCtx);
                             
                             playButtonSound();
-                            document.getElementById('zukanDetailOverlay').classList.add('visible');
+                            const detailOverlay = document.getElementById('zukanDetailOverlay');
+                            detailOverlay.classList.add('visible');
+                            detailOverlay.setAttribute('aria-hidden', 'false');
+                            document.getElementById('closeZukanDetailBtn')?.focus();
                         });
                     } else {
                         nameEl.textContent = '???';
@@ -2577,7 +2612,10 @@
                                 applyPixelFilter(zCtxDetail, 192, 192, itemData.filter || 'remove-white');
                             }
                         };
-                        document.getElementById('zukanDetailOverlay').classList.add('visible');
+                        const detailOverlay = document.getElementById('zukanDetailOverlay');
+                        detailOverlay.classList.add('visible');
+                        detailOverlay.setAttribute('aria-hidden', 'false');
+                        document.getElementById('closeZukanDetailBtn')?.focus();
                     });
 
                     if (itemData.src) {
@@ -3545,6 +3583,9 @@
                     await speechPlugin.removeAllListeners();
                     await speechPlugin.addListener('partialResults', (data) => {
                         if (data && data.matches && data.matches.length > 0) {
+                            // 「started」だけでは即時エラーとのループを成功扱いにしない。
+                            // 実際の認識結果が届いた時点で、再試行回数を戻す。
+                            nativeRestartAttempt = 0;
                             const sessionId = Number(data.sessionId);
                             if (Number.isFinite(sessionId) && sessionId > 0
                                 && sessionId !== nativeRecognitionSessionId) {
@@ -3559,7 +3600,6 @@
                         if (data && data.status === 'started') {
                             isListening = true;
                             isStartingMic = false;
-                            nativeRestartAttempt = 0;
                             nativeLastErrorMessage = '';
                             micBtnEl.classList.remove('mic-starting');
                             micBtnEl.classList.add('mic-active');
@@ -4755,14 +4795,32 @@
             }
         }
 
-        function submitOnlineBattleAction(action) {
+        function restoreOnlineBattleActionChoice(action, options) {
+            if (selectedBattleAction !== action || pendingBattleOptions) return;
+            selectedBattleAction = null;
+            pendingBattleOptions = { ...options, online: true };
+            const battleCommandPanel = document.getElementById('battleCommandPanel');
+            if (battleCommandPanel) battleCommandPanel.classList.add('visible');
+            battleMessageEl.textContent = '通信が切れました。再接続後に作戦を選び直してね。';
+            battleMessageEl.style.color = 'var(--screen-text)';
+            battleMessageEl.style.fontSize = '1.1rem';
+            battleMessageEl.style.display = 'block';
+        }
+
+        function submitOnlineBattleAction(action, options) {
             const socket = onlineBattleSession?.socket;
             if (!socket || socket.readyState !== WebSocket.OPEN) {
-                battleMessageEl.textContent = '通信が切れました。対戦をやり直してね。';
-                battleMessageEl.style.display = 'block';
-                return;
+                restoreOnlineBattleActionChoice(action, options);
+                return false;
             }
-            socket.send(JSON.stringify({ type: 'choose', action }));
+            try {
+                socket.send(JSON.stringify({ type: 'choose', action }));
+                return true;
+            } catch (error) {
+                console.warn('作戦を送信できませんでした。', error);
+                restoreOnlineBattleActionChoice(action, options);
+                return false;
+            }
         }
 
         function updateOpponentStampMessage() {
@@ -4984,7 +5042,7 @@
                     battleMessageEl.style.color = 'var(--screen-text)';
                     battleMessageEl.style.fontSize = '1.1rem';
                     battleMessageEl.style.display = 'block';
-                    submitOnlineBattleAction(action);
+                    submitOnlineBattleAction(action, options);
                 }, 900);
                 return;
             }
@@ -5460,28 +5518,9 @@
             }
         }
 
-        function preventViewportZoom() {
-            const cancelZoomGesture = (event) => event.preventDefault();
-            ['gesturestart', 'gesturechange', 'gestureend'].forEach(eventName => {
-                document.addEventListener(eventName, cancelZoomGesture, { passive: false });
-            });
-
-            document.addEventListener('touchmove', event => {
-                if (event.touches.length > 1) event.preventDefault();
-            }, { passive: false });
-
-            let lastTouchEnd = 0;
-            document.addEventListener('touchend', event => {
-                const now = Date.now();
-                if (now - lastTouchEnd < 320) event.preventDefault();
-                lastTouchEnd = now;
-            }, { passive: false });
-        }
-
         // 初回ロード
         window.onload = () => {
-            preventViewportZoom();
             init();
         };
 
-document.addEventListener('DOMContentLoaded', () => { const btn = document.getElementById('closeZukanDetailBtn'); if(btn) btn.addEventListener('click', () => { playButtonSound(); document.getElementById('zukanDetailOverlay').classList.remove('visible'); }); });
+document.addEventListener('DOMContentLoaded', () => { const btn = document.getElementById('closeZukanDetailBtn'); if(btn) btn.addEventListener('click', () => { playButtonSound(); const overlay = document.getElementById('zukanDetailOverlay'); overlay.classList.remove('visible'); overlay.setAttribute('aria-hidden', 'true'); }); });
