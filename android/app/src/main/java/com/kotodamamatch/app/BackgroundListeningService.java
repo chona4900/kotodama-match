@@ -36,7 +36,13 @@ public class BackgroundListeningService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) pendingIntentFlags |= PendingIntent.FLAG_IMMUTABLE;
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openAppIntent, pendingIntentFlags);
 
-        Notification notification = new Notification.Builder(this, CHANNEL_ID)
+        // Notification.Builder(Context, channelId) is Android 8+ only. The app
+        // still supports Android 7.0, where the channel-less constructor is the
+        // compatible equivalent (notification channels do not exist yet).
+        Notification.Builder notificationBuilder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? new Notification.Builder(this, CHANNEL_ID)
+            : new Notification.Builder(this);
+        Notification notification = notificationBuilder
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("コトダマっちが言霊をききとり中")
             .setContentText("マイクを止めるには、コトダマっちを開いてMICを押してください。")
