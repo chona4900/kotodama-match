@@ -104,7 +104,9 @@ jobs:
             DEVELOPMENT_TEAM="72SZ49GXQU" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
+            # TestFlightの既存1.0.10 build 78より必ず新しくする。workflow単位で
+            # 小さいrun_numberではなく、GitHub全体で一意なrun_idを使う。
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_ID"
           
           # Export ipa
           # Note: ExportOptions.plist is required for correct packaging. It can be provided as a secret or committed.
