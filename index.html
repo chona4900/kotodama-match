@@ -23,7 +23,7 @@
                     会: 0%<br>
                     陰徳: 0
                 </div>
-                <div class="battle-record-display" id="battleRecordDisplay" style="position: absolute; top: 30px; right: 12px; font-size: 1.15rem; line-height: 1.5; color: #0f380f; z-index: 10; font-family: 'Yu Gothic UI', Meiryo, sans-serif; font-weight: bold; text-align: right;">
+                <div class="battle-record-display" id="battleRecordDisplay">
                     戦歴<br>0勝<br>0敗
                 </div>
                 
@@ -46,12 +46,6 @@
                 <div class="stats-overlay" id="statsOverlay">
                     <div style="text-align:center; margin-bottom:5px; font-weight:bold; font-size:1.2rem;">★心のごはん★</div>
                     <div id="statsList"></div>
-                    <details class="speech-recognition-log-panel">
-                        <summary>ききとり記録（この端末だけ）</summary>
-                        <p>音声そのものは保存しません。端末が文字にした直近20件と、反応した言霊を表示します。</p>
-                        <div id="speechRecognitionLogList" class="speech-recognition-log-list">まだ記録はありません</div>
-                        <button type="button" class="speech-recognition-log-clear" onclick="clearSpeechRecognitionLog()">ききとり記録を消す</button>
-                    </details>
                     <div class="quick-settings" aria-label="保存設定">
                         <div class="save-protection-status">保存データ：自動予備保存 ON</div>
                     </div>

@@ -103,10 +103,18 @@
         }
 
         .status-text {
-            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            min-height: 2.5rem;
+            padding: 0 4px;
+            box-sizing: border-box;
+            font-size: 0.84rem;
+            line-height: 1.35;
             text-align: center;
-            height: 1.2rem;
-            margin-bottom: 5px;
+            white-space: pre-line;
+            margin-bottom: 4px;
         }
 
         /* 最終進化後だけ表示する転生タイマー。キャラクターの下に表示する。 */
@@ -189,7 +197,7 @@
 
         .main-stats-display {
             position: absolute;
-            top: 30px;
+            top: 52px;
             left: 12px;
             font-size: 1.15rem; /* 邏・.5蛟阪€懷€崎ｿ代￥縺ｫ諡｡螟ｧ縺励※隕冶ｪ肴€ｧ繧｢繝・・ */
             line-height: 1.5;
@@ -198,6 +206,19 @@
             font-family: var(--app-font);
             text-shadow: none;
             font-weight: bold;
+        }
+
+        .battle-record-display {
+            position: absolute;
+            top: 52px;
+            right: 12px;
+            color: var(--screen-text);
+            z-index: 10;
+            font-family: var(--app-font);
+            font-size: 1.15rem;
+            line-height: 1.5;
+            font-weight: bold;
+            text-align: right;
         }
 
         /* 繝励Ο繧ｰ繝ｬ繧ｹ繝舌・ */
@@ -258,24 +279,6 @@
         .save-protection-status {
             text-align: center; font-size: 0.65rem; font-weight: bold;
         }
-        .speech-recognition-log-panel {
-            margin-top: 10px; padding: 7px;
-            border: 1px dashed var(--screen-shadow); border-radius: 4px;
-            font-size: 0.65rem;
-        }
-        .speech-recognition-log-panel summary { cursor: pointer; font-weight: bold; }
-        .speech-recognition-log-panel p { margin: 6px 0; line-height: 1.45; }
-        .speech-recognition-log-list { display: grid; gap: 4px; max-height: 115px; overflow-y: auto; }
-        .speech-recognition-log-row {
-            padding: 4px; border-radius: 3px; background: rgba(255,255,255,0.35);
-            overflow-wrap: anywhere;
-        }
-        .speech-recognition-log-clear {
-            display: block; margin: 7px auto 0; padding: 4px 8px;
-            border: 1px solid var(--screen-text); border-radius: 3px;
-            background: transparent; color: var(--screen-text); font: inherit; font-weight: bold;
-        }
-
         .tutorial-coachmark {
             position: absolute; left: 20px; right: 20px; bottom: 116px; z-index: 500;
             display: none; padding: 11px; box-sizing: border-box;

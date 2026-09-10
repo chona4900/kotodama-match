@@ -587,7 +587,7 @@ test('究極進化の失敗で回数を4800へ巻き戻さず、二重抽選も�
 
   assert.doesNotMatch(mainSource, /totalCount\s*=\s*4800/);
   assert.doesNotMatch(addWordSource, /Math\.random\(\)\s*<\s*0\.05/);
-  assert.match(mainSource, /何も起きなかった。次は/);
+  assert.match(mainSource, /何も起きなかった。\\n次の挑戦まで/);
   assert.match(addWordSource, /cycleWordCounts\[word\] \+= count/);
   assert.match(addWordSource, /maybeStartUltimateEvolution\(\)/);
 });
@@ -670,6 +670,22 @@ test('究極進化に失敗した結果文と次回目標が暗転後に残る',
   assert.equal(context.totalCount, 4900);
   assert.equal(context.currentStage, 3);
   assert.equal(context.isEvolutionInProgress, false);
-  assert.equal(context.statusTextEl.textContent, '……しかし、何も起きなかった。次はあと 900 回で再挑戦！');
+  assert.equal(context.statusTextEl.textContent, '……しかし、何も起きなかった。\n次の挑戦まで あと 900回');
   assert.deepEqual({ ...updateOptions }, { preserveStatus: true, checkEvolution: false });
+});
+
+test('究極進化失敗の2行案内は能力値・戦歴より上に専用の高さを確保する', () => {
+  assert.match(styleSource, /\.status-text\s*\{[^}]*min-height:\s*2\.5rem;[^}]*white-space:\s*pre-line;/s);
+  assert.match(styleSource, /\.main-stats-display\s*\{[^}]*top:\s*52px;/s);
+  assert.match(styleSource, /\.battle-record-display\s*\{[^}]*top:\s*52px;/s);
+  assert.doesNotMatch(indexSource, /id="battleRecordDisplay"[^>]*style=/);
+});
+
+test('廃止したききとり記録は新規保存せず、旧端末の診断文字列だけを削除する', () => {
+  const loadSource = sourceBetween('function loadState()', '// --- 転生ロジック ---');
+
+  assert.doesNotMatch(indexSource, /ききとり記録|speechRecognitionLogList/);
+  assert.doesNotMatch(mainSource, /function recordSpeechRecognitionResult|function renderSpeechRecognitionLog/);
+  assert.doesNotMatch(styleSource, /speech-recognition-log/);
+  assert.match(loadSource, /localStorage\.removeItem\('kotodama_speech_recognition_log_v1'\)/);
 });

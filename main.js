@@ -115,8 +115,6 @@
 
         const KOKORO_GO_HAN_WORDS = [...WORD_GROUPS.A.words, ...WORD_GROUPS.B.words, ...WORD_GROUPS.C.words];
         const allWords = [...KOKORO_GO_HAN_WORDS, ...OYATSU_WORDS];
-        const SPEECH_RECOGNITION_LOG_STORAGE_KEY = 'kotodama_speech_recognition_log_v1';
-        const SPEECH_RECOGNITION_LOG_LIMIT = 20;
 
         let wordCounts = {};
         allWords.forEach(w => wordCounts[w] = 0);
@@ -887,6 +885,8 @@
                 // 音量は端末側で管理する。旧バージョンのアプリ内OFF設定は引き継がない。
                 soundEnabled = true;
                 localStorage.removeItem('kotodama_sound_enabled');
+                // 旧版の診断用「ききとり記録」は廃止したため、保存済み文字列も削除する。
+                localStorage.removeItem('kotodama_speech_recognition_log_v1');
                 const saved = localStorage.getItem('kotodama_state');
                 if (saved) {
                     let state;
@@ -2062,7 +2062,8 @@
                     updateUI({ preserveStatus: true, checkEvolution: false });
                     canvas.classList.remove('bouncing');
                     const remaining = Math.max(0, getNextUltimateEvolutionGoal() - totalCount);
-                    statusTextEl.textContent = `……しかし、何も起きなかった。次はあと ${remaining.toLocaleString('ja-JP')} 回で再挑戦！`;
+                    const remainingLabel = remaining.toLocaleString('ja-JP');
+                    statusTextEl.textContent = `……しかし、何も起きなかった。\n次の挑戦まで あと ${remainingLabel}回`;
                     setTimeout(() => checkRebirth(), 4000);
                     return; 
                 }
@@ -2300,7 +2301,6 @@
 
             if (nextPage === 1) {
                 updateStatsList();
-                renderSpeechRecognitionLog();
             }
             if (nextPage === 2) updateOyatsuList();
             if (nextPage === 3) renderZukan();
@@ -3277,77 +3277,6 @@
             ), candidates[0]);
         }
 
-        function getSpeechRecognitionLog() {
-            if (typeof localStorage === 'undefined') return [];
-            try {
-                const stored = JSON.parse(localStorage.getItem(SPEECH_RECOGNITION_LOG_STORAGE_KEY) || '[]');
-                return Array.isArray(stored) ? stored.slice(0, SPEECH_RECOGNITION_LOG_LIMIT) : [];
-            } catch {
-                return [];
-            }
-        }
-
-        function renderSpeechRecognitionLog() {
-            if (typeof document === 'undefined') return;
-            const container = document.getElementById('speechRecognitionLogList');
-            if (!container) return;
-            const entries = getSpeechRecognitionLog();
-            container.innerHTML = '';
-            if (entries.length === 0) {
-                container.textContent = 'まだ記録はありません';
-                return;
-            }
-            entries.forEach(entry => {
-                const row = document.createElement('div');
-                row.className = 'speech-recognition-log-row';
-                const heard = document.createElement('span');
-                heard.textContent = `「${entry.heard}」`;
-                const result = document.createElement('strong');
-                result.textContent = entry.matchedWords.length > 0
-                    ? ` → ${entry.matchedWords.join('・')}`
-                    : ' → 反応なし';
-                row.append(heard, result);
-                container.appendChild(row);
-            });
-        }
-
-        function recordSpeechRecognitionResult(rawTranscript, matchedWords) {
-            if (typeof localStorage === 'undefined') return;
-            const heard = String(rawTranscript || '').trim().slice(0, 80);
-            if (!heard) return;
-            const entries = getSpeechRecognitionLog();
-            const entry = {
-                at: Date.now(),
-                heard,
-                matchedWords: [...new Set(matchedWords)]
-            };
-            const previous = entries[0];
-            if (previous && previous.heard === entry.heard
-                && JSON.stringify(previous.matchedWords) === JSON.stringify(entry.matchedWords)
-                && entry.at - previous.at < 2000) {
-                entries[0] = entry;
-            } else {
-                entries.unshift(entry);
-            }
-            try {
-                localStorage.setItem(
-                    SPEECH_RECOGNITION_LOG_STORAGE_KEY,
-                    JSON.stringify(entries.slice(0, SPEECH_RECOGNITION_LOG_LIMIT))
-                );
-            } catch (error) {
-                console.warn('聞き取り記録を保存できませんでした。', error);
-            }
-            renderSpeechRecognitionLog();
-        }
-
-        function clearSpeechRecognitionLog() {
-            playButtonSound();
-            if (typeof localStorage !== 'undefined') {
-                localStorage.removeItem(SPEECH_RECOGNITION_LOG_STORAGE_KEY);
-            }
-            renderSpeechRecognitionLog();
-        }
-
         function processTranscript(rawTranscript, isFinal, interimMatchCounts) {
             let transcript = normalizeSpeechTranscript(rawTranscript);
             const sortedWords = [...allWords].sort((a, b) => b.length - a.length);
@@ -3387,7 +3316,6 @@
             });
 
             const hasAnyMatchInSentence = Object.values(interimMatchCounts).some(v => v > 0);
-            if (isFinal) recordSpeechRecognitionResult(rawTranscript, matchedWords);
             if (isFinal && !hasAnyMatchInSentence && currentStage < 3) {
                 statusTextEl.textContent = "おしい";
             }
