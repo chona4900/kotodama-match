@@ -992,7 +992,7 @@
                 : (days > 0 ? `あと ${days}日 ${hours}時間` : `あと ${Math.max(1, hours)}時間`);
 
             rebirthCountdownEl.textContent = `転生まで ${remainingLabel}`;
-            rebirthCountdownEl.setAttribute('aria-label', `現在の姿は${remainingLabel}で転生します。図鑑、アイテム、言霊の累計、育成能力は残ります。`);
+            rebirthCountdownEl.setAttribute('aria-label', `現在の姿は${remainingLabel}で転生します。育成能力は初期値に戻ります。魂のおやつ、戦歴、図鑑、神器、コトダマ杯は残ります。`);
             rebirthCountdownEl.hidden = false;
         }
 
@@ -1010,6 +1010,7 @@
                 currentForm = 'egg';
                 totalCount = 0;
                 ultimateAttemptCount = 0;
+                KOKORO_GO_HAN_WORDS.forEach(w => wordCounts[w] = 0);
                 for (let w in cycleWordCounts) {
                     cycleWordCounts[w] = 0;
                 }
@@ -1018,7 +1019,7 @@
                 sickRecoveryCount = 0;
                 lastInteractionTimestamp = Date.now();
                 
-                // 図鑑・アイテム・言霊別の累計・育成ステータスはそのまま！
+                // 育成能力は初期値へ戻し、魂のおやつ・戦歴・図鑑・神器・コトダマ杯は残す。
                 saveState();
                 
                 renderCanvasArt('egg', ctx);
@@ -1868,7 +1869,8 @@
             } else if (battleWins >= 10) {
                 auraEl.classList.add('aura-10');
             }
-            applyAwardVisual(auraEl, document.getElementById('mainAwardBadge'), getStoredActiveAwardRank());
+            // コトダマ杯の表彰はバッジだけで示し、勝利数オーラとは重ねない。
+            applyAwardVisual(document.getElementById('mainAwardBadge'), getStoredActiveAwardRank());
         }
 
         function createEvolutionEffect(callback, isUltimate = false) {
@@ -4368,9 +4370,9 @@
         }
 
         function getAwardVisual(rank) {
-            if (rank === 1) return { label: '👑 金・前回1位', badgeClass: 'award-badge-gold', auraClass: 'award-aura-gold' };
-            if (rank === 2) return { label: '👑 銀・前回2位', badgeClass: 'award-badge-silver', auraClass: 'award-aura-silver' };
-            if (rank === 3) return { label: '👑 銅・前回3位', badgeClass: 'award-badge-bronze', auraClass: 'award-aura-bronze' };
+            if (rank === 1) return { label: '👑 金・前回1位', badgeClass: 'award-badge-gold' };
+            if (rank === 2) return { label: '👑 銀・前回2位', badgeClass: 'award-badge-silver' };
+            if (rank === 3) return { label: '👑 銅・前回3位', badgeClass: 'award-badge-bronze' };
             return null;
         }
 
@@ -4405,13 +4407,9 @@
             updateAuraEffect();
         }
 
-        function applyAwardVisual(auraEl, badgeEl, rawRank) {
+        function applyAwardVisual(badgeEl, rawRank) {
             const rank = normalizeAwardRank(rawRank);
             const visual = getAwardVisual(rank);
-            if (auraEl) {
-                auraEl.classList.remove('award-aura-gold', 'award-aura-silver', 'award-aura-bronze');
-                if (visual) auraEl.classList.add(visual.auraClass);
-            }
             if (!badgeEl) return;
             badgeEl.classList.remove('visible', 'award-badge-gold', 'award-badge-silver', 'award-badge-bronze');
             badgeEl.textContent = visual?.label || '';
@@ -4975,8 +4973,8 @@
             const myAwardRank = challengerData && Object.prototype.hasOwnProperty.call(challengerData, 'myAwardRank')
                 ? challengerData.myAwardRank
                 : getStoredActiveAwardRank();
-            applyAwardVisual(myAuraEl, myAwardBadgeEl, myAwardRank);
-            applyAwardVisual(enemyAuraEl, enemyAwardBadgeEl, challengerData?.awardRank);
+            applyAwardVisual(myAwardBadgeEl, myAwardRank);
+            applyAwardVisual(enemyAwardBadgeEl, challengerData?.awardRank);
             myHpBarEl.style.width = '100%';
             enemyHpBarEl.style.width = '100%';
             

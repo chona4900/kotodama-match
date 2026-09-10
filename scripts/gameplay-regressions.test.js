@@ -500,18 +500,26 @@ test('初回チュートリアル成功後もMICを止めず連続して言霊�
   assert.match(tutorialSuccessSource, /MICはそのまま聞き取り中/);
 });
 
-test('転生しても累計の言霊回数を残し、今回の進化回数だけを戻す', () => {
+test('転生時は育成能力を初期化し、魂のおやつと戦歴などは残す', () => {
   const reincarnationSource = sourceBetween(
     'function reincarnate({ announce = true } = {})',
     '// --- 描画ロジック ---',
+  );
+  const battleStatsSource = sourceBetween(
+    'function diminishingStatGrowth(score, scale)',
+    'function getEnemyStats(',
   );
   const context = vm.createContext({
     currentStage: 3,
     currentForm: 'childA_1_1',
     totalCount: 4900,
     ultimateAttemptCount: 1,
-    wordCounts: { ありがとう: 10000, 愛してます: 2400 },
-    cycleWordCounts: { ありがとう: 4900, 愛してます: 0 },
+    KOKORO_GO_HAN_WORDS: ['ありがとう', '愛してます'],
+    wordCounts: { ありがとう: 10000, 愛してます: 2400, 自分はすごいんだ: 12 },
+    cycleWordCounts: { ありがとう: 4900, 愛してます: 0, 自分はすごいんだ: 12 },
+    intokuPower: 7,
+    battleWins: 10,
+    battleLosses: 2,
     finalEvolutionTimestamp: 123,
     isSick: true,
     sickRecoveryCount: 4,
@@ -526,7 +534,7 @@ test('転生しても累計の言霊回数を残し、今回の進化回数だ�
     Date: { now: () => 987654 },
   });
 
-  vm.runInContext(`${reincarnationSource}\nthis.reincarnate = reincarnate;`, context);
+  vm.runInContext(`${battleStatsSource}\n${reincarnationSource}\nthis.reincarnate = reincarnate; this.getBattleStats = getBattleStats;`, context);
   context.reincarnate({ announce: false });
 
   assert.equal(context.currentStage, 0);
@@ -534,8 +542,41 @@ test('転生しても累計の言霊回数を残し、今回の進化回数だ�
   assert.equal(context.totalCount, 0);
   assert.equal(context.ultimateAttemptCount, 0);
   assert.equal(context.lastInteractionTimestamp, 987654);
-  assert.deepEqual({ ...context.wordCounts }, { ありがとう: 10000, 愛してます: 2400 });
-  assert.deepEqual({ ...context.cycleWordCounts }, { ありがとう: 0, 愛してます: 0 });
+  assert.deepEqual({ ...context.wordCounts }, { ありがとう: 0, 愛してます: 0, 自分はすごいんだ: 12 });
+  assert.deepEqual({ ...context.cycleWordCounts }, { ありがとう: 0, 愛してます: 0, 自分はすごいんだ: 0 });
+  assert.equal(context.intokuPower, 7);
+  assert.equal(context.battleWins, 10);
+  assert.equal(context.battleLosses, 2);
+  assert.deepEqual({ ...context.getBattleStats() }, {
+    hp: 100,
+    attack: 10,
+    evasionRate: 5,
+    criticalRate: 5,
+  });
+});
+
+test('コトダマ杯表彰はバッジで示し、10・50・100勝オーラと同じレイヤーに重ねない', () => {
+  const auraSource = sourceBetween(
+    'function updateAuraEffect()',
+    'function createEvolutionEffect(',
+  );
+  const awardSource = sourceBetween(
+    'function getAwardVisual(rank)',
+    'function renderKotodamaCup(',
+  );
+  const battleSetupSource = sourceBetween(
+    'function startBattle(forceMiracle = false, challengerData = null)',
+    'function chooseBattleAction(action)',
+  );
+
+  assert.match(auraSource, /classList\.add\('aura-100'\)/);
+  assert.match(auraSource, /classList\.add\('aura-50'\)/);
+  assert.match(auraSource, /classList\.add\('aura-10'\)/);
+  assert.match(auraSource, /applyAwardVisual\(document\.getElementById\('mainAwardBadge'\), getStoredActiveAwardRank\(\)\)/);
+  assert.doesNotMatch(awardSource, /award-aura-|auraClass|auraEl/);
+  assert.match(battleSetupSource, /applyAwardVisual\(myAwardBadgeEl, myAwardRank\)/);
+  assert.match(battleSetupSource, /applyAwardVisual\(enemyAwardBadgeEl, challengerData\?\.awardRank\)/);
+  assert.doesNotMatch(styleSource, /\.award-aura-(?:gold|silver|bronze)/);
 });
 
 test('究極進化の失敗で回数を4800へ巻き戻さず、二重抽選もしない', () => {
