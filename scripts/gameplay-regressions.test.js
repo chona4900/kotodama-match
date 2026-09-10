@@ -398,7 +398,7 @@ test('Androidは発話ごとの認識終了後もMICを止めず、状況に応�
   assert.match(androidSpeechPluginSource, /ERROR_CLIENT:[\s\S]*?ERROR_RECOGNIZER_BUSY:[\s\S]*?scheduleRecognizerRestart\(1000, true, error, true\);/);
   assert.match(androidSpeechPluginSource, /ERROR_TOO_MANY_REQUESTS:[\s\S]*?scheduleRecognizerRestart\(2000, true, error, true\);/);
   assert.match(androidSpeechPluginSource, /private void scheduleRecognizerRestart\([\s\S]*?boolean countRecoveryAttempt[\s\S]*?if \(!listeningRequested \|\| restartScheduled\) return;/);
-  assert.match(androidSpeechPluginSource, /MAX_RECOVERY_ATTEMPTS = 4/);
+  assert.match(androidSpeechPluginSource, /MAX_FOREGROUND_RECOVERY_ATTEMPTS = 4/);
   assert.match(androidSpeechPluginSource, /if \(countRecoveryAttempt\) recoveryAttempt \+= 1;/);
   assert.match(androidSpeechPluginSource, /if \(countRecoveryAttempt\) notifySpeechError\(errorCode, true\);/);
   assert.match(androidSpeechPluginSource, /result\.put\("listening", listeningRequested\)/);
@@ -413,6 +413,23 @@ test('Androidは発話ごとの認識終了後もMICを止めず、状況に応�
   assert.match(androidSpeechPluginSource, /data\.put\("sessionId", recognitionSessionId\)/);
   assert.match(mainSource, /sessionId !== nativeRecognitionSessionId[\s\S]*?nativeInterimMatchCounts = \{\}/);
   assert.match(androidManifestSource, /android\.speech\.RecognitionService/);
+});
+
+test('Androidはホーム移動直後の一時エラーで、MICの常駐待受を勝手に停止しない', () => {
+  const backgroundListeningServiceSource = fs.readFileSync(
+    path.join(root, 'android/app/src/main/java/com/kotodamamatch/app/BackgroundListeningService.java'),
+    'utf8',
+  );
+
+  assert.match(backgroundListeningServiceSource, /private static volatile boolean running = false/);
+  assert.match(backgroundListeningServiceSource, /public static boolean isRunning\(\)/);
+  assert.match(backgroundListeningServiceSource, /onStartCommand[\s\S]*?running = true/);
+  assert.match(backgroundListeningServiceSource, /onDestroy\(\)[\s\S]*?running = false/);
+  assert.match(androidSpeechPluginSource, /boolean keepForegroundServiceAlive = BackgroundListeningService\.isRunning\(\)/);
+  assert.match(
+    androidSpeechPluginSource,
+    /countRecoveryAttempt[\s\S]*?!keepForegroundServiceAlive[\s\S]*?MAX_FOREGROUND_RECOVERY_ATTEMPTS/,
+  );
 });
 
 test('iOSは発話ごとの終了後に次の言霊を待ち、画面復帰時に状態を同期する', () => {

@@ -13,6 +13,13 @@ import android.os.IBinder;
 public class BackgroundListeningService extends Service {
     private static final String CHANNEL_ID = "kotodama_listening";
     private static final int NOTIFICATION_ID = 4101;
+    // SpeechRecognizerの一時エラー時に、ユーザーが明示的にMICを止めるまで
+    // バックグラウンド待受を継続すべきか判断するためのプロセス内状態。
+    private static volatile boolean running = false;
+
+    public static boolean isRunning() {
+        return running;
+    }
 
     public static void start(Context context) {
         Intent intent = new Intent(context, BackgroundListeningService.class);
@@ -29,6 +36,7 @@ public class BackgroundListeningService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        running = true;
         createNotificationChannel();
         Intent openAppIntent = new Intent(this, MainActivity.class);
         openAppIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -65,6 +73,7 @@ public class BackgroundListeningService extends Service {
 
     @Override
     public void onDestroy() {
+        running = false;
         stopForeground(STOP_FOREGROUND_REMOVE);
         super.onDestroy();
     }

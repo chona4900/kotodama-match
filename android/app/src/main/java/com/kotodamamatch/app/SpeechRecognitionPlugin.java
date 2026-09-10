@@ -40,7 +40,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
     private boolean restartScheduled = false;
     private int recognitionSessionId = 0;
     private int recoveryAttempt = 0;
-    private static final int MAX_RECOVERY_ATTEMPTS = 4;
+    private static final int MAX_FOREGROUND_RECOVERY_ATTEMPTS = 4;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @PluginMethod
@@ -293,7 +293,15 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         boolean countRecoveryAttempt
     ) {
         if (!listeningRequested || restartScheduled) return;
-        if (countRecoveryAttempt && recoveryAttempt >= MAX_RECOVERY_ATTEMPTS) {
+        // ホーム画面へ移動した直後は、端末や認識サービスによって
+        // ERROR_CLIENT / ERROR_AUDIO が返ることがある。MICをオンにした
+        // 意思とフォアグラウンドサービスが残っている間は、4回で勝手に
+        // 停止せず、上限付きの待機時間で聞き取りを再接続し続ける。
+        // 明示的なMICオフ、権限エラーなどの致命的な経路は従来どおり停止する。
+        boolean keepForegroundServiceAlive = BackgroundListeningService.isRunning();
+        if (countRecoveryAttempt
+            && !keepForegroundServiceAlive
+            && recoveryAttempt >= MAX_FOREGROUND_RECOVERY_ATTEMPTS) {
             notifySpeechError(errorCode, false);
             stopAndNotify();
             return;
