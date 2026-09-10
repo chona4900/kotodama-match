@@ -12,6 +12,7 @@
     "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/progression.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js scripts/gameplay-regressions.test.js scripts/noon-ritual.test.js",
     "release:preflight": "node scripts/release-preflight.js",
     "online:test": "node --test online-battle/test/*.test.mjs",
+    "online:test:integration": "node scripts/online-room-integration-check.mjs",
     "online:check": "cd online-battle && npx wrangler deploy --config wrangler.jsonc --dry-run"
   },
   "keywords": [],

@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { ACTIONS, sanitizeSnapshot, simulateBattle } from './battle-engine.mjs';
+import { getClientRoomPhase, hasBothPlayersConnected } from './room-readiness.mjs';
 import { createSafeDisplayName, isAllowedStamp, sanitizePlayerDisplayName } from './ranking-rules.mjs';
 import {
   createProfile,
@@ -55,9 +56,9 @@ const SUPPORT_PAGE = legalPage('コトダマっち サポート', `
 
 const PRIVACY_PAGE = legalPage('コトダマっち プライバシーポリシー', `
   <h1>コトダマっち プライバシーポリシー</h1>
-  <p class="updated">最終更新日: 2026年9月1日</p>
+  <p class="updated">最終更新日: 2026年9月10日</p>
   <h2>収集する情報</h2>
-  <p>コトダマっちは、育成の進行状況、発話した言霊の回数、戦績などのゲームデータを端末内に保存します。聞き取り状況を本人が確認できるよう、端末が文字に変換した直近20件の音声認識結果と、反応した言霊も端末内だけに保存します。音声そのものは保存しません。聞き取り記録はアプリ内の情報画面からいつでも削除できます。通常プレイでは、開発者が運営するサーバーへ、これらのゲームデータ、音声、音声認識結果を送信・保存することはありません。オンライン対戦や「コトダマ杯」を利用する場合だけの通信内容は、下記「オンライン対戦とコトダマ杯」をご確認ください。</p>
+  <p>コトダマっちは、育成の進行状況、発話した言霊の回数、戦績などのゲームデータを端末内に保存します。音声そのものと、端末が文字に変換した音声認識結果は保存しません。通常プレイでは、開発者が運営するサーバーへ、これらのゲームデータ、音声、音声認識結果を送信・保存することはありません。オンライン対戦や「コトダマ杯」を利用する場合だけの通信内容は、下記「オンライン対戦とコトダマ杯」をご確認ください。</p>
   <h2>マイクと音声認識</h2>
   <p>言霊の判定のため、利用者が許可した場合に限りマイクと端末の音声認識機能を使用します。MICをオンにした間は、ほかのアプリを開いている時も言霊をききとります。iPhone・iPadではマイク使用中を示すシステム表示が出ます。Androidでは、ききとり中であることを示す通知が表示されます。停止するにはコトダマっちを開いてMICをもう一度押します。音声認識の処理にはAppleが提供する機能が使用される場合があります。Appleによる情報の取扱いについては、<a href="https://www.apple.com/legal/privacy/" rel="noopener">Appleのプライバシーポリシー</a>をご確認ください。</p>
   <h2>通知と正午のことだま</h2>
@@ -66,7 +67,7 @@ const PRIVACY_PAGE = legalPage('コトダマっち プライバシーポリシ�
   <p>本アプリは、広告SDK、行動解析SDK、利用者の識別を目的としたトラッキングを使用しません。利用者の情報を販売しません。また、サービスの運営に必要な通信・保管と、下記のランキング表示を除き、利用者の情報を第三者へ提供しません。</p>
   <p>オンライン対戦とランキングの通信・保管基盤にはCloudflareのサービスを利用します。送信された情報は、オンライン対戦とランキングの提供、安全確保、不正防止のためだけに取り扱い、広告や行動追跡には利用しません。</p>
   <h2>データの削除</h2>
-  <p>ゲーム画面の「B リセット」は、キャラクターをタマゴの状態へ戻し、「心のごはん」とその回の進化回数をリセットします。魂のおやつ、戦歴、図鑑、神器などの解放状況、コトダマ杯の記録、聞き取り記録は残ります。</p>
+  <p>ゲーム画面の「B リセット」は、キャラクターをタマゴの状態へ戻し、「心のごはん」とその回の進化回数をリセットします。魂のおやつ、戦歴、図鑑、神器などの解放状況、コトダマ杯の記録は残ります。</p>
   <p>オンライン対戦とランキングのためのデータ保存への同意は、コトダマ杯の画面にある「コトダマ杯のデータを削除」からいつでも取り消せます。この操作では、サーバーへ削除を要求し、表示名、匿名プロフィール、週間戦績、対戦記録、入賞・受賞履歴と端末内のランキング表示用キャッシュを削除します。通信できない状態や通信エラーのときは、サーバー側の削除が完了しないことがあります。通信できる状態で、もう一度この操作を行ってください。アプリを削除すると端末内のアプリデータは削除されますが、サーバーへは通知できないため、サーバー側の情報は自動では削除されません。再操作できない場合や、削除できたか確認したい場合は、下記のお問い合わせ先までご連絡ください。</p>
   <h2>オンライン対戦とコトダマ杯</h2>
   <p>オンライン対戦またはコトダマ杯を初めて利用するときは、保存する情報と、ほかの利用者へ表示する情報をアプリ内で説明します。コトダマ杯への参加に同意すると、サーバーは無作為なプレイヤーIDと認証用トークンを発行します。認証用トークンそのものは端末内だけに保存し、サーバーには元へ戻せない形に変換した値を保存します。ランキングとオンライン対戦で表示する名前は、利用者がコトダマ杯画面で設定できます。表示名には本名、連絡先、住所などの個人情報を入力しないでください。コトダマ杯への参加に同意しない場合も、匿名プロフィールを使わない一時的なオンライン対戦、育成、CPU戦は遊べます。</p>
@@ -211,7 +212,8 @@ export class BattleRoom extends DurableObject {
     if (!room || room.expiresAt <= Date.now()) return json({ error: 'room not found or expired' }, 404);
     if (room.guest) return json({ error: 'room is already full' }, 409);
     room.guest = { snapshot: sanitizeSnapshot(snapshot), tokenHash: guestTokenHash, action: null, stamp: null, profile: profile || null };
-    room.phase = 'choosing';
+    // HTTPの入室完了だけでは対戦を始めない。両端末のWebSocket認証完了を待つ。
+    room.phase = 'connecting';
     await this.save(room);
     this.broadcast({ type: 'room', room: this.publicRoom(room) });
     return json(this.publicRoom(room, 'guest'));
@@ -246,12 +248,29 @@ export class BattleRoom extends DurableObject {
         ? 'host'
         : constantTimeEqual(room.guest?.tokenHash, hash) ? 'guest' : null;
       if (!seat) {
-        this.send(socket, { type: 'error', message: '入室確認に失敗しました。' });
+        this.send(socket, { type: 'error', code: 'auth-failed', message: '入室確認に失敗しました。' });
         socket.close(1008, 'authentication failed');
         return;
       }
+
+      // 同じ席の古い接続が残っている場合は新しい接続を正とし、二重受信を防ぐ。
+      for (const existingSocket of this.ctx.getWebSockets()) {
+        if (existingSocket === socket) continue;
+        if (existingSocket.deserializeAttachment()?.seat === seat) {
+          try { existingSocket.close(4001, 'replaced by a newer connection'); } catch { /* already closed */ }
+        }
+      }
       socket.serializeAttachment({ seat });
-      return this.send(socket, { type: 'room', room: this.publicRoom(room, seat), seat });
+      const connectedSeats = this.connectedSeats();
+      if (room.phase === 'connecting' && hasBothPlayersConnected(room, connectedSeats)) {
+        room.phase = 'choosing';
+        await this.save(room);
+      }
+      if (getClientRoomPhase(room, connectedSeats) === 'choosing') {
+        this.broadcast({ type: 'room', room: this.publicRoom(room, null, { connectedSeats }) });
+        return;
+      }
+      return this.send(socket, { type: 'room', room: this.publicRoom(room, seat, { connectedSeats }), seat });
     }
 
     if (payload.type === 'choose') {
@@ -274,6 +293,9 @@ export class BattleRoom extends DurableObject {
   async choose(socket, room, seat, action) {
     if (!ACTIONS.has(action)) return this.send(socket, { type: 'error', message: '作戦が正しくありません。' });
     if (room.phase !== 'choosing' || !room.host || !room.guest) return this.send(socket, { type: 'error', message: 'まだ対戦を始められません。' });
+    if (!hasBothPlayersConnected(room, this.connectedSeats())) {
+      return this.send(socket, { type: 'error', code: 'peer-not-connected', message: '相手との通信を待っています。' });
+    }
     if (room[seat].action) return this.send(socket, { type: 'error', message: '作戦は一度だけ選べます。' });
     room[seat].action = action;
 
@@ -328,6 +350,23 @@ export class BattleRoom extends DurableObject {
     await this.scheduleNextAlarm(room);
   }
 
+  async webSocketClose(socket) {
+    const seat = socket.deserializeAttachment()?.seat;
+    if (!seat) return;
+    const room = await this.load();
+    if (!room || room.expiresAt <= Date.now() || room.phase === 'finished') return;
+    const connectedSeats = this.connectedSeats({ exclude: socket });
+    this.broadcast({
+      type: 'room',
+      room: this.publicRoom(room, null, { connectedSeats })
+    });
+  }
+
+  async webSocketError(socket) {
+    await this.webSocketClose(socket);
+    try { socket.close(1011, 'websocket error'); } catch { /* already closed */ }
+  }
+
   async recordRoomRanking(room) {
     const hostId = room.host.profile?.playerId;
     const guestId = room.guest.profile?.playerId;
@@ -352,18 +391,29 @@ export class BattleRoom extends DurableObject {
     await this.ctx.storage.setAlarm(Math.min(retryAt, room.expiresAt));
   }
 
-  publicRoom(room, seat, { includeProfile = true } = {}) {
+  connectedSeats({ exclude = null } = {}) {
+    const seats = new Set();
+    for (const socket of this.ctx.getWebSockets()) {
+      if (socket === exclude) continue;
+      const seat = socket.deserializeAttachment()?.seat;
+      if (seat === 'host' || seat === 'guest') seats.add(seat);
+    }
+    return seats;
+  }
+
+  publicRoom(room, seat, { includeProfile = true, connectedSeats = this.connectedSeats() } = {}) {
     const player = (name) => room[name] ? {
       form: room[name].snapshot.form,
       wins: room[name].snapshot.wins,
       displayName: includeProfile ? room[name].profile?.displayName || null : null,
       awardRank: includeProfile ? room[name].profile?.activeAwardRank || null : null,
       selected: Boolean(room[name].action),
+      connected: connectedSeats.has(name),
       isYou: seat === name
     } : null;
     return {
       code: room.code,
-      phase: room.phase,
+      phase: getClientRoomPhase(room, connectedSeats),
       expiresAt: room.expiresAt,
       ranking: room.ranking,
       host: player('host'),

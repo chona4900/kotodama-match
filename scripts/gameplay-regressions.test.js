@@ -614,6 +614,19 @@ test('オンライン対戦は通信断・再起動後にも本人トークン�
   assert.match(mainSource, /対戦へ再接続しています/);
 });
 
+test('オンライン対戦は両端末の接続確認前に始めず、切断ループから退出できる', () => {
+  assert.match(onlineBattleWorkerSource, /room\.phase = 'connecting'/);
+  assert.match(onlineBattleWorkerSource, /hasBothPlayersConnected\(room, connectedSeats\)/);
+  assert.match(onlineBattleWorkerSource, /code: 'peer-not-connected'/);
+  assert.match(mainSource, /session\.socket !== socket/);
+  assert.match(mainSource, /function abandonOnlineBattleFromArena\(\)/);
+  assert.match(indexSource, /id="onlineBattleAbort"[^>]*onclick="abandonOnlineBattleFromArena\(\)"/);
+});
+
+test('育成一覧の見出しは天国言葉と心のごはんを併記する', () => {
+  assert.match(indexSource, />天国言葉\(心のごはん\)</);
+});
+
 test('オンライン対戦は新しい4桁コードと旧版の6桁コードを同じ入力・再接続経路で扱う', () => {
   const onlineCodeSource = sourceBetween(
     'const ONLINE_BATTLE_API_URL',

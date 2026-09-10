@@ -31,6 +31,30 @@ function calculateStats(score, currentForm = 'egg') {
   return context.getBattleStats();
 }
 
+function calculateStatsForCounts(wordCounts, currentForm = 'egg') {
+  const start = mainSource.indexOf('function diminishingStatGrowth');
+  const end = mainSource.indexOf('function getEnemyStats', start);
+  const context = { currentForm, wordCounts };
+  vm.createContext(context);
+  vm.runInContext(`${mainSource.slice(start, end)}; this.getBattleStats = getBattleStats; this.formatBattleRate = formatBattleRate;`, context);
+  return { stats: context.getBattleStats(), formatBattleRate: context.formatBattleRate };
+}
+
+test('天国言葉は担当するHP・攻・回避・会心をそれぞれ育てる', () => {
+  const base = calculateStatsForCounts({}).stats;
+  const hp = calculateStatsForCounts({ 愛してます: 1 }).stats;
+  const attack = calculateStatsForCounts({ ありがとう: 1 }).stats;
+  const evasion = calculateStatsForCounts({ 楽しい: 1 }).stats;
+  const critical = calculateStatsForCounts({ しあわせ: 1 }).stats;
+
+  assert.ok(hp.hp > base.hp);
+  assert.ok(attack.attack > base.attack);
+  assert.ok(evasion.evasionRate > base.evasionRate);
+  assert.ok(critical.criticalRate > base.criticalRate);
+  assert.equal(attack.attack, 11, '攻撃系の最初の1回を画面と対戦値へ反映する');
+  assert.equal(calculateStatsForCounts({ 楽しい: 1 }).formatBattleRate(evasion.evasionRate), '5.01');
+});
+
 test('battle stats grow with diminishing returns', () => {
   const early = calculateStats(100);
   const experienced = calculateStats(1000);

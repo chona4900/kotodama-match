@@ -2,7 +2,7 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "kotodama-match-battle",
   "main": "src/index.mjs",
-  "compatibility_date": "2026-08-24",
+  "compatibility_date": "2026-09-10",
   "compatibility_flags": ["nodejs_compat"],
   "durable_objects": {
     "bindings": [

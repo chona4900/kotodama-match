@@ -809,7 +809,8 @@
 
             // 2. 火力・パワー系（攻撃力アップ）
             const atkScore = (wordCounts['ありがとう'] || 0) + (wordCounts['感謝してます'] || 0);
-            stats.attack += diminishingStatGrowth(atkScore, 3);
+            // 最初の1回から「攻」が上がったと分かるよう、育成済みなら最低+1にする。
+            stats.attack += atkScore > 0 ? Math.max(1, diminishingStatGrowth(atkScore, 3)) : 0;
 
             // 3. スピード・回避系（回避率アップ）
             const evaScore = (wordCounts['楽しい'] || 0) + (wordCounts['うれしい'] || 0);
@@ -827,6 +828,11 @@
             }
 
             return stats;
+        }
+
+        function formatBattleRate(value) {
+            const rounded = Math.round((Number(value) || 0) * 100) / 100;
+            return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0$/, '');
         }
 
         function getEnemyStats(playerStats = getBattleStats()) {
@@ -1812,8 +1818,8 @@
                 mainStatsDisplay.innerHTML = `
                     HP:${currentStats.hp}<br>
                     攻:${currentStats.attack}<br>
-                    避:${Math.floor(currentStats.evasionRate)}%<br>
-                    会:${Math.floor(currentStats.criticalRate)}%<br>
+                    避:${formatBattleRate(currentStats.evasionRate)}%<br>
+                    会:${formatBattleRate(currentStats.criticalRate)}%<br>
                     陰徳:${intokuPower}
                 `;
             }
@@ -4211,6 +4217,10 @@
             try { localStorage.removeItem(ONLINE_BATTLE_SESSION_STORAGE_KEY); } catch (error) {}
         }
 
+        function setOnlineBattleAbortVisible(visible) {
+            document.getElementById('onlineBattleAbort')?.classList.toggle('visible', Boolean(visible));
+        }
+
         function restoreOnlineBattleSession() {
             try {
                 const saved = JSON.parse(localStorage.getItem(ONLINE_BATTLE_SESSION_STORAGE_KEY) || 'null');
@@ -4635,6 +4645,7 @@
         function connectOnlineBattleSocket() {
             if (!onlineBattleSession || !ONLINE_BATTLE_API_URL) return;
             const session = onlineBattleSession;
+            if (session.socket?.readyState === WebSocket.OPEN || session.socket?.readyState === WebSocket.CONNECTING) return;
             const socketUrl = `${ONLINE_BATTLE_API_URL.replace(/^http/, 'ws')}/v1/rooms/${session.code}/socket`;
             const socket = new WebSocket(socketUrl);
             session.socket = socket;
@@ -4645,7 +4656,12 @@
             });
             socket.addEventListener('message', (event) => handleOnlineBattleMessage(event, session));
             socket.addEventListener('close', () => {
-                if (onlineBattleSession === session && !session.finished && Date.now() < session.expiresAt) {
+                // 新しい接続へ交換済みなら、古いsocketのcloseから再接続を増やさない。
+                if (onlineBattleSession !== session || session.socket !== socket) return;
+                session.socket = null;
+                session.peerConnected = false;
+                if (!session.finished && Date.now() < session.expiresAt) {
+                    if (session.started) showOnlinePeerWaiting();
                     session.reconnectAttempts = (session.reconnectAttempts || 0) + 1;
                     if (session.reconnectAttempts <= 4) {
                         const delay = Math.min(800 * (2 ** (session.reconnectAttempts - 1)), 5000);
@@ -4659,17 +4675,78 @@
                 }
             });
             socket.addEventListener('error', () => {
-                if (onlineBattleSession === session) onlineBattleStatus('通信を再接続しています…');
+                if (onlineBattleSession === session && session.socket === socket) onlineBattleStatus('通信を再接続しています…');
             });
+        }
+
+        function showOnlinePeerWaiting() {
+            const battleCommandPanel = document.getElementById('battleCommandPanel');
+            if (battleCommandPanel) battleCommandPanel.classList.remove('visible');
+            if (onlineBattleSession?.started) {
+                battleMessageEl.textContent = '相手の再接続を待っています…';
+                battleMessageEl.style.color = 'var(--screen-text)';
+                battleMessageEl.style.fontSize = '1.05rem';
+                battleMessageEl.style.top = '50%';
+                battleMessageEl.style.display = 'block';
+                setOnlineBattleAbortVisible(true);
+            } else {
+                onlineBattleStatus('相手の通信接続を待っています。そろうまで対戦は始まりません。');
+            }
+        }
+
+        function resumeOnlineBattleChoice(room) {
+            const mine = onlineBattleSession.seat === 'host' ? room.host : room.guest;
+            onlineBattleSession.peerConnected = true;
+            setOnlineBattleAbortVisible(true);
+            if (!onlineBattleSession.started) {
+                startOnlineBattle(room);
+                return;
+            }
+            const battleCommandPanel = document.getElementById('battleCommandPanel');
+            if (mine?.selected) {
+                selectedBattleAction = 'recovered';
+                pendingBattleOptions = null;
+                if (battleCommandPanel) battleCommandPanel.classList.remove('visible');
+                battleMessageEl.textContent = '作戦は送信済みです。相手を待っています…';
+            } else {
+                selectedBattleAction = null;
+                pendingBattleOptions = { online: true };
+                if (battleCommandPanel) battleCommandPanel.classList.add('visible');
+                battleMessageEl.textContent = '通信が戻りました。作戦をえらんでね！';
+            }
+            battleMessageEl.style.color = 'var(--screen-text)';
+            battleMessageEl.style.fontSize = '1.05rem';
+            battleMessageEl.style.top = '25%';
+            battleMessageEl.style.display = 'block';
         }
 
         function handleOnlineBattleMessage(event, session = onlineBattleSession) {
             let message;
             try { message = JSON.parse(event.data); } catch { return; }
             if (!onlineBattleSession || onlineBattleSession !== session) return;
-            if (message.type === 'error') return onlineBattleStatus(message.message || '通信エラーが起きました。');
+            if (message.type === 'error') {
+                if (message.code === 'auth-failed') {
+                    const wasStarted = Boolean(onlineBattleSession.started);
+                    const socket = onlineBattleSession.socket;
+                    onlineBattleSession = null;
+                    clearPersistedOnlineBattleSession();
+                    if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) socket.close();
+                    if (wasStarted) closeBattleOverlay();
+                    return onlineBattleStatus('前の対戦には戻れませんでした。新しい部屋をつくってね。');
+                }
+                if (message.code === 'peer-not-connected' && selectedBattleAction) {
+                    restoreOnlineBattleActionChoice(selectedBattleAction, { online: true });
+                    showOnlinePeerWaiting();
+                }
+                return onlineBattleStatus(message.message || '通信エラーが起きました。');
+            }
             if (message.type === 'expired') {
+                const wasStarted = Boolean(onlineBattleSession.started);
+                const socket = onlineBattleSession.socket;
+                onlineBattleSession = null;
                 clearPersistedOnlineBattleSession();
+                if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) socket.close();
+                if (wasStarted) closeBattleOverlay();
                 onlineBattleStatus('この部屋は期限切れです。新しい部屋をつくってね。');
                 return;
             }
@@ -4680,8 +4757,11 @@
                 persistOnlineBattleSession();
                 if (room.phase === 'waiting') {
                     onlineBattleStatus(`招待コード: ${room.code}\n友だちの入室を待っています。`);
-                } else if (room.phase === 'choosing' && !onlineBattleSession.started) {
-                    startOnlineBattle(room);
+                } else if (room.phase === 'connecting') {
+                    onlineBattleSession.peerConnected = false;
+                    showOnlinePeerWaiting();
+                } else if (room.phase === 'choosing') {
+                    resumeOnlineBattleChoice(room);
                 }
                 return;
             }
@@ -4708,8 +4788,12 @@
         function startOnlineBattle(room) {
             const mine = onlineBattleSession.seat === 'host' ? room.host : room.guest;
             const opponent = onlineBattleSession.seat === 'host' ? room.guest : room.host;
-            if (!opponent) return;
+            if (!mine?.connected || !opponent?.connected) {
+                showOnlinePeerWaiting();
+                return;
+            }
             onlineBattleSession.started = true;
+            onlineBattleSession.peerConnected = true;
             onlineBattleSession.opponentDisplayName = String(opponent.displayName || '対戦相手');
             onlineBattleSession.myAwardRank = normalizeAwardRank(mine?.awardRank);
             onlineBattleSession.opponentAwardRank = normalizeAwardRank(opponent.awardRank);
@@ -4724,6 +4808,7 @@
                 awardRank: onlineBattleSession.opponentAwardRank
             });
             if (pendingBattleOptions) pendingBattleOptions.online = true;
+            setOnlineBattleAbortVisible(true);
             if (mine?.selected) {
                 // 再接続前に送信済みの作戦は、二重送信せず相手を待つ。
                 selectedBattleAction = 'recovered';
@@ -4855,6 +4940,7 @@
         function startBattle(forceMiracle = false, challengerData = null) {
             closePvpMenu(); // メニューが開いていれば閉じる
             hidePostMatchStampPanel();
+            setOnlineBattleAbortVisible(false);
             if (postMatchAutoCloseTimer) {
                 window.clearTimeout(postMatchAutoCloseTimer);
                 postMatchAutoCloseTimer = null;
@@ -4946,6 +5032,10 @@
                 startBattleBgm();
                 
                 setTimeout(() => {
+                    if (pendingBattleOptions?.online && onlineBattleSession?.peerConnected === false) {
+                        showOnlinePeerWaiting();
+                        return;
+                    }
                     battleMessageEl.textContent = '作戦をえらぼう！';
                     battleMessageEl.style.color = 'var(--screen-text)';
                     battleMessageEl.style.fontSize = '1.15rem';
@@ -4958,6 +5048,10 @@
 
         function chooseBattleAction(action) {
             if (!BATTLE_ACTIONS[action] || selectedBattleAction || !pendingBattleOptions) return;
+            if (pendingBattleOptions.online && onlineBattleSession?.peerConnected === false) {
+                showOnlinePeerWaiting();
+                return;
+            }
 
             playButtonSound();
             selectedBattleAction = action;
@@ -5328,10 +5422,12 @@
                 postMatchAutoCloseTimer = null;
             }
             hidePostMatchStampPanel();
+            setOnlineBattleAbortVisible(false);
             battleOverlayEl.classList.remove('visible');
             myCharEl.className = 'battle-character mine';
             enemyCharEl.className = 'battle-character enemy';
             selectedBattleAction = null;
+            pendingBattleOptions = null;
 
             // キャンバスのアニメーションタイマーを停止して軽くする
             if (myCanvasCtx.canvas.animTimer) clearInterval(myCanvasCtx.canvas.animTimer);
@@ -5343,6 +5439,19 @@
                 clearPersistedOnlineBattleSession();
                 if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) socket.close();
             }
+        }
+
+        function abandonOnlineBattleFromArena() {
+            if (!onlineBattleSession || onlineBattleSession.finished) return;
+            playButtonSound();
+            const socket = onlineBattleSession.socket;
+            onlineBattleSession = null;
+            clearPersistedOnlineBattleSession();
+            selectedBattleAction = null;
+            pendingBattleOptions = null;
+            if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) socket.close();
+            closeBattleOverlay();
+            onlineBattleStatus('対戦を終了しました。新しい部屋をつくれます。');
         }
 
         function closePostMatchBattle() {

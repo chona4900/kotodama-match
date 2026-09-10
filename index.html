@@ -44,7 +44,7 @@
                 </div>
 
                 <div class="stats-overlay" id="statsOverlay">
-                    <div style="text-align:center; margin-bottom:5px; font-weight:bold; font-size:1.2rem;">★心のごはん★</div>
+                    <div style="text-align:center; margin-bottom:5px; font-weight:bold; font-size:1.2rem;">天国言葉(心のごはん)</div>
                     <div id="statsList"></div>
                     <div class="quick-settings" aria-label="保存設定">
                         <div class="save-protection-status">保存データ：自動予備保存 ON</div>
@@ -241,6 +241,7 @@
                             <canvas id="myCanvas" width="24" height="24"></canvas>
                         </div>
                         <div class="battle-message" id="battleMessage">BATTLE!</div>
+                        <button type="button" class="online-battle-abort" id="onlineBattleAbort" onclick="abandonOnlineBattleFromArena()">対戦をやめる</button>
                         <div class="battle-command-panel" id="battleCommandPanel" role="group" aria-labelledby="battleCommandTitle">
                             <div class="battle-command-title" id="battleCommandTitle">こうどうを えらぼう！</div>
                             <div class="battle-command-buttons">
