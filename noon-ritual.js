@@ -11,9 +11,9 @@
     const SPECIAL_PRAYER_DAYS = Object.freeze([1, 15]);
     const PHRASES = Object.freeze([
         '宇宙の調和に感謝します',
-        'だんだんよくなる明るい未来'
+        'だんだんよくなる未来はあかるい'
     ]);
-    const LEGACY_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
+    const LEGACY_FUTURE_PHRASE = 'だんだんよくなる明るい未来';
 
     function getDateKey(date = new Date()) {
         const value = date instanceof Date ? date : new Date(date);

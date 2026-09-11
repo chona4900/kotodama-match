@@ -763,8 +763,8 @@
         const PRAYER_NOTIFICATION_FIRST_ID = 1901;
         const PRAYER_NOTIFICATION_FIFTEENTH_ID = 1915;
         const NOON_THANKS_PHRASE = '宇宙の調和に感謝します';
-        const NOON_FUTURE_PHRASE = 'だんだんよくなる明るい未来';
-        const LEGACY_NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
+        const NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい';
+        const LEGACY_NOON_FUTURE_PHRASE = 'だんだんよくなる明るい未来';
         const NOON_RITUAL_DISPLAY_NAME = '斉藤ひとりさんとともに\n祈り合わせ';
         let noonRitualState = window.KotodamaNoonRitual.createState();
         let noonNotificationListenersReady = false;
@@ -831,8 +831,7 @@
         }
 
         function formatBattleRate(value) {
-            const rounded = Math.round((Number(value) || 0) * 100) / 100;
-            return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0$/, '');
+            return String(Math.floor(Number(value) || 0));
         }
 
         function getEnemyStats(playerStats = getBattleStats()) {

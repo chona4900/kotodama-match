@@ -52,7 +52,8 @@ test('天国言葉は担当するHP・攻・回避・会心をそれぞれ育て
   assert.ok(evasion.evasionRate > base.evasionRate);
   assert.ok(critical.criticalRate > base.criticalRate);
   assert.equal(attack.attack, 11, '攻撃系の最初の1回を画面と対戦値へ反映する');
-  assert.equal(calculateStatsForCounts({ 楽しい: 1 }).formatBattleRate(evasion.evasionRate), '5.01');
+  assert.equal(calculateStatsForCounts({ 楽しい: 1 }).formatBattleRate(evasion.evasionRate), '5');
+  assert.equal(calculateStatsForCounts({ しあわせ: 1 }).formatBattleRate(17.5), '17');
 });
 
 test('battle stats grow with diminishing returns', () => {

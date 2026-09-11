@@ -48,7 +48,7 @@ test('旧版の正午進捗を新しい言霊表記へ引き継ぐ', () => {
         date: '2026-08-01',
         counts: {
             [THANKS]: 2,
-            'だんだんよくなる未来はあかるい': 3
+            'だんだんよくなる明るい未来': 3
         },
         rewarded: false
     };
@@ -56,6 +56,12 @@ test('旧版の正午進捗を新しい言霊表記へ引き継ぐ', () => {
 
     assert.equal(ritual.getSlotState(state, ritual.NOON_SLOT, DAY_ONE).counts[THANKS], 2);
     assert.equal(ritual.getSlotState(state, ritual.NOON_SLOT, DAY_ONE).counts[FUTURE], 3);
+});
+
+test('正午の言霊は正しい語順で表示・記録する', () => {
+    assert.equal(FUTURE, 'だんだんよくなる未来はあかるい');
+    assert.match(mainSource, /const NOON_FUTURE_PHRASE = 'だんだんよくなる未来はあかるい'/);
+    assert.doesNotMatch(mainSource, /const NOON_FUTURE_PHRASE = 'だんだんよくなる明るい未来'/);
 });
 
 test('日付が変わると各時間の進捗と報酬状態をリセットする', () => {
