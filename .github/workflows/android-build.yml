@@ -69,3 +69,27 @@ jobs:
           path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
+
+      # Google Play の申告用動画を先に撮れるよう、同じ署名鍵で直接インストール用APKも作る。
+      # versionCode 15 は、既存のクローズドテスト版 (7) より新しく、Play 配布予定のAAB (16) より低い。
+      - name: Build signed verification APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/kotodama-upload-key.p12
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: kotodama-upload
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_KEYSTORE_TYPE: PKCS12
+          ANDROID_VERSION_CODE: 15
+          ANDROID_VERSION_NAME: 1.0.10-test
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
+
+      - name: Upload verification APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotodama-match-android-test-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
