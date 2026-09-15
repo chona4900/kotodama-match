@@ -21,13 +21,22 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
     private var audioEngine: AVAudioEngine?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
-    private var recognitionSessionId = 0
+    private var lifecycle = SpeechSessionLifecycle()
+    private var inputTapInstalled = false
 
     @objc func available(_ call: CAPPluginCall) {
         call.resolve(["available": SFSpeechRecognizer(locale: Locale(identifier: "ja-JP"))?.isAvailable ?? false])
     }
 
     @objc func start(_ call: CAPPluginCall) {
+        // Capacitor invokes plugin methods on its bridge queue; Speech callbacks
+        // must use the same queue as start/stop to make generation checks atomic.
+        DispatchQueue.main.async {
+            self.startRecognition(call)
+        }
+    }
+
+    private func startRecognition(_ call: CAPPluginCall) {
         guard SFSpeechRecognizer.authorizationStatus() == .authorized else {
             call.reject("Speech recognition permission is required")
             return
@@ -54,8 +63,7 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         speechRecognizer = recognizer
-        recognitionSessionId += 1
-        let sessionId = recognitionSessionId
+        let sessionId = lifecycle.begin()
         let engine = AVAudioEngine()
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = partialResults
@@ -69,13 +77,19 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
 
             let inputNode = engine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self, request] buffer, _ in
-                guard let self, self.recognitionSessionId == sessionId else { return }
+            guard format.sampleRate > 0, format.channelCount > 0 else {
+                throw NSError(domain: "KotodamaSpeechRecognition", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "Microphone input is unavailable"])
+            }
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [request] buffer, _ in
+                // Capture this request, never the mutable current-session field.
                 request.append(buffer)
             }
+            inputTapInstalled = true
 
             recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                guard let self, self.recognitionSessionId == sessionId else { return }
+                DispatchQueue.main.async {
+                guard let self, self.lifecycle.accepts(sessionId) else { return }
 
                 if let result {
                     let matches = Array(result.transcriptions.prefix(maxResults)).map(\.formattedString)
@@ -100,6 +114,7 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
                         call.reject(error.localizedDescription)
                     }
                 }
+                }
             }
 
             engine.prepare()
@@ -115,11 +130,19 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func stop(_ call: CAPPluginCall) {
-        stopRecognition(notify: true)
-        call.resolve()
+        DispatchQueue.main.async {
+            self.stopRecognition(notify: true)
+            call.resolve()
+        }
     }
 
     @objc func refreshAudioSession(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.refreshAudioSessionOnMain(call)
+        }
+    }
+
+    private func refreshAudioSessionOnMain(_ call: CAPPluginCall) {
         do {
             let session = AVAudioSession.sharedInstance()
             if audioEngine?.isRunning == true {
@@ -137,7 +160,9 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func isListening(_ call: CAPPluginCall) {
-        call.resolve(["listening": audioEngine?.isRunning ?? false])
+        DispatchQueue.main.async {
+            call.resolve(["listening": self.audioEngine?.isRunning ?? false])
+        }
     }
 
     @objc func getSupportedLanguages(_ call: CAPPluginCall) {
@@ -205,11 +230,13 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func stopRecognition(notify: Bool) {
-        let wasRunning = audioEngine?.isRunning == true
         // cancel()後に届く古いコールバックが、次の認識セッションを止めないよう無効化する。
-        recognitionSessionId += 1
+        let hadActiveSession = lifecycle.end()
         audioEngine?.stop()
-        audioEngine?.inputNode.removeTap(onBus: 0)
+        if inputTapInstalled {
+            audioEngine?.inputNode.removeTap(onBus: 0)
+            inputTapInstalled = false
+        }
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
         recognitionTask = nil
@@ -223,7 +250,7 @@ public final class SpeechRecognitionPlugin: CAPPlugin, CAPBridgedPlugin {
             print("Failed to restore playback audio session: \(error)")
         }
 
-        if wasRunning && notify {
+        if hadActiveSession && notify {
             notifyListeners("listeningState", data: ["status": "stopped"])
         }
     }

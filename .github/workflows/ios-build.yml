@@ -34,6 +34,14 @@ jobs:
       - name: Run shared regression tests
         run: npm test
 
+      - name: Run online regression tests
+        run: npm run online:test
+
+      - name: Test native speech session lifecycle
+        run: |
+          swiftc plugins/kotodama-speech-recognition/ios/Sources/KotodamaSpeechRecognitionPlugin/SpeechSessionLifecycle.swift plugins/kotodama-speech-recognition/ios/Tests/SpeechSessionLifecycleTests.swift -o "$RUNNER_TEMP/kotodama-speech-tests"
+          "$RUNNER_TEMP/kotodama-speech-tests"
+
       - name: Build Web Assets
         run: npm run build
 

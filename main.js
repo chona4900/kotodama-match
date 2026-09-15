@@ -893,19 +893,23 @@
                 // 旧版の診断用「ききとり記録」は廃止したため、保存済み文字列も削除する。
                 localStorage.removeItem('kotodama_speech_recognition_log_v1');
                 const saved = localStorage.getItem('kotodama_state');
-                if (saved) {
+                const backup = localStorage.getItem('kotodama_state_backup');
+                if (saved || backup) {
+                    const parseSavedState = (serialized) => {
+                        const parsed = JSON.parse(serialized);
+                        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                            throw new Error('保存データの形式が不正です');
+                        }
+                        return parsed;
+                    };
                     let state;
                     try {
-                        state = JSON.parse(saved);
+                        state = parseSavedState(saved);
                     } catch (primaryError) {
-                        const backup = localStorage.getItem('kotodama_state_backup');
                         if (!backup) throw primaryError;
-                        state = JSON.parse(backup);
+                        state = parseSavedState(backup);
                         localStorage.setItem('kotodama_state', backup);
                         console.warn('保存データを予備保存から復旧しました。');
-                    }
-                    if (!state || typeof state !== 'object') {
-                        throw new Error('保存データの形式が不正です');
                     }
 
                     const migration = window.KotodamaStateMigrations.migrateSavedState(state, allWords);
@@ -3434,7 +3438,7 @@
                     updateNoonRitualMicButton();
                     return;
                 }
-                if (nativeListeningRequested && !isIosNativeSpeech() && !isListening) {
+                if (nativeListeningRequested && !isIosNativeSpeech()) {
                     // Androidはネイティブ側で再接続する。端末に止められた場合だけ
                     // 状態を戻し、ユーザーが明示的に再開できるようにする。
                     nativeListeningRequested = false;
@@ -3518,6 +3522,7 @@
                 if (!nativeListenersReady) {
                     await speechPlugin.removeAllListeners();
                     await speechPlugin.addListener('partialResults', (data) => {
+                        if (!nativeListeningRequested) return;
                         if (data && data.matches && data.matches.length > 0) {
                             // 「started」だけでは即時エラーとのループを成功扱いにしない。
                             // 実際の認識結果が届いた時点で、再試行回数を戻す。
@@ -3533,6 +3538,8 @@
                         }
                     });
                     await speechPlugin.addListener('listeningState', (data) => {
+                        // stop()の完了前に届いた旧セッションの通知でMICをオンに戻さない。
+                        if (!nativeListeningRequested && data?.status !== 'stopped') return;
                         if (data && data.status === 'started') {
                             isListening = true;
                             isStartingMic = false;
@@ -3561,6 +3568,7 @@
                         }
                     });
                     await speechPlugin.addListener('recognitionError', (data) => {
+                        if (!nativeListeningRequested) return;
                         nativeLastErrorMessage = getNativeSpeechErrorMessage(data);
                         if (data?.willRetry) {
                             statusTextEl.textContent = nativeLastErrorMessage;
@@ -3599,17 +3607,27 @@
                     nativeRestartAttempt = 0;
                 }
                 const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
-                await prepareNativeSpeech();
-                await queueNativeSpeechOperation(async () => {
-                    if (!nativeListeningRequested) return;
-                    await speechPlugin.start({
-                        language: "ja-JP",
-                        maxResults: 3,
-                        prompt: "言霊を唱えてください",
-                        partialResults: true,
-                        popup: false
+                try {
+                    await prepareNativeSpeech();
+                    await queueNativeSpeechOperation(async () => {
+                        if (!nativeListeningRequested) return;
+                        await speechPlugin.start({
+                            language: "ja-JP",
+                            maxResults: 3,
+                            prompt: "言霊を唱えてください",
+                            partialResults: true,
+                            popup: false
+                        });
                     });
-                });
+                } catch (error) {
+                    // 初回開始失敗を「MICオンの意思」だけ残した状態にしない。
+                    // 自動復旧中の失敗はリトライ側で回数を管理する。
+                    if (!isRecovery) nativeListeningRequested = false;
+                    isListening = false;
+                    micBtnEl.classList.remove('mic-starting', 'mic-active');
+                    updateNoonRitualMicButton();
+                    throw error;
+                }
                 if (!nativeListeningRequested) return;
                 isListening = true;
                 micBtnEl.classList.remove('mic-starting');

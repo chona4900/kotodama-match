@@ -24,6 +24,67 @@ const androidManifestSource = fs.readFileSync(
 const appDelegateSource = fs.readFileSync(path.join(root, 'ios/App/App/AppDelegate.swift'), 'utf8');
 const onlineBattleWorkerSource = fs.readFileSync(path.join(root, 'online-battle/src/index.mjs'), 'utf8');
 
+function speechLifecycleHarness(platform = 'ios') {
+  const listeners = {};
+  const classes = new Set();
+  const plugin = {
+    async removeAllListeners() {},
+    async addListener(name, callback) { listeners[name] = callback; },
+    async checkPermissions() { return { microphone: 'granted', speechRecognition: 'granted' }; },
+    async isListening() { return { listening: false }; },
+    async start() {}, async stop() {},
+  };
+  const context = vm.createContext({
+    window: { Capacitor: { getPlatform: () => platform, Plugins: { SpeechRecognition: plugin } } },
+    document: { visibilityState: 'visible' },
+    useNativeSpeech: true, isListening: false, isStartingMic: false, currentStage: 0,
+    micBtnEl: { classList: { add: (...names) => names.forEach(n => classes.add(n)), remove: (...names) => names.forEach(n => classes.delete(n)) } },
+    statusTextEl: { textContent: '' },
+    updateNoonRitualMicButton() {}, onMicrophoneStartedForTutorial() {}, initAudio() {},
+    selectBestSpeechTranscript: matches => matches[0],
+    processTranscript() { context.resultCount += 1; }, resultCount: 0,
+    setTimeout() { return 1; }, clearTimeout() {}, console,
+  });
+  vm.runInContext(sourceBetween('let nativeInterimMatchCounts = {};', '// --- UI用 ---') + '\nthis.requested = () => nativeListeningRequested;', context);
+  return { context, plugin, listeners, classes };
+}
+
+test('failed initial microphone start clears intent so next tap can retry', async () => {
+  const { context, plugin, classes } = speechLifecycleHarness();
+  plugin.start = async () => { throw new Error('unavailable'); };
+  await assert.rejects(context.startMic(), /unavailable/);
+  assert.equal(context.requested(), false);
+  assert.equal(context.isListening, false);
+  assert.equal(classes.has('mic-active'), false);
+  plugin.start = async () => {};
+  await context.startMic();
+  assert.equal(context.requested(), true);
+  assert.equal(context.isListening, true);
+});
+
+test('late recognition callbacks after MIC off cannot reactivate or reward', async () => {
+  const { context, listeners, classes } = speechLifecycleHarness();
+  await context.startMic();
+  await context.stopMic();
+  listeners.listeningState({ status: 'started' });
+  listeners.listeningState({ status: 'recovering' });
+  listeners.partialResults({ matches: ['ありがとう'], isFinal: true });
+  assert.equal(context.isListening, false);
+  assert.equal(classes.has('mic-active'), false);
+  assert.equal(context.resultCount, 0);
+});
+
+test('Android resume clears stale active UI when native recognizer has stopped', async () => {
+  const { context, classes } = speechLifecycleHarness('android');
+  await context.startMic();
+  assert.equal(context.isListening, true);
+  await context.syncNativeSpeechState();
+  assert.equal(context.isListening, false);
+  assert.equal(context.requested(), false);
+  assert.equal(classes.has('mic-active'), false);
+  assert.match(context.statusTextEl.textContent, /MICを押して再開/);
+});
+
 function sourceBetween(startMarker, endMarker) {
   const start = mainSource.indexOf(startMarker);
   const end = mainSource.indexOf(endMarker, start);
@@ -440,10 +501,12 @@ test('iOSは発話ごとの終了後に次の言霊を待ち、画面復帰時�
   assert.match(mainSource, /function syncNativeSpeechState\(\)/);
   assert.match(mainSource, /appStateChange/);
   assert.match(mainSource, /const WORD_MATCH_COOLDOWN_MS = 250/);
-  assert.match(speechPluginSource, /private var recognitionSessionId = 0/);
-  assert.match(speechPluginSource, /self\.recognitionSessionId == sessionId/);
+  assert.match(speechPluginSource, /private var lifecycle = SpeechSessionLifecycle\(\)/);
+  assert.match(speechPluginSource, /DispatchQueue\.main\.async \{\s*guard let self, self\.lifecycle\.accepts\(sessionId\)/);
   assert.match(speechPluginSource, /"sessionId": sessionId/);
-  assert.match(speechPluginSource, /\[weak self, request\][\s\S]*?self\.recognitionSessionId == sessionId[\s\S]*?request\.append\(buffer\)/);
+  assert.match(speechPluginSource, /installTap[\s\S]*?\[request\][\s\S]*?request\.append\(buffer\)/);
+  assert.match(speechPluginSource, /let hadActiveSession = lifecycle\.end\(\)/);
+  assert.match(speechPluginSource, /if hadActiveSession && notify/);
   assert.match(mainSource, /data\.matches\.length > 0[\s\S]{0,240}?nativeRestartAttempt = 0/);
   assert.doesNotMatch(mainSource, /status === 'started'\) \{[\s\S]{0,240}?nativeRestartAttempt = 0/);
 });
