@@ -36,6 +36,7 @@ jobs:
       - name: Run web and Android regression checks
         run: |
           npm test
+          npm run online:test
           cd android
           chmod +x gradlew
           ./gradlew testDebugUnitTest lintDebug --stacktrace
@@ -71,7 +72,7 @@ jobs:
           retention-days: 14
 
       # Google Play の申告用動画を先に撮れるよう、同じ署名鍵で直接インストール用APKも作る。
-      # versionCode 15 は、既存のクローズドテスト版 (7) より新しく、Play 配布予定のAAB (16) より低い。
+      # AABと同じビルド番号を使い、修正版APKを以前の検証版と区別する。
       - name: Build signed verification APK
         working-directory: android
         env:
@@ -80,7 +81,7 @@ jobs:
           ANDROID_KEY_ALIAS: kotodama-upload
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
           ANDROID_KEYSTORE_TYPE: PKCS12
-          ANDROID_VERSION_CODE: 15
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
           ANDROID_VERSION_NAME: 1.0.10-test
         run: |
           chmod +x gradlew

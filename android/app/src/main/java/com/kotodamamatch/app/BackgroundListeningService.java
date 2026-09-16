@@ -34,23 +34,46 @@ public class BackgroundListeningService extends Service {
         context.stopService(new Intent(context, BackgroundListeningService.class));
     }
 
+    // Settings can grant permission after the original foreground notification
+    // was suppressed. Repost it without restarting microphone capture.
+    public static void refreshNotification(Context context) {
+        if (!running) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager != null && manager.areNotificationsEnabled()) {
+            manager.notify(NOTIFICATION_ID, buildNotification(context));
+        }
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         running = true;
         createNotificationChannel();
-        Intent openAppIntent = new Intent(this, MainActivity.class);
+        Notification notification = buildNotification(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
+        return START_NOT_STICKY;
+    }
+
+    private static Notification buildNotification(Context context) {
+        Intent openAppIntent = new Intent(context, MainActivity.class);
         openAppIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         int pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) pendingIntentFlags |= PendingIntent.FLAG_IMMUTABLE;
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openAppIntent, pendingIntentFlags);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, openAppIntent, pendingIntentFlags);
 
         // Notification.Builder(Context, channelId) is Android 8+ only. The app
         // still supports Android 7.0, where the channel-less constructor is the
         // compatible equivalent (notification channels do not exist yet).
         Notification.Builder notificationBuilder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-            ? new Notification.Builder(this, CHANNEL_ID)
-            : new Notification.Builder(this);
-        Notification notification = notificationBuilder
+            ? new Notification.Builder(context, CHANNEL_ID)
+            : new Notification.Builder(context);
+        return notificationBuilder
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("コトダマっちが言霊をききとり中")
             .setContentText("マイクを止めるには、コトダマっちを開いてMICを押してください。")
@@ -58,12 +81,6 @@ public class BackgroundListeningService extends Service {
             .setOngoing(true)
             .build();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
-        } else {
-            startForeground(NOTIFICATION_ID, notification);
-        }
-        return START_NOT_STICKY;
     }
 
     @Override

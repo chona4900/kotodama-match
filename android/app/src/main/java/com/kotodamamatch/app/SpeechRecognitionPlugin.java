@@ -84,6 +84,10 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
                 call.resolve();
             } catch (Exception error) {
                 listeningRequested = false;
+                listening = false;
+                restartScheduled = false;
+                mainHandler.removeCallbacksAndMessages(null);
+                destroyRecognizer();
                 BackgroundListeningService.stop(getContext());
                 call.reject("Failed to start background listening: " + error.getMessage());
             }
@@ -95,9 +99,8 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         getActivity().runOnUiThread(() -> {
             listeningRequested = false;
             mainHandler.removeCallbacksAndMessages(null);
-            if (recognizer != null) {
-                recognizer.stopListening();
-            }
+            // MIC-off discards pending speech; cancel/destroy below also
+            // handles a recognition provider that has disconnected.
             stopAndNotify();
             call.resolve();
         });
@@ -331,9 +334,9 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         // cancel/destroy後に遅れて届く旧セッションの結果を、現在の結果として扱わない。
         recognitionSessionId += 1;
         if (recognizer != null) {
-            recognizer.cancel();
-            recognizer.destroy();
+            SpeechRecognizer previousRecognizer = recognizer;
             recognizer = null;
+            SpeechResourceCleanup.release(previousRecognizer::cancel, previousRecognizer::destroy);
         }
     }
 

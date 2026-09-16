@@ -5583,7 +5583,9 @@
         }
 
         // 初回ロード
-        window.onload = () => {
+        window.onload = async () => {
+            // Androidの買い切りは購入検証後に開始。iOSはストアで購入済み。
+            if (window.KotodamaBilling) await window.KotodamaBilling.ready;
             init();
         };
 
