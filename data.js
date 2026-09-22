@@ -13,7 +13,11 @@
             if (window.isKotodamaSpeechListening?.()) return Promise.resolve();
             if (nativeAudioRefreshPromise) return nativeAudioRefreshPromise;
 
-            nativeAudioRefreshPromise = Promise.resolve(speechPlugin.refreshAudioSession())
+            nativeAudioRefreshPromise = Promise.resolve()
+                .then(() => {
+                    // A MIC click can start recording later in the same event turn.
+                    if (!window.isKotodamaSpeechListening?.()) return speechPlugin.refreshAudioSession();
+                })
                 .catch((error) => console.warn('Native audio session refresh failed:', error))
                 .finally(() => { nativeAudioRefreshPromise = null; });
             return nativeAudioRefreshPromise;
@@ -42,16 +46,19 @@
             // iPhoneの消音スイッチを切り替えた直後は、Web Audioだけが
             // running のままでも、ネイティブの出力先が古い状態になることがある。
             // 音を鳴らす操作ごとに出力セッションを再接続してから再生する。
-            const startPlayback = () => Promise.resolve(ctx.resume())
+            const startPlayback = () => Promise.resolve()
                 .then(() => {
-                    if (ctx.state === 'running') {
+                    if (soundEnabled && ctx === audioCtx) return ctx.resume();
+                })
+                .then(() => {
+                    if (soundEnabled && ctx === audioCtx && ctx.state === 'running') {
                         nudgeWebAudioOutput();
                         playback(ctx);
                     }
                 })
                 .catch((error) => console.warn('Audio playback resume failed:', error));
 
-            refreshNativeAudioSession().then(startPlayback, startPlayback);
+            return refreshNativeAudioSession().then(startPlayback, startPlayback);
         }
         
         function nudgeWebAudioOutput() {
@@ -77,7 +84,11 @@
 
             // Web Audioの再開はユーザー操作と同じ同期処理内でも実行する。
             nudgeWebAudioOutput();
-            refreshNativeAudioSession({ force }).then(nudgeWebAudioOutput);
+            window.resumeKotodamaBattleBgm?.();
+            return refreshNativeAudioSession({ force }).then(() => {
+                nudgeWebAudioOutput();
+                window.resumeKotodamaBattleBgm?.();
+            });
         };
         document.addEventListener('touchstart', recoverAudioOutput, { passive: true });
         document.addEventListener('click', recoverAudioOutput);

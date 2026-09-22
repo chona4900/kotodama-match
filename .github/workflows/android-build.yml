@@ -58,7 +58,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
           ANDROID_KEYSTORE_TYPE: PKCS12
           ANDROID_VERSION_CODE: ${{ github.run_number }}
-          ANDROID_VERSION_NAME: 1.0.10
+          ANDROID_VERSION_NAME: 1.0.11
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease --stacktrace
@@ -82,7 +82,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
           ANDROID_KEYSTORE_TYPE: PKCS12
           ANDROID_VERSION_CODE: ${{ github.run_number }}
-          ANDROID_VERSION_NAME: 1.0.10-test
+          ANDROID_VERSION_NAME: 1.0.11-test
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace

@@ -39,8 +39,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
     private int maxResults = 1;
     private boolean restartScheduled = false;
     private int recognitionSessionId = 0;
-    private int recoveryAttempt = 0;
-    private static final int MAX_FOREGROUND_RECOVERY_ATTEMPTS = 4;
+    private final SpeechRecoveryBackoff recoveryBackoff = new SpeechRecoveryBackoff();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @PluginMethod
@@ -60,14 +59,9 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
             call.reject("Speech recognition is unavailable");
             return;
         }
-        if (listening || listeningRequested || restartScheduled) {
-            call.reject("Speech recognition is already running");
-            return;
-        }
-
-        language = call.getString("language", "ja-JP");
-        partialResults = call.getBoolean("partialResults", true);
-        maxResults = call.getInt("maxResults", 1);
+        final String requestedLanguage = call.getString("language", "ja-JP");
+        final boolean requestedPartialResults = call.getBoolean("partialResults", true);
+        final int requestedMaxResults = call.getInt("maxResults", 1);
 
         getActivity().runOnUiThread(() -> {
             if (listening || listeningRequested || restartScheduled) {
@@ -75,6 +69,10 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
                 return;
             }
             try {
+                language = requestedLanguage;
+                partialResults = requestedPartialResults;
+                maxResults = requestedMaxResults;
+                recoveryBackoff.reset();
                 // ユーザーがMICをオンにした直後だけ開始する。Android 14以降は
                 // バックグラウンドからマイク用サービスを起動できないため、ここで維持する。
                 BackgroundListeningService.start(getContext());
@@ -108,11 +106,13 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
 
     @PluginMethod
     public void isListening(PluginCall call) {
-        JSObject result = new JSObject();
-        // 発話間の短い再開待ちも、ユーザーにとってはMICオンの状態。
-        // ここでfalseを返すと画面復帰と再開タイマーが競合して停止扱いになる。
-        result.put("listening", listeningRequested);
-        call.resolve(result);
+        getActivity().runOnUiThread(() -> {
+            JSObject result = new JSObject();
+            // Read on the same thread that writes the recognition state.
+            // 発話間の短い再開待ちも、ユーザーにとってはMICオンの状態。
+            result.put("listening", listeningRequested);
+            call.resolve(result);
+        });
     }
 
     @PluginMethod
@@ -165,7 +165,8 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
 
     @Override
     public void onReadyForSpeech(Bundle params) {
-        recoveryAttempt = 0;
+        // A provider may become ready and still fail on every network request.
+        // Reset only after an ordinary utterance boundary or a new MIC-on intent.
     }
 
     @Override
@@ -188,7 +189,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
             case SpeechRecognizer.ERROR_NO_MATCH:
             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
                 // 無音・認識なしは通常の発話区切り。すぐ次を聞き始める。
-                recoveryAttempt = 0;
+                recoveryBackoff.reset();
                 scheduleRecognizerRestart(250, true, 0, false);
                 break;
             case SpeechRecognizer.ERROR_CLIENT:
@@ -220,7 +221,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         // AndroidのSpeechRecognizerは1発話ごとに結果を返して終了する。
         // これはユーザーがMICを止めた意味ではない。古いコールバックを
         // 次の発話へ混ぜないため、認識器はセッションごとに作り直す。
-        recoveryAttempt = 0;
+        recoveryBackoff.reset();
         scheduleRecognizerRestart(250, true, 0, false);
     }
 
@@ -247,6 +248,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
     private void notifyListeningState(String status) {
         JSObject data = new JSObject();
         data.put("status", status);
+        data.put("sessionId", recognitionSessionId);
         notifyListeners("listeningState", data);
     }
 
@@ -267,6 +269,7 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         JSObject data = new JSObject();
         data.put("code", error);
         data.put("willRetry", willRetry);
+        data.put("sessionId", recognitionSessionId);
         notifyListeners("recognitionError", data);
     }
 
@@ -302,22 +305,18 @@ public class SpeechRecognitionPlugin extends Plugin implements RecognitionListen
         // 停止せず、上限付きの待機時間で聞き取りを再接続し続ける。
         // 明示的なMICオフ、権限エラーなどの致命的な経路は従来どおり停止する。
         boolean keepForegroundServiceAlive = BackgroundListeningService.isRunning();
-        if (countRecoveryAttempt
-            && !keepForegroundServiceAlive
-            && recoveryAttempt >= MAX_FOREGROUND_RECOVERY_ATTEMPTS) {
+        if (countRecoveryAttempt && !recoveryBackoff.mayRetry(keepForegroundServiceAlive)) {
             notifySpeechError(errorCode, false);
             stopAndNotify();
             return;
         }
 
-        if (countRecoveryAttempt) recoveryAttempt += 1;
+        long retryDelay = recoveryBackoff.nextDelay(baseDelayMillis, countRecoveryAttempt);
         restartScheduled = true;
         listening = false;
         if (recreateRecognizer) destroyRecognizer();
         if (countRecoveryAttempt) notifySpeechError(errorCode, true);
         notifyListeningState("recovering");
-        int backoffExponent = countRecoveryAttempt ? Math.min(Math.max(recoveryAttempt - 1, 0), 3) : 0;
-        long retryDelay = Math.min(baseDelayMillis * (1L << backoffExponent), 8000L);
         mainHandler.postDelayed(() -> {
             restartScheduled = false;
             if (!listeningRequested) return;

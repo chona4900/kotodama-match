@@ -900,6 +900,13 @@
         .pvp-menu-overlay.visible, .pvp-challenge-overlay.visible {
             display: flex;
         }
+        /* Auto margins center short menus but become zero on overflow. Plain
+           justify-content:center places the heading above scrollTop=0 on short screens. */
+        .pvp-menu-overlay { justify-content: flex-start; }
+        .pvp-menu-overlay::before, .pvp-menu-overlay::after {
+            content: ''; flex: 0 0 0; margin-top: auto; margin-bottom: auto;
+        }
+        .pvp-menu-overlay > :first-child { flex-shrink: 0; }
         .pvp-btn {
             background: var(--screen-bg); border: 2px solid var(--screen-text);
             color: var(--screen-text); padding: 10px; margin: 8px 0;

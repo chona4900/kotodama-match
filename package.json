@@ -1,6 +1,6 @@
 {
   "name": "kotodama-match",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "",
   "main": "main.js",
   "directories": {
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node build.js",
     "dev": "npx live-server",
-    "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/progression.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js scripts/gameplay-regressions.test.js scripts/noon-ritual.test.js scripts/persistence-recovery.test.js scripts/billing-state.test.js scripts/billing-ui.test.js",
+    "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/progression.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js scripts/gameplay-regressions.test.js scripts/noon-ritual.test.js scripts/persistence-recovery.test.js scripts/billing-state.test.js scripts/billing-ui.test.js scripts/speech-races.test.js scripts/audio-recovery.test.js scripts/online-recovery.test.js",
     "release:preflight": "node scripts/release-preflight.js",
     "online:test": "node --test online-battle/test/*.test.mjs",
     "online:test:integration": "node scripts/online-room-integration-check.mjs",

@@ -12,8 +12,6 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
 
 /** A single non-consumable full-game purchase. Never consumes or auto-purchases. */
 @CapacitorPlugin(name = "KotodamaBilling")
@@ -29,14 +27,16 @@ public class KotodamaBillingPlugin extends Plugin {
     private String price = "";
     private String message = "";
     private final List<Runnable> waiting = new ArrayList<>();
-    private final Set<String> acknowledgedThisSession = new HashSet<>();
+    private final BillingAcknowledgements acknowledgements = new BillingAcknowledgements();
     private final BillingRefreshEpoch refreshEpoch = new BillingRefreshEpoch();
 
     @Override public void load() {
         receipts = getContext().getSharedPreferences("kotodama_play_receipt", Context.MODE_PRIVATE);
         try {
             Purchase cached = new Purchase(receipts.getString("data", ""), receipts.getString("signature", ""));
-            owned = valid(cached) && cached.isAcknowledged();
+            owned = BillingAcknowledgements.canRestore(valid(cached), cached.isAcknowledged(),
+                cached.getPurchaseToken(), receipts.getString("acknowledgedToken", ""));
+            if (owned) acknowledgements.confirmed(cached.getPurchaseToken());
         } catch (Exception ignored) { owned = false; }
         client = BillingClient.newBuilder(getContext()).setListener((result, purchases) -> main(() -> {
             purchaseInFlight = false;
@@ -126,14 +126,20 @@ public class KotodamaBillingPlugin extends Plugin {
             }));
     }
     private void completePurchase(Purchase purchase, PluginCall call, long epoch) {
-        if (purchase.isAcknowledged() || acknowledgedThisSession.contains(purchase.getPurchaseToken())) {
+        if (purchase.isAcknowledged() || acknowledgements.contains(purchase.getPurchaseToken())) {
             grant(purchase); if (call != null) call.resolve(state()); return;
         }
         client.acknowledgePurchase(AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build(),
             acknowledgement -> main(() -> {
-                if (!refreshEpoch.accepts(epoch)) { if (call != null) call.resolve(state()); return; }
-                if (acknowledgement.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                    acknowledgedThisSession.add(purchase.getPurchaseToken());
+                // A newer restore query does not undo Google's successful ACK.
+                // Record it even when this callback can no longer grant state.
+                boolean acknowledged = acknowledgement.getResponseCode() == BillingClient.BillingResponseCode.OK;
+                if (!acknowledgements.recordResult(purchase.getPurchaseToken(), acknowledged, epoch, refreshEpoch)) {
+                    if (call != null) call.resolve(state());
+                    if (acknowledged) refresh(null);
+                    return;
+                }
+                if (acknowledged || acknowledgements.contains(purchase.getPurchaseToken())) {
                     grant(purchase);
                     // One bounded refresh obtains the acknowledged offline receipt.
                     refresh(call);
@@ -144,7 +150,13 @@ public class KotodamaBillingPlugin extends Plugin {
             }));
     }
     private void grant(Purchase p) {
-        receipts.edit().putString("data", p.getOriginalJson()).putString("signature", p.getSignature()).apply();
+        if (p.isAcknowledged()) acknowledgements.confirmed(p.getPurchaseToken());
+        // The signed JSON may still say acknowledged=false after an OK ACK or
+        // when its follow-up query loses connectivity. Preserve that signed
+        // receipt unchanged and bind our successful ACK to its exact token.
+        receipts.edit().putString("data", p.getOriginalJson()).putString("signature", p.getSignature())
+            .putString("acknowledgedToken", p.isAcknowledged() || acknowledgements.contains(p.getPurchaseToken())
+                ? p.getPurchaseToken() : "").apply();
         owned = true; pending = false; message = ""; emit();
     }
     @PluginMethod public void getProduct(PluginCall call) { main(() -> connected(() -> queryProduct(call, false))); }
@@ -158,6 +170,10 @@ public class KotodamaBillingPlugin extends Plugin {
             .setProductId(PRODUCT).setProductType(BillingClient.ProductType.INAPP).build();
         client.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(Collections.singletonList(item)).build(),
             (result, details) -> main(() -> {
+                if (launch && !BillingLaunchGuard.mayLaunch(owned, pending, purchaseInFlight)) {
+                    purchaseInFlight = false;
+                    call.resolve(state()); emit(); return;
+                }
                 List<ProductDetails> products = details.getProductDetailsList();
                 if (result.getResponseCode() != BillingClient.BillingResponseCode.OK || products.isEmpty()) {
                     if (launch) purchaseInFlight = false;
@@ -165,7 +181,7 @@ public class KotodamaBillingPlugin extends Plugin {
                 }
                 ProductDetails product = products.get(0);
                 ProductDetails.OneTimePurchaseOfferDetails offer = product.getOneTimePurchaseOfferDetails();
-                if (offer == null) { if (launch) purchaseInFlight = false; call.reject("購入できる商品がありません。"); return; }
+                if (offer == null) { if (launch) purchaseInFlight = false; call.reject("購入できる商品がありません。"); emit(); return; }
                 price = offer.getFormattedPrice();
                 if (!launch) { call.resolve(state()); return; }
                 BillingFlowParams.ProductDetailsParams params = BillingFlowParams.ProductDetailsParams.newBuilder()
