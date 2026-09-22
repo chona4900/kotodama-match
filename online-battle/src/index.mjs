@@ -270,7 +270,15 @@ export class BattleRoom extends DurableObject {
         this.broadcast({ type: 'room', room: this.publicRoom(room, null, { connectedSeats }) });
         return;
       }
-      return this.send(socket, { type: 'room', room: this.publicRoom(room, seat, { connectedSeats }), seat });
+      this.send(socket, { type: 'room', room: this.publicRoom(room, seat, { connectedSeats }), seat });
+      // A disconnect can lose the one-time result broadcast. The authenticated
+      // player must be able to recover the same result without replaying a move.
+      if (room.phase === 'finished' && room.result) {
+        this.send(socket, { type: 'result', result: room.result, room: this.publicRoom(room, seat, { connectedSeats }) });
+      } else if (room.phase === 'finalizing' && room.result) {
+        await this.scheduleNextAlarm(room);
+      }
+      return;
     }
 
     if (payload.type === 'choose') {
@@ -316,18 +324,35 @@ export class BattleRoom extends DurableObject {
       finishedAt: Date.now()
     };
     room.phase = 'finalizing';
-    await this.save(room);
+    room.ranking = { eligible: Boolean(room.host.profile && room.guest.profile), counted: false, pending: true };
+    // Writes with no intervening await are committed atomically by DO storage.
+    // Persist the recovery alarm with the result before crossing the D1 boundary.
+    await Promise.all([this.save(room), this.scheduleNextAlarm(room)]);
+    await this.finalizeRoomRanking(room);
+  }
 
+  async finalizeRoomRanking(room) {
+    let ranking;
     try {
-      room.ranking = await this.recordRoomRanking(room);
+      ranking = await this.recordRoomRanking(room);
     } catch (error) {
       console.error(JSON.stringify({ event: 'ranking-record-failed', matchId: room.matchId, error: String(error) }));
-      room.ranking = { eligible: Boolean(room.host.profile && room.guest.profile), counted: false, pending: true };
+      ranking = { eligible: Boolean(room.host.profile && room.guest.profile), counted: false, pending: true };
     }
-    room.phase = 'finished';
-    await this.save(room);
-    await this.scheduleNextAlarm(room);
-    this.broadcast({ type: 'result', result: room.result, room: this.publicRoom(room) });
+
+    // Another alarm/request may have finished while D1 was responding. Preserve
+    // its stamps and successful ranking, and never revive an expired/new room.
+    const current = await this.load();
+    if (!current || current.matchId !== room.matchId || current.expiresAt <= Date.now()) return;
+    const wasFinalizing = current.phase === 'finalizing';
+    if (current.ranking?.pending !== false || !ranking.pending) current.ranking = ranking;
+    current.phase = 'finished';
+    await Promise.all([this.save(current), this.scheduleNextAlarm(current)]);
+    if (wasFinalizing) {
+      this.broadcast({ type: 'result', result: current.result, room: this.publicRoom(current) });
+    } else {
+      this.broadcast({ type: 'room', room: this.publicRoom(current) });
+    }
   }
 
   async alarm() {
@@ -339,13 +364,9 @@ export class BattleRoom extends DurableObject {
       return;
     }
 
-    if (room.ranking?.pending) {
-      try {
-        room.ranking = await this.recordRoomRanking(room);
-        await this.save(room);
-      } catch (error) {
-        console.error(JSON.stringify({ event: 'ranking-retry-failed', matchId: room.matchId, error: String(error) }));
-      }
+    if ((room.phase === 'finalizing' && room.result) || room.ranking?.pending) {
+      await this.finalizeRoomRanking(room);
+      return;
     }
     await this.scheduleNextAlarm(room);
   }
@@ -387,7 +408,7 @@ export class BattleRoom extends DurableObject {
   }
 
   async scheduleNextAlarm(room) {
-    const retryAt = room.ranking?.pending ? Date.now() + RANKING_RETRY_MS : room.expiresAt;
+    const retryAt = room.phase === 'finalizing' || room.ranking?.pending ? Date.now() + RANKING_RETRY_MS : room.expiresAt;
     await this.ctx.storage.setAlarm(Math.min(retryAt, room.expiresAt));
   }
 

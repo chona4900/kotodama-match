@@ -17,6 +17,10 @@ const androidSpeechPluginSource = fs.readFileSync(
   path.join(root, 'android/app/src/main/java/com/kotodamamatch/app/SpeechRecognitionPlugin.java'),
   'utf8',
 );
+const androidSpeechRecoverySource = fs.readFileSync(
+  path.join(root, 'android/app/src/main/java/com/kotodamamatch/app/SpeechRecoveryBackoff.java'),
+  'utf8',
+);
 const androidManifestSource = fs.readFileSync(
   path.join(root, 'android/app/src/main/AndroidManifest.xml'),
   'utf8',
@@ -93,7 +97,7 @@ function sourceBetween(startMarker, endMarker) {
   return mainSource.slice(start, end);
 }
 
-test('CPU battles do not update the persistent win/loss record', () => {
+test('battle completion only renders; CPU battles and online replays do not increment persisted records', () => {
   const finishBattleSource = sourceBetween(
     'function finishBattle(isWin, recordOnlineResult = false)',
     'function setupBattleMessage(isWin)',
@@ -136,9 +140,9 @@ test('CPU battles do not update the persistent win/loss record', () => {
   assert.equal(saveCount, 0);
 
   context.finishBattle(true, true);
-  assert.equal(context.battleWins, 5);
+  assert.equal(context.battleWins, 4);
   assert.equal(context.battleLosses, 2);
-  assert.equal(saveCount, 1);
+  assert.equal(saveCount, 0);
 });
 
 test('the online battle result path explicitly enables record keeping', () => {
@@ -454,13 +458,18 @@ test('iOS audio output can recover after mute, interruption, or app resume', () 
 });
 
 test('Androidは発話ごとの認識終了後もMICを止めず、状況に応じて安全に再接続する', () => {
-  assert.match(androidSpeechPluginSource, /public void onResults\(Bundle results\)[\s\S]*?recoveryAttempt = 0;[\s\S]*?scheduleRecognizerRestart\(250, true, 0, false\);/);
-  assert.match(androidSpeechPluginSource, /ERROR_NO_MATCH:[\s\S]*?scheduleRecognizerRestart\(250, true, 0, false\);/);
+  assert.match(androidSpeechPluginSource, /public void onResults\(Bundle results\)[\s\S]*?recoveryBackoff\.reset\(\);[\s\S]*?scheduleRecognizerRestart\(250, true, 0, false\);/);
+  assert.match(androidSpeechPluginSource, /ERROR_NO_MATCH:[\s\S]*?ERROR_SPEECH_TIMEOUT:[\s\S]*?recoveryBackoff\.reset\(\);[\s\S]*?scheduleRecognizerRestart\(250, true, 0, false\);/);
   assert.match(androidSpeechPluginSource, /ERROR_CLIENT:[\s\S]*?ERROR_RECOGNIZER_BUSY:[\s\S]*?scheduleRecognizerRestart\(1000, true, error, true\);/);
   assert.match(androidSpeechPluginSource, /ERROR_TOO_MANY_REQUESTS:[\s\S]*?scheduleRecognizerRestart\(2000, true, error, true\);/);
   assert.match(androidSpeechPluginSource, /private void scheduleRecognizerRestart\([\s\S]*?boolean countRecoveryAttempt[\s\S]*?if \(!listeningRequested \|\| restartScheduled\) return;/);
-  assert.match(androidSpeechPluginSource, /MAX_FOREGROUND_RECOVERY_ATTEMPTS = 4/);
-  assert.match(androidSpeechPluginSource, /if \(countRecoveryAttempt\) recoveryAttempt \+= 1;/);
+  assert.match(androidSpeechPluginSource, /recoveryBackoff = new SpeechRecoveryBackoff\(\)/);
+  assert.match(androidSpeechPluginSource, /long retryDelay = recoveryBackoff\.nextDelay\(baseDelayMillis, countRecoveryAttempt\)/);
+  assert.match(androidSpeechPluginSource, /mainHandler\.postDelayed\([\s\S]*?\}, retryDelay\)/);
+  assert.match(androidSpeechRecoverySource, /MAX_ATTEMPTS_WITHOUT_SERVICE = 4/);
+  assert.match(androidSpeechRecoverySource, /if \(recoveryFailure\) failures = Math\.min\(failures \+ 1, MAX_ATTEMPTS_WITHOUT_SERVICE\)/);
+  assert.match(androidSpeechRecoverySource, /return Math\.min\(baseDelayMillis \* \(1L << exponent\), 8000L\)/);
+  assert.doesNotMatch(androidSpeechPluginSource, /public void onReadyForSpeech\(Bundle params\) \{[^}]*recoveryBackoff\.reset\(/);
   assert.match(androidSpeechPluginSource, /if \(countRecoveryAttempt\) notifySpeechError\(errorCode, true\);/);
   assert.match(androidSpeechPluginSource, /result\.put\("listening", listeningRequested\)/);
   assert.match(androidSpeechPluginSource, /notifyListeners\("recognitionError", data\)/);
@@ -489,8 +498,9 @@ test('Androidはホーム移動直後の一時エラーで、MICの常駐待受�
   assert.match(androidSpeechPluginSource, /boolean keepForegroundServiceAlive = BackgroundListeningService\.isRunning\(\)/);
   assert.match(
     androidSpeechPluginSource,
-    /countRecoveryAttempt[\s\S]*?!keepForegroundServiceAlive[\s\S]*?MAX_FOREGROUND_RECOVERY_ATTEMPTS/,
+    /if \(countRecoveryAttempt && !recoveryBackoff\.mayRetry\(keepForegroundServiceAlive\)\) \{\s*notifySpeechError\(errorCode, false\);\s*stopAndNotify\(\);\s*return;/,
   );
+  assert.match(androidSpeechRecoverySource, /return foregroundServiceRunning \|\| failures < MAX_ATTEMPTS_WITHOUT_SERVICE/);
 });
 
 test('iOSは発話ごとの終了後に次の言霊を待ち、画面復帰時に状態を同期する', () => {

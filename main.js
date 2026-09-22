@@ -126,6 +126,7 @@
         let intokuPower = 0;
         let battleWins = 0;
         let battleLosses = 0;
+        let processedOnlineMatchIds = [];
 
         // --- 24x24 拡張ピクセルアート定義 (0:空白, 1:描画) ---
         // 配列の配列で定義します（各行24文字）
@@ -860,6 +861,7 @@
                 intokuPower,
                 battleWins,
                 battleLosses,
+                processedOnlineMatchIds,
                 isSick,
                 sickRecoveryCount,
                 lastInteractionTimestamp,
@@ -880,8 +882,10 @@
                     }
                 }
                 localStorage.setItem('kotodama_state', serializedState);
+                return true;
             } catch (e) {
                 console.error('Failed to save state:', e);
+                return false;
             }
         }
 
@@ -930,6 +934,9 @@
                     intokuPower = (state.intokuPower !== undefined) ? Number(state.intokuPower) : 0;
                     battleWins = (state.battleWins !== undefined) ? Number(state.battleWins) : 0;
                     battleLosses = (state.battleLosses !== undefined) ? Number(state.battleLosses) : 0;
+                    processedOnlineMatchIds = Array.isArray(state.processedOnlineMatchIds)
+                        ? [...new Set(state.processedOnlineMatchIds.filter(id => typeof id === 'string' && id.length <= 100))].slice(-256)
+                        : [];
                     isSick = !!state.isSick;
                     sickRecoveryCount = (state.sickRecoveryCount !== undefined) ? Number(state.sickRecoveryCount) : 0;
                     lastInteractionTimestamp = (state.lastInteractionTimestamp !== undefined) ? Number(state.lastInteractionTimestamp) : Date.now();
@@ -3333,10 +3340,10 @@
         async function toggleMic() {
             playButtonSound();
             if (!useNativeSpeech && !webRecognition) return alert('この環境は音声認識に非対応です');
-            if (isStartingMic) return;
-            if(isListening || (useNativeSpeech && nativeListeningRequested)) {
+            if(isStartingMic || isListening || (useNativeSpeech && nativeListeningRequested)) {
                 stopMic();
             } else {
+                const requestGeneration = ++nativeSpeechGeneration;
                 isStartingMic = true;
                 micBtnEl.classList.add('mic-starting');
                 statusTextEl.textContent = 'マイク準備中...';
@@ -3345,38 +3352,50 @@
                     if (useNativeSpeech) {
                         const speechPlugin = window.Capacitor.Plugins.SpeechRecognition;
                         const permissionResult = await ensureNativeSpeechPermissions();
+                        if (requestGeneration !== nativeSpeechGeneration) return;
                         if (!permissionResult.granted) {
                             statusTextEl.textContent = permissionResult.message;
                             return;
                         }
 
                         const availability = await speechPlugin.available();
+                        if (requestGeneration !== nativeSpeechGeneration) return;
                         if (!availability.available) {
                             statusTextEl.textContent = '音声認識を開始できません。通信状態を確認して、もう一度試してください';
                             return;
                         }
                     }
-                    await startMic();
+                    await startMic({ requestGeneration });
                 } catch (e) {
+                    if (requestGeneration !== nativeSpeechGeneration) return;
                     console.error('Speech recognition failed to start', e);
                     statusTextEl.textContent = getNativeSpeechErrorMessage(e);
                 } finally {
-                    isStartingMic = false;
-                    micBtnEl.classList.remove('mic-starting');
-                    if (!isListening) micBtnEl.classList.remove('mic-active');
-                    updateNoonRitualMicButton();
+                    if (requestGeneration === nativeSpeechGeneration) {
+                        isStartingMic = false;
+                        micBtnEl.classList.remove('mic-starting');
+                        if (!isListening) micBtnEl.classList.remove('mic-active');
+                        updateNoonRitualMicButton();
+                    }
                 }
             }
         }
 
         let nativeInterimMatchCounts = {};
         let nativeRecognitionSessionId = null;
+        let nativeEventSessionId = 0;
+        let nativeRetiredSessionId = 0;
+        let nativeResultsEnabled = false;
+        let nativeSpeechInterrupted = false;
         let nativeListenersReady = false;
         let nativePermissionGranted = false;
         let nativeListeningRequested = false;
         let nativeRestartTimer = null;
         let nativeRestartAttempt = 0;
         let nativeSpeechOperation = Promise.resolve();
+        let nativeSpeechGeneration = 0;
+        let nativeStartPending = null;
+        let nativeStateRevision = 0;
         let nativeLastErrorMessage = '';
         let nativePermissionState = {
             microphone: 'prompt',
@@ -3385,10 +3404,20 @@
         let nativePreparationPromise = null;
 
         // data.js からも現在の録音状態を安全に参照できるようにする。
-        window.isKotodamaSpeechListening = () => Boolean(isListening);
+        window.isKotodamaSpeechListening = () => Boolean(isListening || isStartingMic || nativeListeningRequested);
 
         function isIosNativeSpeech() {
             return window.Capacitor?.getPlatform?.() === 'ios';
+        }
+
+        function acceptNativeSpeechEvent(data) {
+            const sessionId = Number(data?.sessionId);
+            // Older installed bridges may omit the id. Updated native bridges use a
+            // monotonically increasing id for each recognizer, including recovery.
+            if (!Number.isFinite(sessionId) || sessionId <= 0) return true;
+            if (sessionId < nativeEventSessionId || sessionId <= nativeRetiredSessionId) return false;
+            nativeEventSessionId = sessionId;
+            return true;
         }
 
         function clearNativeSpeechRestart() {
@@ -3404,29 +3433,41 @@
         }
 
         function scheduleNativeSpeechRestart() {
-            if (!useNativeSpeech || !isIosNativeSpeech() || !nativeListeningRequested || nativeRestartTimer) return;
+            if (!useNativeSpeech || !isIosNativeSpeech() || !nativeListeningRequested || nativeRestartTimer || nativeSpeechInterrupted) return;
+            const requestGeneration = nativeSpeechGeneration;
             const retryDelay = Math.min(300 * (2 ** nativeRestartAttempt), 2400);
             nativeRestartTimer = setTimeout(async () => {
                 nativeRestartTimer = null;
-                if (!nativeListeningRequested) return;
+                if (!nativeListeningRequested || requestGeneration !== nativeSpeechGeneration || nativeSpeechInterrupted) return;
                 try {
                     nativeRestartAttempt += 1;
-                    await startMic({ isRecovery: true });
+                    await startMic({ isRecovery: true, requestGeneration });
                 } catch (error) {
+                    if (requestGeneration !== nativeSpeechGeneration) return;
                     if (nativeRestartAttempt < 4 && nativeListeningRequested) {
                         scheduleNativeSpeechRestart();
                     } else {
-                        nativeListeningRequested = false;
-                        statusTextEl.textContent = '聞き取りを再開できません。MICを押してもう一度お試しください';
+                        const stopping = stopMic();
+                        const stoppedGeneration = nativeSpeechGeneration;
+                        await stopping;
+                        if (stoppedGeneration === nativeSpeechGeneration) {
+                            statusTextEl.textContent = '聞き取りを再開できません。MICを押してもう一度お試しください';
+                        }
                     }
                 }
             }, retryDelay);
         }
 
         async function syncNativeSpeechState() {
-            if (!useNativeSpeech || document.visibilityState === 'hidden') return;
+            if (!useNativeSpeech || !nativeListeningRequested || isStartingMic
+                || nativeStartPending !== null || document.visibilityState === 'hidden') return;
+            const requestGeneration = nativeSpeechGeneration;
+            const stateRevision = nativeStateRevision;
             try {
                 const result = await window.Capacitor.Plugins.SpeechRecognition.isListening();
+                // A query describes the state when it was issued, not a newer MIC action/event.
+                if (requestGeneration !== nativeSpeechGeneration || stateRevision !== nativeStateRevision
+                    || nativeStartPending !== null || !nativeListeningRequested) return;
                 if (result?.listening) return;
                 if (nativeListeningRequested && isIosNativeSpeech()) {
                     // iOSでは画面復帰時に音声セッションが止められていることがある。
@@ -3480,7 +3521,8 @@
 
         function getNativeSpeechErrorMessage(error) {
             const code = Number(error?.code);
-            if (code === 3 || code === 9) return '設定で「マイク」をオンにしてください';
+            if (code === 9) return '設定で「マイク」をオンにしてください';
+            if (code === 3) return 'マイクを利用できません。通話や他の録音アプリの状態を確認してください';
             if (code === 1 || code === 2 || code === 4 || code === 11) {
                 return '通信を確認して、聞き取りを再開しています';
             }
@@ -3522,7 +3564,7 @@
                 if (!nativeListenersReady) {
                     await speechPlugin.removeAllListeners();
                     await speechPlugin.addListener('partialResults', (data) => {
-                        if (!nativeListeningRequested) return;
+                        if (!nativeListeningRequested || !nativeResultsEnabled || !acceptNativeSpeechEvent(data)) return;
                         if (data && data.matches && data.matches.length > 0) {
                             // 「started」だけでは即時エラーとのループを成功扱いにしない。
                             // 実際の認識結果が届いた時点で、再試行回数を戻す。
@@ -3538,9 +3580,12 @@
                         }
                     });
                     await speechPlugin.addListener('listeningState', (data) => {
+                        if (!acceptNativeSpeechEvent(data)) return;
+                        nativeStateRevision += 1;
                         // stop()の完了前に届いた旧セッションの通知でMICをオンに戻さない。
                         if (!nativeListeningRequested && data?.status !== 'stopped') return;
                         if (data && data.status === 'started') {
+                            nativeSpeechInterrupted = false;
                             isListening = true;
                             isStartingMic = false;
                             nativeLastErrorMessage = '';
@@ -3549,18 +3594,21 @@
                             statusTextEl.textContent = 'ききとり中...';
                             updateNoonRitualMicButton();
                         } else if (data && data.status === 'recovering') {
+                            nativeSpeechInterrupted = Boolean(data.interrupted);
+                            if (nativeSpeechInterrupted) clearNativeSpeechRestart();
                             isListening = true;
                             micBtnEl.classList.remove('mic-starting');
                             micBtnEl.classList.add('mic-active');
                             statusTextEl.textContent = '聞き取りを再開中...';
                             updateNoonRitualMicButton();
                         } else if (data && data.status === 'stopped') {
+                            nativeSpeechInterrupted = false;
                             isListening = false;
                             isStartingMic = false;
                             micBtnEl.classList.remove('mic-starting', 'mic-active');
                             if (nativeListeningRequested && isIosNativeSpeech()) {
                                 statusTextEl.textContent = '次の言霊を聞く準備中...';
-                                scheduleNativeSpeechRestart();
+                                if (nativeStartPending === null) scheduleNativeSpeechRestart();
                             } else if (currentStage < 3) {
                                 statusTextEl.textContent = nativeLastErrorMessage || 'マイクがオフです';
                             }
@@ -3568,7 +3616,7 @@
                         }
                     });
                     await speechPlugin.addListener('recognitionError', (data) => {
-                        if (!nativeListeningRequested) return;
+                        if (!nativeListeningRequested || !acceptNativeSpeechEvent(data)) return;
                         nativeLastErrorMessage = getNativeSpeechErrorMessage(data);
                         if (data?.willRetry) {
                             statusTextEl.textContent = nativeLastErrorMessage;
@@ -3597,11 +3645,16 @@
             return nativePreparationPromise;
         }
         
-        async function startMic({ isRecovery = false } = {}){
+        async function startMic({ isRecovery = false, requestGeneration = isRecovery ? nativeSpeechGeneration : ++nativeSpeechGeneration } = {}){
             if (useNativeSpeech) {
+                if (requestGeneration !== nativeSpeechGeneration) return;
                 nativeListeningRequested = true;
+                nativeResultsEnabled = false;
+                nativeStartPending = requestGeneration;
+                let startStateRevision = null;
                 clearNativeSpeechRestart();
                 if (!isRecovery) {
+                    nativeSpeechInterrupted = false;
                     nativeInterimMatchCounts = {};
                     nativeRecognitionSessionId = null;
                     nativeRestartAttempt = 0;
@@ -3610,7 +3663,9 @@
                 try {
                     await prepareNativeSpeech();
                     await queueNativeSpeechOperation(async () => {
-                        if (!nativeListeningRequested) return;
+                        if (!nativeListeningRequested || requestGeneration !== nativeSpeechGeneration) return;
+                        startStateRevision = nativeStateRevision;
+                        nativeResultsEnabled = true;
                         await speechPlugin.start({
                             language: "ja-JP",
                             maxResults: 3,
@@ -3620,15 +3675,36 @@
                         });
                     });
                 } catch (error) {
+                    if (requestGeneration !== nativeSpeechGeneration) return;
+                    // An OS interruption can arrive while a restart is in flight.
+                    // Wait for its end event instead of consuming the retry budget.
+                    if (isRecovery && nativeSpeechInterrupted) return;
                     // 初回開始失敗を「MICオンの意思」だけ残した状態にしない。
                     // 自動復旧中の失敗はリトライ側で回数を管理する。
-                    if (!isRecovery) nativeListeningRequested = false;
+                    if (!isRecovery) {
+                        nativeListeningRequested = false;
+                        // Native iOS retains intent through per-utterance recovery;
+                        // a failed explicit start must also release that intent.
+                        await queueNativeSpeechOperation(() => speechPlugin.stop()).catch(() => {});
+                        if (requestGeneration !== nativeSpeechGeneration) return;
+                    }
                     isListening = false;
                     micBtnEl.classList.remove('mic-starting', 'mic-active');
                     updateNoonRitualMicButton();
                     throw error;
+                } finally {
+                    if (nativeStartPending === requestGeneration) nativeStartPending = null;
                 }
-                if (!nativeListeningRequested) return;
+                if (!nativeListeningRequested || requestGeneration !== nativeSpeechGeneration) return;
+                // A native stop/recovery arriving before start() resolves is authoritative.
+                if (startStateRevision !== nativeStateRevision) {
+                    if (!isListening && isIosNativeSpeech()) scheduleNativeSpeechRestart();
+                    if (isListening) {
+                        if (!isRecovery) onMicrophoneStartedForTutorial();
+                        initAudio();
+                    }
+                    return;
+                }
                 isListening = true;
                 micBtnEl.classList.remove('mic-starting');
                 micBtnEl.classList.add('mic-active');
@@ -3643,8 +3719,15 @@
         }
 
         async function stopMic(){ 
+            nativeSpeechGeneration += 1;
+            nativeRetiredSessionId = Math.max(nativeRetiredSessionId, nativeEventSessionId);
+            nativeResultsEnabled = false;
+            nativeSpeechInterrupted = false;
+            nativeStartPending = null;
             isListening = false; 
             isStartingMic = false;
+            micBtnEl.classList.remove('mic-starting', 'mic-active');
+            if (currentStage < 3) statusTextEl.textContent = 'マイクがオフです';
             if (useNativeSpeech) {
                 nativeListeningRequested = false;
                 clearNativeSpeechRestart();
@@ -3864,19 +3947,41 @@
             'maou_game_medley02.mp3'
         ];
         let currentBgmAudio = null;
+        let battleBgmPlayPromise = null;
         const BATTLE_BGM_VOLUME = 0.08;
 
         function startBattleBgm() {
             if (!soundEnabled) return;
-            let randomBgmFile = bgmFileList[Math.floor(Math.random() * bgmFileList.length)];
-            currentBgmAudio = new Audio(randomBgmFile);
-            currentBgmAudio.loop = true;
-            currentBgmAudio.volume = BATTLE_BGM_VOLUME;
-            // 自動再生ポリシー対策
-            currentBgmAudio.play().catch(e => console.log('BGM Play Error:', e));
+            if (!currentBgmAudio) {
+                const randomBgmFile = bgmFileList[Math.floor(Math.random() * bgmFileList.length)];
+                currentBgmAudio = new Audio(randomBgmFile);
+                currentBgmAudio.loop = true;
+                currentBgmAudio.volume = BATTLE_BGM_VOLUME;
+            }
+            return resumeBattleBgm();
         }
 
+        function resumeBattleBgm() {
+            const track = currentBgmAudio;
+            if (!soundEnabled || !track || !track.paused || battleBgmPlayPromise) return;
+            // Keep play() inside the user gesture; a rejected autoplay attempt can be
+            // retried on the next gesture/foreground event without replacing the track.
+            try {
+                const attempt = Promise.resolve(track.play())
+                    .catch(error => console.log('BGM Play Error:', error))
+                    .finally(() => {
+                        if (battleBgmPlayPromise === attempt) battleBgmPlayPromise = null;
+                    });
+                battleBgmPlayPromise = attempt;
+                return attempt;
+            } catch (error) {
+                console.log('BGM Play Error:', error);
+            }
+        }
+        window.resumeKotodamaBattleBgm = resumeBattleBgm;
+
         function stopBattleBgm() {
+            battleBgmPlayPromise = null;
             if (currentBgmAudio) {
                 currentBgmAudio.pause();
                 currentBgmAudio.currentTime = 0;
@@ -4520,6 +4625,16 @@
             document.getElementById('pvpMainMenu').style.display = 'none';
             document.getElementById('kotodamaCupMenu').style.display = 'none';
             document.getElementById('onlineBattleMenu').style.display = 'flex';
+            if (ONLINE_BATTLE_API_URL && onlineBattleSession && !onlineBattleSession.finished) {
+                if (onlineBattleSession.pendingResult) {
+                    handleOnlineBattleMessage({ data: JSON.stringify(onlineBattleSession.pendingResult) }, onlineBattleSession);
+                    return;
+                }
+                onlineBattleSession.reconnectAttempts = 0;
+                onlineBattleStatus('前の対戦に再接続しています…');
+                connectOnlineBattleSocket();
+                return;
+            }
             if (ONLINE_BATTLE_API_URL && !onlineBattleSession) {
                 const recoveredSession = restoreOnlineBattleSession();
                 if (recoveredSession) {
@@ -4668,10 +4783,11 @@
             session.socket = socket;
             socket.addEventListener('open', () => {
                 if (onlineBattleSession !== session) return socket.close();
-                session.reconnectAttempts = 0;
                 socket.send(JSON.stringify({ type: 'auth', token: session.token }));
             });
-            socket.addEventListener('message', (event) => handleOnlineBattleMessage(event, session));
+            socket.addEventListener('message', (event) => {
+                if (session.socket === socket) handleOnlineBattleMessage(event, session);
+            });
             socket.addEventListener('close', () => {
                 // 新しい接続へ交換済みなら、古いsocketのcloseから再接続を増やさない。
                 if (onlineBattleSession !== session || session.socket !== socket) return;
@@ -4737,6 +4853,36 @@
             battleMessageEl.style.display = 'block';
         }
 
+        function recordConfirmedOnlineResult(result, session = onlineBattleSession) {
+            if (!session || !['host', 'guest'].includes(session.seat)
+                || !/^(?:\d{4}|\d{6})$/.test(session.code)
+                || typeof result?.hostWon !== 'boolean'
+                || !Number.isSafeInteger(result.finishedAt) || result.finishedAt <= 0) return false;
+
+            // Room codes cannot be reused during their lifetime. The server's
+            // completion timestamp is stable across reconnects and is present
+            // in older deployed Workers too; no rollout-dependent ID alias.
+            const receiptId = 'room:' + session.code + ':' + result.finishedAt;
+            if (processedOnlineMatchIds.includes(receiptId)) return true;
+            const previousWins = battleWins;
+            const previousLosses = battleLosses;
+            const previousReceipts = processedOnlineMatchIds;
+            if (session.seat === 'host' ? result.hostWon : !result.hostWon) battleWins++;
+            else battleLosses++;
+            processedOnlineMatchIds = [...previousReceipts, receiptId].slice(-256);
+            try {
+                // The counts and receipt share one atomic primary-state write.
+                // Do not clear the recovery token or start animation until it commits.
+                if (saveState()) return true;
+            } catch (error) {
+                console.warn('対戦結果を保存できませんでした。', error);
+            }
+            battleWins = previousWins;
+            battleLosses = previousLosses;
+            processedOnlineMatchIds = previousReceipts;
+            return false;
+        }
+
         function handleOnlineBattleMessage(event, session = onlineBattleSession) {
             let message;
             try { message = JSON.parse(event.data); } catch { return; }
@@ -4768,6 +4914,7 @@
                 return;
             }
             if (message.type === 'room') {
+                onlineBattleSession.reconnectAttempts = 0;
                 if (message.seat) onlineBattleSession.seat = message.seat;
                 const room = message.room;
                 if (room.expiresAt) onlineBattleSession.expiresAt = room.expiresAt;
@@ -4796,18 +4943,34 @@
                 return;
             }
             if (message.type === 'result') {
+                if (onlineBattleSession.finished) return;
+                if (!recordConfirmedOnlineResult(message.result, onlineBattleSession)) {
+                    onlineBattleSession.pendingResult = message;
+                    const warning = '戦績を保存できませんでした。空き容量を確認して、アプリを開き直してください。';
+                    onlineBattleStatus(warning);
+                    battleMessageEl.textContent = warning;
+                    battleMessageEl.style.display = 'block';
+                    return;
+                }
+                delete onlineBattleSession.pendingResult;
+                if (!onlineBattleSession.started) {
+                    // Recovered completed rooms can be viewed even after the
+                    // opponent has left. Prepare the scene before its replay.
+                    if (!startOnlineBattle(message.room, { recoveringResult: true })) return;
+                }
                 onlineBattleSession.finished = true;
                 clearPersistedOnlineBattleSession();
                 runOnlineBattleSequence(message.result, onlineBattleSession.seat);
             }
         }
 
-        function startOnlineBattle(room) {
+        function startOnlineBattle(room, { recoveringResult = false } = {}) {
+            if (!room?.host || !room?.guest) return false;
             const mine = onlineBattleSession.seat === 'host' ? room.host : room.guest;
             const opponent = onlineBattleSession.seat === 'host' ? room.guest : room.host;
-            if (!mine?.connected || !opponent?.connected) {
+            if (!recoveringResult && (!mine?.connected || !opponent?.connected)) {
                 showOnlinePeerWaiting();
-                return;
+                return false;
             }
             onlineBattleSession.started = true;
             onlineBattleSession.peerConnected = true;
@@ -4821,6 +4984,7 @@
                 a: 10,
                 e: 5,
                 c: 5,
+                resultReplay: recoveringResult,
                 myAwardRank: onlineBattleSession.myAwardRank,
                 awardRank: onlineBattleSession.opponentAwardRank
             });
@@ -4833,6 +4997,7 @@
                 battleMessageEl.textContent = '作戦は送信済みです。相手を待っています…';
                 battleMessageEl.style.display = 'block';
             }
+            return true;
         }
 
         function restoreOnlineBattleActionChoice(action, options) {
@@ -4955,6 +5120,14 @@
         }
 
         function startBattle(forceMiracle = false, challengerData = null) {
+            const previousScene = battleOverlayEl.kotodamaBattleScene;
+            if (previousScene) {
+                clearTimeout(previousScene.introTimer);
+                clearTimeout(previousScene.commandTimer);
+            }
+            const battleScene = { introTimer: null, commandTimer: null };
+            battleOverlayEl.kotodamaBattleScene = battleScene;
+            stopBattleBgm();
             closePvpMenu(); // メニューが開いていれば閉じる
             hidePostMatchStampPanel();
             setOnlineBattleAbortVisible(false);
@@ -5019,6 +5192,15 @@
             }
             renderCanvasArt(currentForm, myCanvasCtx);
             renderCanvasArt(enemyKey, enemyCanvasCtx);
+
+            // A recovered result starts immediately; do not leave intro timers
+            // that could later cover its result with FIGHT or command buttons.
+            if (challengerData?.resultReplay) {
+                battleVsScreenEl.style.display = 'none';
+                battleArenaEl.style.display = 'block';
+                pendingBattleOptions = null;
+                return;
+            }
             
             // ピコピコVS音
             initAudio();
@@ -5032,7 +5214,8 @@
             // 決定音
             playOscillator(1318.51, now + 0.8, 0.5, 0.2, 'square'); // E6
             
-            setTimeout(() => {
+            battleScene.introTimer = setTimeout(() => {
+                if (battleOverlayEl.kotodamaBattleScene !== battleScene) return;
                 // VS画面消去＆アリーナ表示＆フラッシュ
                 battleVsScreenEl.style.display = 'none';
                 battleArenaEl.style.display = 'block';
@@ -5048,7 +5231,8 @@
                 // バトルBGM再生開始
                 startBattleBgm();
                 
-                setTimeout(() => {
+                battleScene.commandTimer = setTimeout(() => {
+                    if (battleOverlayEl.kotodamaBattleScene !== battleScene) return;
                     if (pendingBattleOptions?.online && onlineBattleSession?.peerConnected === false) {
                         showOnlinePeerWaiting();
                         return;
@@ -5403,12 +5587,10 @@
             setupBattleMessage(isWin);
             
             if (isWin) {
-                if (recordOnlineResult) battleWins++;
                 myCharEl.classList.add('win');
                 enemyCharEl.classList.add('lose');
                 playCelebrateSound(); // 勝利のファンファーレ
             } else {
-                if (recordOnlineResult) battleLosses++;
                 myCharEl.classList.add('lose');
                 enemyCharEl.classList.add('win');
                 // 敗北のファンファーレ
@@ -5419,7 +5601,8 @@
                 playOscillator(100, now + 0.8, 1.0, 0.3, 'sawtooth');
             }
             
-            if (recordOnlineResult) saveState(); // 人とのオンライン対戦だけ戦績を保存
+            // Online results were committed with a receipt before animation.
+            // Rendering completion must never apply the same win/loss twice.
             updateUI(); // メイン画面の戦績を更新
 
             if (recordOnlineResult) {
@@ -5434,6 +5617,13 @@
         }
 
         function closeBattleOverlay() {
+            const battleScene = battleOverlayEl.kotodamaBattleScene;
+            battleOverlayEl.kotodamaBattleScene = null;
+            if (battleScene) {
+                clearTimeout(battleScene.introTimer);
+                clearTimeout(battleScene.commandTimer);
+            }
+            stopBattleBgm();
             if (postMatchAutoCloseTimer) {
                 clearTimeout(postMatchAutoCloseTimer);
                 postMatchAutoCloseTimer = null;

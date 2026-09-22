@@ -90,11 +90,17 @@ await Promise.all([
 host.socket.send(JSON.stringify({ type: 'choose', action: 'attack' }));
 await host.waitFor(message => message.type === 'waiting' && message.seat === 'host');
 reconnectedGuest.socket.send(JSON.stringify({ type: 'choose', action: 'guard' }));
-await Promise.all([
+const completedResults = await Promise.all([
   host.waitFor(message => message.type === 'result'),
   reconnectedGuest.waitFor(message => message.type === 'result')
 ]);
 
 reconnectedGuest.socket.close(1000, 'integration check');
 host.socket.close(1000, 'integration check');
+const returningGuest = openPlayerSocket(hostRoom.code, guestRoom.playerToken);
+await returningGuest.opened;
+const replay = await returningGuest.waitFor(message => message.type === 'result');
+assert.deepEqual(replay.result, completedResults[1].result);
+assert.equal(replay.room.phase, 'finished');
+returningGuest.socket.close(1000, 'integration check');
 console.log('Online room integration check passed.');
