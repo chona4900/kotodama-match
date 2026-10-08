@@ -20,6 +20,7 @@ public class KotodamaBillingPlugin extends Plugin {
     private static final String PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu29OxqMkDEBOlwkGHy8FYSvWIK435UqTTtkSyCUo8dwEl3N5Iw1jAaTg10SGlmb9PVc3pWLL5PlyLmKUgC5plCWhc0EzOUAwq6dFVqe6qtJQKyUaXPRLWePC4LNnK35ec+vLCSH0SohN1ehE055r3Te2XhYki+kiIvnx3ewLepQjMP9MDI3i2D7doOV+9KZeRS1vqgei11E4FCIwMIR8P7RyQW013hdsz6mCqlXK77oY4RHjlusjecxtHDOH0nEKSJNvBfiiDrVvaoPgtJZBdVK9s5oxiKJujyhSyaruordjTscueIduJ6cbMOhJd74rZnUVBhL712VmDCyzZ6+YLQIDAQAB";
     private BillingClient client;
     private SharedPreferences receipts;
+    private SharedPreferences reviewAccess;
     private boolean owned;
     private boolean pending;
     private boolean connecting;
@@ -32,6 +33,7 @@ public class KotodamaBillingPlugin extends Plugin {
 
     @Override public void load() {
         receipts = getContext().getSharedPreferences("kotodama_play_receipt", Context.MODE_PRIVATE);
+        reviewAccess = getContext().getSharedPreferences("kotodama_review_access", Context.MODE_PRIVATE);
         try {
             Purchase cached = new Purchase(receipts.getString("data", ""), receipts.getString("signature", ""));
             owned = BillingAcknowledgements.canRestore(valid(cached), cached.isAcknowledged(),
@@ -72,6 +74,7 @@ public class KotodamaBillingPlugin extends Plugin {
     private JSObject state() {
         JSObject out = new JSObject();
         out.put("owned", owned); out.put("pending", pending);
+        out.put("reviewAccess", reviewAccess.getBoolean("enabled", false));
         out.put("price", price); out.put("message", message);
         out.put("productId", PRODUCT); out.put("busy", purchaseInFlight);
         return out;
@@ -100,6 +103,20 @@ public class KotodamaBillingPlugin extends Plugin {
         connected(() -> refresh(null));
     }); }
     @PluginMethod public void restore(PluginCall call) { main(() -> connected(() -> refresh(call))); }
+
+    @PluginMethod public void activateReviewAccess(PluginCall call) { main(() -> {
+        if (!ReviewAccess.accepts(call.getString("code"))) {
+            call.reject("審査用コードを確認してください。 / Check the review access code.");
+            return;
+        }
+        // Kept outside receipts: a restore returning no purchase must not erase review access.
+        // Commit before resolving so an immediate restart preserves the grant.
+        if (!reviewAccess.edit().putBoolean("enabled", true).commit()) {
+            call.reject("審査用アクセスを保存できませんでした。もう一度お試しください。");
+            return;
+        }
+        call.resolve(state()); emit();
+    }); }
 
     private void refresh(PluginCall call) {
         final long epoch = refreshEpoch.begin();
@@ -161,7 +178,7 @@ public class KotodamaBillingPlugin extends Plugin {
     }
     @PluginMethod public void getProduct(PluginCall call) { main(() -> connected(() -> queryProduct(call, false))); }
     @PluginMethod public void purchase(PluginCall call) { main(() -> {
-        if (owned || pending || purchaseInFlight) { call.reject("購入済み、支払い保留中、または購入処理中です。復元・再確認してください。"); return; }
+        if (owned || reviewAccess.getBoolean("enabled", false) || pending || purchaseInFlight) { call.reject("購入済み、審査用アクセス中、支払い保留中、または購入処理中です。復元・再確認してください。"); return; }
         purchaseInFlight = true;
         connected(() -> queryProduct(call, true));
     }); }
@@ -170,7 +187,7 @@ public class KotodamaBillingPlugin extends Plugin {
             .setProductId(PRODUCT).setProductType(BillingClient.ProductType.INAPP).build();
         client.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(Collections.singletonList(item)).build(),
             (result, details) -> main(() -> {
-                if (launch && !BillingLaunchGuard.mayLaunch(owned, pending, purchaseInFlight)) {
+                if (launch && (reviewAccess.getBoolean("enabled", false) || !BillingLaunchGuard.mayLaunch(owned, pending, purchaseInFlight))) {
                     purchaseInFlight = false;
                     call.resolve(state()); emit(); return;
                 }
