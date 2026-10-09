@@ -21,6 +21,7 @@ Thumbs.db
 # Android release signing materials and local tools (never commit private keys)
 /.android-signing/
 /.tools/
+/.review-access/
 
 # Apple signing materials (never commit private keys or provisioning profiles)
 /ios_distribution.key
