@@ -36,3 +36,4 @@ Thumbs.db
 # Cloudflare/Wrangler local development state and logs
 /online-battle/.wrangler/
 /online-battle/.wrangler-config/
+/.wrangler/

@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-19",
+  "scope": "shared progression, save/load, evolution and reincarnation races; AI companion excluded",
+  "method": "Actual source functions executed in a Node VM with controlled timers, speech additions and in-memory storage; no native runtime or production network.",
+  "runs": [
+    {
+      "phase": "before",
+      "source": "published Android 1.0.11/versionCode21 snapshot",
+      "exitCode": 1,
+      "tests": 18,
+      "passed": 2,
+      "failed": 16,
+      "log": "gameplay-before.tap.txt"
+    },
+    {
+      "phase": "after",
+      "source": "dedicated bugfix worktree based on 3ffad5f",
+      "exitCode": 0,
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "log": "gameplay-after.tap.txt"
+    }
+  ],
+  "regressionFile": "scripts/progression-races.test.js",
+  "findings": [
+    {
+      "id": "GAMEPLAY-001",
+      "severity": "P1",
+      "path": "main.js",
+      "line": 2048,
+      "reproduction": "During normal evolution or failed ultimate evolution, continue recognized speech and terminate before the effect completes. Previous code saved the target stage with the previous form.",
+      "fix": "Commit stage and form together when evolution finishes; recognize an already-awarded ultimate lifetime while its visual effect is pending."
+    },
+    {
+      "id": "GAMEPLAY-002",
+      "severity": "P2",
+      "path": "main.js",
+      "line": 1030,
+      "reproduction": "Reset during an evolution, then allow the old animation/fallback callback to run. It previously changed the reset character and could restore a pending ultimate award.",
+      "fix": "Cancel active effect listeners/timers, invalidate callbacks by generation, and clear the pending form switch on reset/reincarnation while preserving the earned collection entry."
+    },
+    {
+      "id": "GAMEPLAY-003",
+      "severity": "P2",
+      "path": "main.js",
+      "line": 1084,
+      "reproduction": "At the reincarnation deadline, while the three-second darkening is pending, speak or reset and then speak. The old timeout previously reset the new egg a second time and erased the new count.",
+      "fix": "Invalidate and cancel the pending reincarnation when silent reincarnation or reset occurs; preserve the normal three-second darkening."
+    }
+  ],
+  "migration": {
+    "path": "state-migrations.js",
+    "behavior": "Only a known current form whose saved stage is exactly one step ahead has its stage restored. Form, counts, collections and pending ultimate award are preserved. Unknown/ambiguous cases are unchanged."
+  },
+  "additionalValidation": "Related gameplay, evolution effect, migration and persistence suites: 72 passed, 0 failed after the review correction. Native runtime and the final release artifact remain external verification gates.",
+  "unchanged": "Evolution thresholds, selection probabilities, reward amounts, reincarnation duration rules, retained records, audio features and AI companion files.",
+  "remaining": [
+    "Real Android WebView: kill/relaunch during evolution after another recognized phrase.",
+    "Real Android device: reset during darkening, reduced motion, background/resume at a reincarnation deadline.",
+    "Store-track installation/upgrade of the exact signed artifact."
+  ],
+  "hashes": {
+    "state-migrations.js": "ac2fd6a0711eb88e52985a824835258ac54beba800ff0ed2a8f5de39c43c98f3",
+    "scripts/progression-races.test.js": "80c61fadaa6d468e69a8e7965de093f8e4fcef50496b50c3c1805651bd85baf7"
+  },
+  "reviewCorrection": {
+    "finding": "Pending ultimate collection unlock was lost on warm expiry/reset although cold load retained it.",
+    "before": {
+      "tests": 18,
+      "passed": 14,
+      "failed": 4,
+      "log": "gameplay-review-before.tap.txt"
+    },
+    "after": {
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "log": "gameplay-after.tap.txt"
+    },
+    "fix": "Persist collection unlock when awarded; preserve a legacy pending successful collection entry before cancellation without restoring the form after reset or reincarnation."
+  }
+}

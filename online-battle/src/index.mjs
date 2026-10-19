@@ -238,12 +238,19 @@ export class BattleRoom extends DurableObject {
     try { payload = JSON.parse(typeof message === 'string' ? message : new TextDecoder().decode(message)); }
     catch { return this.send(socket, { type: 'error', message: '通信データを読み取れませんでした。' }); }
 
-    const room = await this.load();
+    let room = await this.load();
     if (!room || room.expiresAt <= Date.now()) return this.send(socket, { type: 'expired' });
     const attachment = socket.deserializeAttachment() || {};
 
     if (payload.type === 'auth') {
       const hash = await tokenHash(String(payload.token || ''));
+      // Hashing yields outside DO storage's input gate. A peer can finish the
+      // match or the alarm can replace/delete this room before it returns.
+      const latestRoom = await this.load();
+      if (!latestRoom || latestRoom.matchId !== room.matchId || latestRoom.expiresAt <= Date.now()) {
+        return this.send(socket, { type: 'expired' });
+      }
+      room = latestRoom;
       const seat = constantTimeEqual(room.host.tokenHash, hash)
         ? 'host'
         : constantTimeEqual(room.guest?.tokenHash, hash) ? 'guest' : null;

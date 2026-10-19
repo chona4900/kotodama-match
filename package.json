@@ -1,6 +1,6 @@
 {
   "name": "kotodama-match",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "",
   "main": "main.js",
   "directories": {
@@ -9,11 +9,12 @@
   "scripts": {
     "build": "node build.js",
     "dev": "npx live-server",
-    "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/progression.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js scripts/gameplay-regressions.test.js scripts/noon-ritual.test.js scripts/persistence-recovery.test.js scripts/billing-state.test.js scripts/billing-ui.test.js scripts/speech-races.test.js scripts/audio-recovery.test.js scripts/online-recovery.test.js",
+    "test": "node scripts/release-preflight.js && node --test scripts/state-migrations.test.js scripts/progression.test.js scripts/evolution-effect.test.js scripts/battle-stats.test.js scripts/gameplay-regressions.test.js scripts/noon-ritual.test.js scripts/persistence-recovery.test.js scripts/billing-state.test.js scripts/billing-ui.test.js scripts/speech-races.test.js scripts/audio-recovery.test.js scripts/online-recovery.test.js scripts/progression-races.test.js scripts/android-notification-regressions.test.cjs",
     "release:preflight": "node scripts/release-preflight.js",
     "online:test": "node --test online-battle/test/*.test.mjs",
     "online:test:integration": "node scripts/online-room-integration-check.mjs",
-    "online:check": "cd online-battle && npx wrangler deploy --config wrangler.jsonc --dry-run"
+    "online:check": "cd online-battle && npx wrangler deploy --config wrangler.jsonc --dry-run",
+    "postinstall": "node scripts/patch-android-notifications.cjs"
   },
   "keywords": [],
   "author": "",
@@ -24,7 +25,7 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.3.0",
     "@capacitor/ios": "^8.3.0",
-    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/local-notifications": "8.0.0",
     "@kotodama/speech-recognition": "file:plugins/kotodama-speech-recognition"
   },
   "devDependencies": {
@@ -32,6 +33,6 @@
     "@capacitor/cli": "^8.3.0",
     "jimp": "^1.6.1",
     "live-server": "^1.2.2",
-    "wrangler": "^4.116.0"
+    "wrangler": "4.151.1"
   }
 }

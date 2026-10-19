@@ -75,6 +75,18 @@
             };
         }
 
+        // 旧版は進化演出の開始時に段階だけを先に進めていた。
+        // その間の発話保存でできた「既知の姿より段階がちょうど1つ先」だけを直す。
+        // 回数・姿・図鑑・当選済みの結果はそのまま残し、起動時の進化処理へ戻す。
+        const formStage = state.currentForm === 'egg' ? 0
+            : /^child[ABC]$/.test(state.currentForm) ? 1
+            : /^child[ABC]_[12]$/.test(state.currentForm) ? 2
+            : /^child[ABC]_[12]_[1-4]$/.test(state.currentForm) ? 3
+            : null;
+        const didRepairInterruptedEvolution = formStage !== null
+            && Number(state.currentStage) === formStage + 1;
+        if (didRepairInterruptedEvolution) state = { ...state, currentStage: formStage };
+
         if ((Number(state.saveDataVersion) || 0) < CURRENT_SAVE_DATA_VERSION
             || !state.cycleWordCounts
             || state.ultimateAttemptCount === undefined) {
@@ -109,7 +121,7 @@
 
         return {
             state,
-            didChange: false,
+            didChange: didRepairInterruptedEvolution,
             didResetKnownTestState: false
         };
     }

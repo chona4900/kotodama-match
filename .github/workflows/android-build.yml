@@ -58,7 +58,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
           ANDROID_KEYSTORE_TYPE: PKCS12
           ANDROID_VERSION_CODE: ${{ github.run_number }}
-          ANDROID_VERSION_NAME: 1.0.11
+          ANDROID_VERSION_NAME: 1.0.12
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease --stacktrace
@@ -82,7 +82,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
           ANDROID_KEYSTORE_TYPE: PKCS12
           ANDROID_VERSION_CODE: ${{ github.run_number }}
-          ANDROID_VERSION_NAME: 1.0.11-test
+          ANDROID_VERSION_NAME: 1.0.12-test
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace
@@ -92,5 +92,35 @@ jobs:
         with:
           name: kotodama-match-android-test-apk
           path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify release packaging and record hashes
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, zipfile
+          root = pathlib.Path('.')
+          results = []
+          for artifact, prefix in [('android/app/build/outputs/bundle/release/app-release.aab', 'base/assets/public/'), ('android/app/build/outputs/apk/release/app-release.apk', 'assets/public/')]:
+              file = root / artifact
+              with zipfile.ZipFile(file) as package:
+                  names = package.namelist()
+                  assert not any('ai-companion' in name or 'prototypes/' in name for name in names), 'Prototype asset in release'
+                  for asset in ['main.js', 'state-migrations.js', 'index.html', 'data.js']:
+                      assert package.read(prefix + asset) == (root / asset).read_bytes(), f'Stale packaged asset: {asset}'
+                  assert b'openCompanion' not in package.read(prefix + 'main.js'), 'Companion entry point in release'
+              results.append({'file': artifact, 'sha256': hashlib.sha256(file.read_bytes()).hexdigest(), 'source_assets_match': True, 'ai_companion_excluded': True})
+          (root / 'android-release-verification.json').write_text(json.dumps(results, indent=2) + '\n')
+          print(json.dumps(results, indent=2))
+          PY
+
+      - name: Upload release verification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotodama-match-android-verification
+          path: |
+            android-release-verification.json
+            android/app/build/outputs/logs/manifest-merger-release-report.txt
+            android/app/build/intermediates/merged_manifests/release/**/AndroidManifest.xml
           if-no-files-found: error
           retention-days: 14

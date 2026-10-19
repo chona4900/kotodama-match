@@ -13,15 +13,18 @@ const source = fs.readFileSync(new URL('../src/index.mjs', import.meta.url), 'ut
   .replace(/^import[\s\S]*?;\r?\n/gm, '')
   .replace('export class BattleRoom', 'class BattleRoom')
   .split('export default {')[0];
-const BattleRoom = vm.runInNewContext(`${source}\nBattleRoom`, {
+function roomImplementation(digest = (...args) => webcrypto.subtle.digest(...args)) {
+  return vm.runInNewContext(`${source}\nBattleRoom`, {
   DurableObject: class { constructor(ctx, env) { this.ctx = ctx; this.env = env; } },
   ACTIONS, sanitizeSnapshot, simulateBattle, getClientRoomPhase, hasBothPlayersConnected, isAllowedStamp,
   crypto: {
     getRandomValues: array => webcrypto.getRandomValues(array),
-    subtle: { digest: (...args) => webcrypto.subtle.digest(...args), timingSafeEqual }
+    subtle: { digest, timingSafeEqual }
   },
   TextEncoder, TextDecoder, URL, Response, Date, console: { error() {} }
 });
+}
+const BattleRoom = roomImplementation();
 const hash = value => createHash('sha256').update(value).digest('hex');
 const snapshot = { form: 'adult_1', hp: 100, attack: 100, evasionRate: 5, criticalRate: 5, wins: 0 };
 const result = { hostWon: true, maxHp: { host: 100, guest: 100 }, hp: { host: 90, guest: 0 }, events: [], finishedAt: Date.now() };
@@ -37,7 +40,7 @@ function socket(seat = null) {
     serializeAttachment(value) { attachment = value; }, deserializeAttachment() { return attachment; },
     send(value) { this.messages.push(JSON.parse(value)); }, close() { this.closed = true; } };
 }
-function harness(initial = roomState()) {
+function harness(initial = roomState(), Room = BattleRoom) {
   let stored = structuredClone(initial);
   const sockets = [];
   const storage = {
@@ -46,7 +49,7 @@ function harness(initial = roomState()) {
     async setAlarm(at) { this.alarmAt = at; }, async deleteAll() { stored = undefined; }
   };
   const ctx = { storage, getWebSockets: () => sockets.filter(value => !value.closed) };
-  return { room: new BattleRoom(ctx, {}), ctx, storage, sockets, stored: () => structuredClone(stored) };
+  return { room: new Room(ctx, {}), ctx, storage, sockets, stored: () => structuredClone(stored) };
 }
 test('authenticated reconnect replays a completed result without the opponent being online', async () => {
   const h = harness();
@@ -118,4 +121,64 @@ test('late D1 response cannot recreate an expired or replacement room', async ()
   await h.storage.put('room', replacement);
   resolveRecord({ eligible: true, counted: true, pending: false }); await pending;
   assert.equal(h.stored().matchId, 'new-match'); assert.equal(h.stored().phase, 'waiting');
+});
+
+function delayedHostAuthentication(initial) {
+  let signalStarted, releaseHash;
+  const started = new Promise(resolve => { signalStarted = resolve; });
+  const released = new Promise(resolve => { releaseHash = resolve; });
+  const Room = roomImplementation(async (...args) => {
+    if (new TextDecoder().decode(args[1]) === 'host-token') {
+      signalStarted();
+      await released;
+    }
+    return webcrypto.subtle.digest(...args);
+  });
+  const h = harness(initial, Room);
+  const returning = socket();
+  h.sockets.push(returning);
+  const authenticate = () => h.room.webSocketMessage(returning, JSON.stringify({ type: 'auth', token: 'host-token' }));
+  return { ...h, returning, started, releaseHash, authenticate };
+}
+
+test('slow reconnect authentication cannot roll back a match completed while hashing', async () => {
+  const initial = roomState('connecting');
+  initial.host.action = null; initial.guest.action = null; initial.result = null;
+  const h = delayedHostAuthentication(initial);
+  const host = socket('host'), guest = socket();
+  h.sockets.push(host, guest);
+  const authentication = h.authenticate();
+  await h.started;
+  await h.room.webSocketMessage(guest, JSON.stringify({ type: 'auth', token: 'guest-token' }));
+  await h.room.webSocketMessage(host, JSON.stringify({ type: 'choose', action: 'attack' }));
+  await h.room.webSocketMessage(guest, JSON.stringify({ type: 'choose', action: 'guard' }));
+  const completed = h.stored();
+  assert.equal(completed.phase, 'finished');
+  h.releaseHash(); await authentication;
+  assert.deepEqual(h.stored(), completed);
+  assert.deepEqual(h.returning.messages.map(message => message.type), ['room', 'result']);
+  assert.deepEqual(h.returning.messages[1].result, completed.result);
+});
+
+test('slow authentication cannot enter or overwrite a replacement room with the same code', async () => {
+  const h = delayedHostAuthentication(roomState('connecting'));
+  const authentication = h.authenticate();
+  await h.started;
+  const replacement = roomState('waiting'); replacement.matchId = 'replacement-match';
+  await h.storage.put('room', replacement);
+  h.releaseHash(); await authentication;
+  assert.deepEqual(h.stored(), replacement);
+  assert.equal(h.returning.deserializeAttachment().seat, null);
+  assert.deepEqual(h.returning.messages.map(message => message.type), ['expired']);
+});
+
+test('slow authentication cannot enter a room that expires while hashing', async () => {
+  const h = delayedHostAuthentication(roomState('connecting'));
+  const authentication = h.authenticate();
+  await h.started;
+  const expired = h.stored(); expired.expiresAt = Date.now() - 1;
+  await h.storage.put('room', expired);
+  h.releaseHash(); await authentication;
+  assert.equal(h.returning.deserializeAttachment().seat, null);
+  assert.deepEqual(h.returning.messages.map(message => message.type), ['expired']);
 });
