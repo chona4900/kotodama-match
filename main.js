@@ -113,6 +113,48 @@
             return rewardPool[Math.floor(random() * rewardPool.length)].id;
         }
 
+        // バトル中に発動できる神器。獲得できる7種類すべてが、少なくとも一方の場面で発動する。
+        // 八咫烏は「目的地へ安全に導き、道を開く」神器なので、攻撃時・防御時の両方で発動する。
+        const BATTLE_ATTACK_ITEM_IDS = ['kusanagi_no_tsurugi', 'houju', 'sankosho', 'yasakani_no_magatama', 'yatagarasu'];
+        const BATTLE_DEFENSE_ITEM_IDS = ['yata_no_kagami', 'kagurasuzu', 'yatagarasu'];
+
+        function selectBattleMiracleItem(availableItemIds, isMyTurn, random = Math.random) {
+            const pool = isMyTurn ? BATTLE_ATTACK_ITEM_IDS : BATTLE_DEFENSE_ITEM_IDS;
+            const candidates = availableItemIds.filter(itemId => pool.includes(itemId));
+            if (candidates.length === 0) return null;
+            return candidates[Math.floor(random() * candidates.length)];
+        }
+
+        // 神器の効果。回復量・反射は常にプレイヤー側へ適用される。
+        function getBattleMiracleEffect(itemId, { isMyTurn, hit, critical, dmg, attack, myMaxHp }) {
+            const effect = { text: '', hit, critical, dmg, healAmount: 0, reflect: false };
+            switch (itemId) {
+                case 'kusanagi_no_tsurugi':
+                    return { ...effect, text: '【草薙剣】神撃！', hit: true, critical: true, dmg: dmg * 3 };
+                case 'houju':
+                    // 固定30ではなく攻撃力依存
+                    return { ...effect, text: '【宝珠】奇跡の一手！', hit: true, critical: true, dmg: dmg + attack * 2 };
+                case 'sankosho':
+                    // 固定80からスケーリング
+                    return { ...effect, text: '【三鈷杵】雷撃！', hit: true, critical: true, dmg: attack * 5 };
+                case 'yasakani_no_magatama':
+                    // 攻撃の代わりの回復行動
+                    return { ...effect, text: '【八尺瓊勾玉】治癒！', hit: false, healAmount: Math.floor(myMaxHp * 0.5) };
+                case 'yata_no_kagami':
+                    return { ...effect, text: '【八咫鏡】反射！', hit: false, reflect: true };
+                case 'kagurasuzu':
+                    return { ...effect, text: '【神楽鈴】清め！', hit: false, healAmount: Math.floor(myMaxHp * 0.3) };
+                case 'yatagarasu':
+                    return isMyTurn
+                        // 道を開く：必中・会心の2倍撃
+                        ? { ...effect, text: '【八咫烏】導きの一撃！', hit: true, critical: true, dmg: dmg * 2 }
+                        // 安全に導く：相手の攻撃をかわし、HPを20%回復
+                        : { ...effect, text: '【八咫烏】導き！', hit: false, healAmount: Math.floor(myMaxHp * 0.2) };
+                default:
+                    return null;
+            }
+        }
+
         const KOKORO_GO_HAN_WORDS = [...WORD_GROUPS.A.words, ...WORD_GROUPS.B.words, ...WORD_GROUPS.C.words];
         const allWords = [...KOKORO_GO_HAN_WORDS, ...OYATSU_WORDS];
 
@@ -3884,6 +3926,13 @@
             itemBtn6.onclick = () => { showItemPopup('kagurasuzu'); };
             div2.appendChild(itemBtn6);
 
+            const itemBtn7 = document.createElement('button');
+            itemBtn7.className = 'test-btn';
+            itemBtn7.style.background = '#e8daef';
+            itemBtn7.textContent = '八咫烏ゲット';
+            itemBtn7.onclick = () => { showItemPopup('yatagarasu'); };
+            div2.appendChild(itemBtn7);
+
             const battleBtn = document.createElement('button');
             battleBtn.className = 'test-btn';
             battleBtn.style.background = '#ffcccc';
@@ -5406,18 +5455,8 @@
                             }
                             
                             if (availableItems.length > 0 && Math.random() < probability) {
-                            if (isMyTurn) {
-                                const attackerItems = availableItems.filter(i => ['kusanagi_no_tsurugi', 'houju', 'sankosho', 'yasakani_no_magatama'].includes(i));
-                                if (attackerItems.length > 0) {
-                                    triggeredItem = attackerItems[Math.floor(Math.random() * attackerItems.length)];
-                                }
-                            } else {
-                                const defenderItems = availableItems.filter(i => ['yata_no_kagami', 'kagurasuzu'].includes(i));
-                                if (defenderItems.length > 0) {
-                                    triggeredItem = defenderItems[Math.floor(Math.random() * defenderItems.length)];
-                                }
+                                triggeredItem = selectBattleMiracleItem(availableItems, isMyTurn);
                             }
-                        }
 
                         // アイテムによる回復や反射のパラメータ
                         let healAmount = 0;
@@ -5506,7 +5545,10 @@
                                     const sW = img.width * (1 - t * 2);
                                     const sH = img.height * (1 - t * 2);
                                     cctx.drawImage(img, sx, sy, sW, sH, 0, 0, 192, 192);
-                                    applyPixelFilter(cctx, 192, 192, 'remove-white');
+                                    // 図鑑と同じく、神器ごとの背景処理（八咫烏は remove-grey）を使う。
+                                    if (itemData.filter !== 'none') {
+                                        applyPixelFilter(cctx, 192, 192, itemData.filter || 'remove-white');
+                                    }
                                 };
                             }
 
@@ -5517,25 +5559,16 @@
                                 cutinContent.classList.add('show');
                                 
                                 let miracleText = "";
-                                switch (triggeredItem) {
-                                    case 'kusanagi_no_tsurugi': miracleText = "【草薙剣】神撃！"; hit = true; critical = true; dmg *= 3; break;
-                                    case 'houju': miracleText = "【宝珠】奇跡の一手！"; hit = true; critical = true; dmg += attackerStats.attack * 2; break; // 固定30ではなく攻撃力依存へ
-                                    case 'sankosho': miracleText = "【三鈷杵】雷撃！"; hit = true; critical = true; dmg = attackerStats.attack * 5; break; // 固定80からスケーリングへ
-                                    case 'yasakani_no_magatama': 
-                                        miracleText = "【八尺瓊勾玉】治癒！"; 
-                                        hit = false; // 攻撃の代わりの回復行動
-                                        healAmount = Math.floor(myMaxHp * 0.5); 
-                                        break;
-                                    case 'yata_no_kagami':
-                                        miracleText = "【八咫鏡】反射！"; 
-                                        hit = false; 
-                                        reflectItem = true;
-                                        break;
-                                    case 'kagurasuzu':
-                                        miracleText = "【神楽鈴】清め！"; 
-                                        hit = false; 
-                                        healAmount = Math.floor(myMaxHp * 0.3);
-                                        break;
+                                const miracleEffect = getBattleMiracleEffect(triggeredItem, {
+                                    isMyTurn, hit, critical, dmg, attack: attackerStats.attack, myMaxHp
+                                });
+                                if (miracleEffect) {
+                                    miracleText = miracleEffect.text;
+                                    hit = miracleEffect.hit;
+                                    critical = miracleEffect.critical;
+                                    dmg = miracleEffect.dmg;
+                                    healAmount = miracleEffect.healAmount;
+                                    reflectItem = miracleEffect.reflect;
                                 }
                                 cutinName.textContent = miracleText;
 

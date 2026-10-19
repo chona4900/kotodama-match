@@ -281,6 +281,68 @@ test('soul snack total milestones choose from every sacred item, including 八�
   assert.doesNotMatch(mainSource, /const ITEM_MAPPING =/);
 });
 
+test('every obtainable sacred item, including 八咫烏, can trigger in CPU battles', () => {
+  const itemsStart = dataSource.indexOf('const SECRET_ITEMS_DATA = [');
+  assert.notEqual(itemsStart, -1);
+  const itemsSource = dataSource.slice(itemsStart, dataSource.indexOf('];', itemsStart));
+  const itemIds = [...itemsSource.matchAll(/\{ id: '([a-z_]+)'/g)].map(match => match[1]);
+  assert.equal(itemIds.length, 7);
+  assert.ok(itemIds.includes('yatagarasu'));
+
+  const battleItemSource = sourceBetween(
+    'const OYATSU_REWARD_MILESTONE = 10000;',
+    '// --- 24x24 拡張ピクセルアート定義',
+  );
+  const context = vm.createContext({
+    WORD_GROUPS: { A: { words: [] }, B: { words: [] }, C: { words: [] } },
+    OYATSU_WORDS: [],
+    SECRET_ITEMS_DATA: itemIds.map(id => ({ id })),
+    unlockedItems: [],
+  });
+  vm.runInContext(
+    `${battleItemSource}\nthis.select = selectBattleMiracleItem; this.effect = getBattleMiracleEffect; this.attackIds = BATTLE_ATTACK_ITEM_IDS; this.defenseIds = BATTLE_DEFENSE_ITEM_IDS;`,
+    context,
+  );
+
+  const base = { hit: false, critical: false, dmg: 30, attack: 20, myMaxHp: 200 };
+  const effect = (id, isMyTurn) => {
+    const result = context.effect(id, { ...base, isMyTurn });
+    return result && { ...result };
+  };
+
+  for (const id of itemIds) {
+    const onAttack = context.attackIds.includes(id);
+    const onDefense = context.defenseIds.includes(id);
+    assert.ok(onAttack || onDefense, `${id} can be obtained but never triggers in battle`);
+    if (onAttack) assert.ok(effect(id, true), `${id} has no attack-turn effect`);
+    if (onDefense) assert.ok(effect(id, false), `${id} has no defense-turn effect`);
+  }
+
+  // The first 10,000-snack reward can be 八咫烏 alone; it must still trigger on both turns.
+  assert.equal(context.select(['yatagarasu'], true, () => 0), 'yatagarasu');
+  assert.equal(context.select(['yatagarasu'], false, () => 0), 'yatagarasu');
+  assert.equal(context.select(['yata_no_kagami'], true, () => 0), null);
+  assert.deepEqual(effect('yatagarasu', true), {
+    text: '【八咫烏】導きの一撃！', hit: true, critical: true, dmg: 60, healAmount: 0, reflect: false,
+  });
+  assert.deepEqual(effect('yatagarasu', false), {
+    text: '【八咫烏】導き！', hit: false, critical: false, dmg: 30, healAmount: 40, reflect: false,
+  });
+
+  // Extracting the effects must not change the six existing sacred items.
+  assert.equal(effect('kusanagi_no_tsurugi', true).dmg, 90);
+  assert.equal(effect('houju', true).dmg, 70);
+  assert.equal(effect('sankosho', true).dmg, 100);
+  assert.equal(effect('yasakani_no_magatama', true).healAmount, 100);
+  assert.equal(effect('yata_no_kagami', false).reflect, true);
+  assert.equal(effect('kagurasuzu', false).healAmount, 60);
+  assert.equal(effect('unknown_item', true), null);
+
+  assert.match(mainSource, /triggeredItem = selectBattleMiracleItem\(availableItems, isMyTurn\);/);
+  assert.match(mainSource, /getBattleMiracleEffect\(triggeredItem, \{/);
+  assert.match(mainSource, /applyPixelFilter\(cctx, 192, 192, itemData\.filter \|\| 'remove-white'\)/);
+});
+
 test('the normal gratitude phrase does not match the bare word 感謝', () => {
   const aliasesSource = sourceBetween(
     'const WORD_ALIASES = {',
