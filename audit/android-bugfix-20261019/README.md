@@ -51,15 +51,20 @@ Yatagarasu fix from PR #3 on top of released revision `07024a3` (Android 21,
 
 ## Remaining verification boundaries
 
-- Android signed build, native unit tests, lint and packaged assets: pending
-  the branch's GitHub Actions run; update this record with its result.
+- Android signed build, native unit tests, lint and packaged assets: passed in
+  run 39236299776 (#23), commit 31f8e82be587809aebc73e13fbd4f4c91aee80ae.
+  CI web tests: 149 passed, 0 skipped; backend: 25 passed. The actual Java
+  receiver test passed all 48 recurring dispatch cases. Both signed artifacts
+  were downloaded and their hashes, package, version and six packaged assets
+  independently verified (artifacts-verified.json).
 - Real device, actual Doze delivery, Bluetooth/calls, Play purchase/restore and
   Play-track upgrade are separate checks, not proven by Java API doubles or web
   tests. No data clear, uninstall or production account changes were performed.
 - Play's BOOT_COMPLETED/microphone warning is not declared fixed. App source and
   the locked notification receiver show boot-triggered notification scheduling,
-  but no boot-to-microphone-service path. Exact packaged manifest/device checks
-  remain to be recorded.
+  but no boot-to-microphone-service path. The merged manifest confirms that the
+  boot receiver belongs to local notifications and the microphone service is
+  not exported. Android 15/16 boot/device behavior remains unverified.
 - Browser screen verification was blocked by automatic approval review citing
   prior interruption; an explicit browser-resume question is pending. Code and
   regression work continued independently.
@@ -71,3 +76,20 @@ Game rules v0.27.0: REL-002/004/005, VAL-001–005/011, MOB-001–006,
 AUD-001/002, LIF-001/002, DAT-001/002 and the project's mobile game test matrix.
 Changes are verified at their actual layer; static findings do not count as
 device or store-track observations.
+
+## Integration and distribution checkpoint
+
+- PR #4 merged to main as 4181ac937d39aaf63115d9b6050b90202f367e70. Its tree
+  matches the tested source. PR: https://github.com/chona4900/kotodama-match/pull/4
+- Android CI: https://github.com/chona4900/kotodama-match/actions/runs/39236299776
+- AAB: 1.0.12, versionCode 23, package com.kotodamamatch.app. Verification APK
+  uses versionName 1.0.12-test. Do not uninstall an existing Play copy or clear
+  player data to work around a Play-signing/upload-signing mismatch.
+- Online Worker updated from prior version a26ec27f-5692-427a-9eff-10b6b05662f4
+  to ef2020be-95dd-4a41-bf3f-d7f61633f2c9. Existing bindings, compatibility
+  date, database and schema are unchanged. No migration or deletion ran.
+- Production verification passed with two synthetic, unranked connections:
+  create/join, reconnect, battle and result replay. No player profile was used.
+  The health endpoint returned HTTP 200 with `{ "ok": true }`.
+- Store submission/approval/rollout: not performed. Browser resume approval
+  is pending; real-device, Play-track and visual checks remain open.

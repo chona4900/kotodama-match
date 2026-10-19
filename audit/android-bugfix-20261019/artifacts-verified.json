@@ -1,0 +1,22 @@
+[
+  {
+    "file": "app-release.aab",
+    "bytes": 52966042,
+    "sha256": "c4922aee5f34a0d306c2dca94d7dfa19d253b67bb740855646304379ba1b80fb",
+    "versionCode": "23",
+    "versionName": "1.0.12",
+    "package": "com.kotodamamatch.app",
+    "packagedSourceMatches": true,
+    "aiCompanionExcluded": true
+  },
+  {
+    "file": "app-release.apk",
+    "bytes": 54050044,
+    "sha256": "21883f5211051471f697d2f0e10dfa70d454e93bfb5d98cca1933e5a427f7160",
+    "versionCode": 23,
+    "versionName": "1.0.12-test",
+    "package": "com.kotodamamatch.app",
+    "packagedSourceMatches": true,
+    "aiCompanionExcluded": true
+  }
+]
