@@ -1,0 +1,465 @@
+TAP version 13
+# Subtest: stage 1: speech during animation saves a coherent previous form and resumes after reload
+not ok 1 - stage 1: speech during animation saves a coherent previous form and resumes after reload
+  ---
+  duration_ms: 3.7248
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:91:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:96:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.start (node:internal/test_runner/test:1242:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+# Subtest: stage 2: speech during animation saves a coherent previous form and resumes after reload
+not ok 2 - stage 2: speech during animation saves a coherent previous form and resumes after reload
+  ---
+  duration_ms: 1.0366
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:91:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:96:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: stage 3: speech during animation saves a coherent previous form and resumes after reload
+not ok 3 - stage 3: speech during animation saves a coherent previous form and resumes after reload
+  ---
+  duration_ms: 0.905
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:91:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    3 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:96:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: a failed ultimate attempt interrupted by speech/reload stays retryable, not MAX
+not ok 4 - a failed ultimate attempt interrupted by speech/reload stays retryable, not MAX
+  ---
+  duration_ms: 1.0125
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:110:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    4 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:115:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: a saved ultimate win survives reload and retains its longer lifetime during animation
+ok 5 - a saved ultimate win survives reload and retains its longer lifetime during animation
+  ---
+  duration_ms: 2.0784
+  type: 'test'
+  ...
+# Subtest: B reset cancels the old effect, so a queued fallback cannot overwrite a newer evolution
+not ok 6 - B reset cancels the old effect, so a queued fallback cannot overwrite a newer evolution
+  ---
+  duration_ms: 0.9605
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:148:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:155:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: reset cancels a pending ultimate form switch but retains its earned collection entry
+not ok 7 - reset cancels a pending ultimate form switch but retains its earned collection entry
+  ---
+  duration_ms: 1.4331
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:170:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + {
+    +   form: 'ultimate_1',
+    +   isSuccess: true,
+    +   name: '八大龍王っち'
+    + }
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    isSuccess: true
+    form: 'ultimate_1'
+    name: '八大龍王っち'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:175:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: an ultimate win unlocks its collection entry when awarded, before animation completes
+not ok 8 - an ultimate win unlocks its collection entry when awarded, before animation completes
+  ---
+  duration_ms: 1.0752
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:185:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:190:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: an expired legacy pending ultimate keeps its collection entry on silent reincarnation, matching cold load
+not ok 9 - an expired legacy pending ultimate keeps its collection entry on silent reincarnation, matching cold load
+  ---
+  duration_ms: 1.185
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:199:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + {
+    +   form: 'ultimate_3',
+    +   isSuccess: true,
+    +   name: 'バステトっち'
+    + }
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    isSuccess: true
+    form: 'ultimate_3'
+    name: 'バステトっち'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:209:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: an expired legacy pending ultimate keeps its collection entry on animated reincarnation, matching cold load
+not ok 10 - an expired legacy pending ultimate keeps its collection entry on animated reincarnation, matching cold load
+  ---
+  duration_ms: 0.9677
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:199:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + {
+    +   form: 'ultimate_3',
+    +   isSuccess: true,
+    +   name: 'バステトっち'
+    + }
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    isSuccess: true
+    form: 'ultimate_3'
+    name: 'バステトっち'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:209:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: a delayed reincarnation cannot erase new-egg progress after speech
+not ok 11 - a delayed reincarnation cannot erase new-egg progress after speech
+  ---
+  duration_ms: 0.9466
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:224:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:233:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: a delayed reincarnation cannot erase new-egg progress after reset
+not ok 12 - a delayed reincarnation cannot erase new-egg progress after reset
+  ---
+  duration_ms: 1.4835
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:224:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:233:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: normal reincarnation still waits for its dark frame and cancels an older evolution
+not ok 13 - normal reincarnation still waits for its dark frame and cancels an older evolution
+  ---
+  duration_ms: 1.1098
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:239:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'childA_1_1'
+    - 'egg'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'egg'
+  actual: 'childA_1_1'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:249:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: existing interrupted-save repair preserves data: 1/egg -> 0/egg
+not ok 14 - existing interrupted-save repair preserves data: 1/egg -> 0/egg
+  ---
+  duration_ms: 0.2425
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:254:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:257:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: existing interrupted-save repair preserves data: 2/childA -> 1/childA
+not ok 15 - existing interrupted-save repair preserves data: 2/childA -> 1/childA
+  ---
+  duration_ms: 0.0913
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:254:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:257:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: existing interrupted-save repair preserves data: 3/childB_2 -> 2/childB_2
+not ok 16 - existing interrupted-save repair preserves data: 3/childB_2 -> 2/childB_2
+  ---
+  duration_ms: 0.0692
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:254:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    3 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:257:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: existing interrupted-save repair preserves data: 4/childC_2_4 -> 3/childC_2_4
+not ok 17 - existing interrupted-save repair preserves data: 4/childC_2_4 -> 3/childC_2_4
+  ---
+  duration_ms: 0.0576
+  type: 'test'
+  location: '<worktree>\\scripts\\progression-races.test.js:254:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    4 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>\scripts\progression-races.test.js:257:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: valid, unknown, and ambiguous forms are not rewritten by interrupted-save repair
+ok 18 - valid, unknown, and ambiguous forms are not rewritten by interrupted-save repair
+  ---
+  duration_ms: 0.3622
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 2
+# fail 16
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 102.7769

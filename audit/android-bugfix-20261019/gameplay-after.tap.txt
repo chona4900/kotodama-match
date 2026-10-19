@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: stage 1: speech during animation saves a coherent previous form and resumes after reload
+ok 1 - stage 1: speech during animation saves a coherent previous form and resumes after reload
+  ---
+  duration_ms: 5.0526
+  type: 'test'
+  ...
+# Subtest: stage 2: speech during animation saves a coherent previous form and resumes after reload
+ok 2 - stage 2: speech during animation saves a coherent previous form and resumes after reload
+  ---
+  duration_ms: 1.7138
+  type: 'test'
+  ...
+# Subtest: stage 3: speech during animation saves a coherent previous form and resumes after reload
+ok 3 - stage 3: speech during animation saves a coherent previous form and resumes after reload
+  ---
+  duration_ms: 1.5968
+  type: 'test'
+  ...
+# Subtest: a failed ultimate attempt interrupted by speech/reload stays retryable, not MAX
+ok 4 - a failed ultimate attempt interrupted by speech/reload stays retryable, not MAX
+  ---
+  duration_ms: 1.6021
+  type: 'test'
+  ...
+# Subtest: a saved ultimate win survives reload and retains its longer lifetime during animation
+ok 5 - a saved ultimate win survives reload and retains its longer lifetime during animation
+  ---
+  duration_ms: 1.6317
+  type: 'test'
+  ...
+# Subtest: B reset cancels the old effect, so a queued fallback cannot overwrite a newer evolution
+ok 6 - B reset cancels the old effect, so a queued fallback cannot overwrite a newer evolution
+  ---
+  duration_ms: 1.0449
+  type: 'test'
+  ...
+# Subtest: reset cancels a pending ultimate form switch but retains its earned collection entry
+ok 7 - reset cancels a pending ultimate form switch but retains its earned collection entry
+  ---
+  duration_ms: 1.4545
+  type: 'test'
+  ...
+# Subtest: an ultimate win unlocks its collection entry when awarded, before animation completes
+ok 8 - an ultimate win unlocks its collection entry when awarded, before animation completes
+  ---
+  duration_ms: 1.5996
+  type: 'test'
+  ...
+# Subtest: an expired legacy pending ultimate keeps its collection entry on silent reincarnation, matching cold load
+ok 9 - an expired legacy pending ultimate keeps its collection entry on silent reincarnation, matching cold load
+  ---
+  duration_ms: 1.8238
+  type: 'test'
+  ...
+# Subtest: an expired legacy pending ultimate keeps its collection entry on animated reincarnation, matching cold load
+ok 10 - an expired legacy pending ultimate keeps its collection entry on animated reincarnation, matching cold load
+  ---
+  duration_ms: 1.6754
+  type: 'test'
+  ...
+# Subtest: a delayed reincarnation cannot erase new-egg progress after speech
+ok 11 - a delayed reincarnation cannot erase new-egg progress after speech
+  ---
+  duration_ms: 0.9403
+  type: 'test'
+  ...
+# Subtest: a delayed reincarnation cannot erase new-egg progress after reset
+ok 12 - a delayed reincarnation cannot erase new-egg progress after reset
+  ---
+  duration_ms: 1.0039
+  type: 'test'
+  ...
+# Subtest: normal reincarnation still waits for its dark frame and cancels an older evolution
+ok 13 - normal reincarnation still waits for its dark frame and cancels an older evolution
+  ---
+  duration_ms: 0.8853
+  type: 'test'
+  ...
+# Subtest: existing interrupted-save repair preserves data: 1/egg -> 0/egg
+ok 14 - existing interrupted-save repair preserves data: 1/egg -> 0/egg
+  ---
+  duration_ms: 0.1688
+  type: 'test'
+  ...
+# Subtest: existing interrupted-save repair preserves data: 2/childA -> 1/childA
+ok 15 - existing interrupted-save repair preserves data: 2/childA -> 1/childA
+  ---
+  duration_ms: 0.1088
+  type: 'test'
+  ...
+# Subtest: existing interrupted-save repair preserves data: 3/childB_2 -> 2/childB_2
+ok 16 - existing interrupted-save repair preserves data: 3/childB_2 -> 2/childB_2
+  ---
+  duration_ms: 0.0614
+  type: 'test'
+  ...
+# Subtest: existing interrupted-save repair preserves data: 4/childC_2_4 -> 3/childC_2_4
+ok 17 - existing interrupted-save repair preserves data: 4/childC_2_4 -> 3/childC_2_4
+  ---
+  duration_ms: 0.0663
+  type: 'test'
+  ...
+# Subtest: valid, unknown, and ambiguous forms are not rewritten by interrupted-save repair
+ok 18 - valid, unknown, and ambiguous forms are not rewritten by interrupted-save repair
+  ---
+  duration_ms: 0.141
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 105.0773

@@ -636,6 +636,7 @@ test('初回チュートリアル成功後もMICを止めず連続して言霊�
 });
 
 test('転生時は育成能力を初期化し、魂のおやつと戦歴などは残す', () => {
+  const cancelSource = sourceBetween('function cancelPendingProgression()', 'function getRebirthDeadline()');
   const reincarnationSource = sourceBetween(
     'function reincarnate({ announce = true } = {})',
     '// --- 描画ロジック ---',
@@ -658,6 +659,9 @@ test('転生時は育成能力を初期化し、魂のおやつと戦歴など�
     finalEvolutionTimestamp: 123,
     isSick: true,
     sickRecoveryCount: 4,
+    evolutionGeneration: 0, rebirthGeneration: 0, rebirthTimer: null,
+    cancelActiveEvolutionEffect: null, pendingUltimateEvolution: null,
+    canvas: { classList: { remove() {} } },
     document: { getElementById: () => ({ classList: { add() {}, remove() {} } }) },
     saveState() {},
     renderCanvasArt() {},
@@ -669,7 +673,7 @@ test('転生時は育成能力を初期化し、魂のおやつと戦歴など�
     Date: { now: () => 987654 },
   });
 
-  vm.runInContext(`${battleStatsSource}\n${reincarnationSource}\nthis.reincarnate = reincarnate; this.getBattleStats = getBattleStats;`, context);
+  vm.runInContext(`${battleStatsSource}\n${cancelSource}\n${reincarnationSource}\nthis.reincarnate = reincarnate; this.getBattleStats = getBattleStats;`, context);
   context.reincarnate({ announce: false });
 
   assert.equal(context.currentStage, 0);
@@ -797,6 +801,7 @@ test('究極進化に失敗した結果文と次回目標が暗転後に残る',
   let updateOptions;
   const context = vm.createContext({
     isEvolutionInProgress: false,
+    evolutionGeneration: 0,
     currentStage: 3,
     currentForm: 'childA_1_1',
     totalCount: 4900,

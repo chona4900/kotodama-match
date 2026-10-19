@@ -57,9 +57,11 @@ Pop-Location
 node --test online-battle/test/*.test.mjs
 ```
 
-現在のリポジトリに入っているWrangler 4.116.0のローカルruntimeは互換日付2026-08-24に未対応です。Wranglerを更新するまでは、`wrangler dev` のローカル確認だけ `--compatibility-date 2026-08-06` を追加してください。本番設定とdry-runは2026-08-24のままにします。
+Wranglerは4.151.1へ固定済みです。設定済みの互換日付2026-09-10を変更せずにローカル検証できます。2026-10-19に入室・切断・再接続・同一結果の再取得を実Workerで確認しました。旧4.116.0向けの日付上書きは不要です。
 
 ## 初回デプロイ（公開はまだしない）
+
+以下は新規環境向けの初期手順です。既存の本番更新では、現在のWorker・D1を使い、データベースの再作成や既存データの削除を行いません。
 
 ```powershell
 Push-Location online-battle

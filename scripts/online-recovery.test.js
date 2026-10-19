@@ -252,3 +252,53 @@ test('receipt history is bounded and malformed results cannot alter records', ()
     assert.equal(h.context.recordConfirmedOnlineResult(confirmedResult), true);
     assert.equal(h.context.battleWins, 5);
 });
+
+function replayHarness() {
+    const h = battleSceneHarness();
+    const effects = { finishes: 0, hits: 0 };
+    Object.assign(h.context, {
+        finishBattle() { effects.finishes++; },
+        createHitFx() { effects.hits++; },
+        createPopupText() {}, playExplosionSound() {}, playCriticalSound() {},
+    });
+    h.context.battleArenaEl.getBoundingClientRect = () => ({ width: 200, height: 200 });
+    vm.runInContext(source.slice(source.indexOf('        function runOnlineBattleSequence('), source.indexOf('        function startBattle(')), h.context);
+    h.context.startBattle(false, { f: 'adult_1', w: 0, resultReplay: true });
+    const result = {
+        hostWon: true, maxHp: { host: 100, guest: 100 },
+        events: [{ attacker: 'host', hit: true, critical: false, damage: 10, hp: { host: 100, guest: 90 } }],
+    };
+    return { ...h, effects, result, flush() { while (h.timers.length) h.timers.shift()(); } };
+}
+
+test('an expired-room replay cannot damage or finish the next battle after its scene closes', () => {
+    const h = replayHarness();
+    h.context.runOnlineBattleSequence(h.result, 'host');
+    // Expiry closes the arena even if the result animation has not finished.
+    h.context.closeBattleOverlay();
+    h.context.startBattle(false, { f: 'adult_2', w: 0, resultReplay: true });
+    h.context.enemyHpBarEl.style.width = '100%';
+    h.flush();
+    assert.equal(h.context.enemyHpBarEl.style.width, '100%');
+    assert.equal(h.effects.hits, 0);
+    assert.equal(h.effects.finishes, 0);
+});
+
+test('closing a replay after impact also cancels its queued next turn and finish', () => {
+    const h = replayHarness();
+    h.context.runOnlineBattleSequence(h.result, 'host');
+    h.timers.shift()(); // The impact already happened; its next turn is pending.
+    assert.equal(h.effects.hits, 1);
+    h.context.closeBattleOverlay();
+    h.flush();
+    assert.equal(h.effects.finishes, 0);
+});
+
+test('a current online replay still applies its impact and finishes exactly once', () => {
+    const h = replayHarness();
+    h.context.runOnlineBattleSequence(h.result, 'host');
+    h.flush();
+    assert.equal(h.context.enemyHpBarEl.style.width, '90%');
+    assert.equal(h.effects.hits, 1);
+    assert.equal(h.effects.finishes, 1);
+});

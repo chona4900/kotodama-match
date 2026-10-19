@@ -165,6 +165,10 @@
         let totalCount = 0;
         let ultimateAttemptCount = 0;
         let isEvolutionInProgress = false;
+        let evolutionGeneration = 0;
+        let cancelActiveEvolutionEffect = null;
+        let rebirthGeneration = 0;
+        let rebirthTimer = null;
         let intokuPower = 0;
         let battleWins = 0;
         let battleLosses = 0;
@@ -1023,10 +1027,32 @@
         }
 
         // --- 転生ロジック ---
+        function cancelPendingProgression() {
+            // リセット後に、古い演出の完了通知で姿・回数を戻さない。
+            evolutionGeneration += 1;
+            isEvolutionInProgress = false;
+            // 旧保存の当選も獲得済み。姿を卵へ戻しても、図鑑からは取り消さない。
+            const awardedForm = pendingUltimateEvolution?.isSuccess ? pendingUltimateEvolution.form : null;
+            if (['ultimate_1', 'ultimate_2', 'ultimate_3'].includes(awardedForm)
+                && !unlockedForms.includes(awardedForm)) unlockedForms.push(awardedForm);
+            pendingUltimateEvolution = null;
+            if (cancelActiveEvolutionEffect) cancelActiveEvolutionEffect();
+            cancelActiveEvolutionEffect = null;
+            canvas.classList.remove('bouncing');
+            rebirthGeneration += 1;
+            if (rebirthTimer !== null) clearTimeout(rebirthTimer);
+            rebirthTimer = null;
+            document.getElementById('rebirthOverlay')?.classList.remove('active');
+        }
+
         function getRebirthDeadline() {
             if (!finalEvolutionTimestamp) return null;
-            if (currentStage === 3) return finalEvolutionTimestamp + REBIRTH_STAGE3_DELAY_MS;
-            if (currentStage === 4) return finalEvolutionTimestamp + REBIRTH_STAGE4_DELAY_MS;
+            // 当選結果は演出より先に確定済み。暗転中も究極進化後の期限を使う。
+            const hasPendingUltimate = pendingUltimateEvolution?.isSuccess
+                && ['ultimate_1', 'ultimate_2', 'ultimate_3'].includes(pendingUltimateEvolution.form);
+            const rebirthStage = hasPendingUltimate ? 4 : currentStage;
+            if (rebirthStage === 3) return finalEvolutionTimestamp + REBIRTH_STAGE3_DELAY_MS;
+            if (rebirthStage === 4) return finalEvolutionTimestamp + REBIRTH_STAGE4_DELAY_MS;
             return null;
         }
 
@@ -1062,6 +1088,8 @@
         function reincarnate({ announce = true } = {}) {
             const overlay = document.getElementById('rebirthOverlay');
             if(!overlay) return;
+            cancelPendingProgression();
+            const generation = rebirthGeneration;
 
             const resetToEgg = () => {
                 currentStage = 0;
@@ -1096,7 +1124,9 @@
             overlay.classList.add('active');
 
             // 3秒後（完全に真っ黒になった瞬間）にデータをリセット
-            setTimeout(() => {
+            rebirthTimer = setTimeout(() => {
+                if (generation !== rebirthGeneration) return;
+                rebirthTimer = null;
                 resetToEgg();
 
                 // ゆっくり明転させる
@@ -1935,7 +1965,7 @@
             const overlay = document.getElementById('evolutionOverlay');
             if(!overlay) {
                 callback();
-                return;
+                return null;
             }
 
             const animationClass = isUltimate ? 'flashing-ultimate' : 'flashing';
@@ -1978,6 +2008,14 @@
             } else {
                 playEvolutionSound();
             }
+
+            return () => {
+                if (finished) return;
+                finished = true;
+                if (fallbackTimer !== null) clearTimeout(fallbackTimer);
+                overlay.removeEventListener('animationend', handleAnimationEnd);
+                overlay.classList.remove('flashing', 'flashing-ultimate');
+            };
         }
 
         function rollUltimateEvolutionOutcome(forcedUltimateSuccess = null) {
@@ -2015,8 +2053,7 @@
             if (isEvolutionInProgress) return false;
 
             isEvolutionInProgress = true;
-            let prevStage = currentStage;
-            currentStage = targetStage;
+            const generation = ++evolutionGeneration;
             statusTextEl.textContent = "ドキドキ...";
             canvas.classList.add('bouncing');
 
@@ -2111,10 +2148,11 @@
             }
 
             // エフェクト開始
-            createEvolutionEffect(() => {
+            cancelActiveEvolutionEffect = createEvolutionEffect(() => {
+                if (generation !== evolutionGeneration) return;
+                cancelActiveEvolutionEffect = null;
                 const isFailedUltimate = (targetStage === 4 && evolutionType === currentForm);
                 if (isFailedUltimate) {
-                    currentStage = prevStage;
                     isEvolutionInProgress = false;
                     saveState();
                     updateUI({ preserveStatus: true, checkEvolution: false });
@@ -2126,6 +2164,8 @@
                     return; 
                 }
 
+                // 発話中も保存されるので、段階と姿は結果が決まった瞬間に一緒に変える。
+                currentStage = targetStage;
                 currentForm = evolutionType;
                 if (!unlockedForms.includes(currentForm)) {
                     unlockedForms.push(currentForm);
@@ -2164,6 +2204,8 @@
             ultimateAttemptCount += 1;
             const outcome = rollUltimateEvolutionOutcome();
             pendingUltimateEvolution = outcome.isSuccess ? outcome : null;
+            // 図鑑の獲得は当選時に確定し、演出中の転生・リセットでも残す。
+            if (outcome.isSuccess && !unlockedForms.includes(outcome.form)) unlockedForms.push(outcome.form);
             saveState();
             return evolve(4, { ultimateOutcome: outcome });
         }
@@ -3062,6 +3104,7 @@
                 return;
             }
             if(confirm("キャラクターをタマゴに戻しますか？\n心のごはんと今回の進化回数は0に戻ります。\n魂のおやつ・戦歴・図鑑・神器・コトダマ杯は残ります。")){
+                cancelPendingProgression();
                 currentStage = 0;
                 currentForm = 'egg';
                 totalCount = 0;
@@ -5124,6 +5167,9 @@
         }
 
         function runOnlineBattleSequence(result, seat) {
+            const battleScene = battleOverlayEl.kotodamaBattleScene;
+            const isCurrentScene = () => battleScene && battleOverlayEl.kotodamaBattleScene === battleScene;
+            if (!isCurrentScene()) return;
             const myRole = seat;
             const enemyRole = seat === 'host' ? 'guest' : 'host';
             const myMaxHp = result.maxHp[myRole];
@@ -5132,6 +5178,7 @@
             battleMessageEl.style.display = 'none';
 
             const playNext = () => {
+                if (!isCurrentScene()) return;
                 const event = result.events[eventIndex];
                 if (!event) {
                     const didWin = seat === 'host' ? result.hostWon : !result.hostWon;
@@ -5147,21 +5194,22 @@
                 initAudio();
                 playOscillator(150, audioCtx ? audioCtx.currentTime : 0, 0.12, 0.08, 'sawtooth');
                 setTimeout(() => {
+                    if (!isCurrentScene()) return;
                     if (event.hit) {
                         defenderEl.classList.add('hit');
                         const arenaRect = battleArenaEl.getBoundingClientRect();
                         createHitFx(arenaRect.width / 2, arenaRect.height / 2);
                         createPopupText(event.critical ? `CRITICAL! ${event.damage}` : `-${event.damage}`, isMyTurn, event.critical);
                         if (event.critical) playCriticalSound(); else playExplosionSound();
-                        setTimeout(() => defenderEl.classList.remove('hit'), 350);
+                        setTimeout(() => { if (isCurrentScene()) defenderEl.classList.remove('hit'); }, 350);
                     } else {
                         defenderEl.classList.add('miss');
                         createPopupText('MISS!', isMyTurn, false);
-                        setTimeout(() => defenderEl.classList.remove('miss'), 350);
+                        setTimeout(() => { if (isCurrentScene()) defenderEl.classList.remove('miss'); }, 350);
                     }
                     myHpBarEl.style.width = `${Math.max(0, event.hp[myRole]) / myMaxHp * 100}%`;
                     enemyHpBarEl.style.width = `${Math.max(0, event.hp[enemyRole]) / enemyMaxHp * 100}%`;
-                    setTimeout(() => attackerEl.classList.remove(atkClass), 250);
+                    setTimeout(() => { if (isCurrentScene()) attackerEl.classList.remove(atkClass); }, 250);
                     setTimeout(playNext, 850);
                 }, 260);
             };
