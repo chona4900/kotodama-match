@@ -65,10 +65,8 @@ Yatagarasu fix from PR #3 on top of released revision `07024a3` (Android 21,
   but no boot-to-microphone-service path. The merged manifest confirms that the
   boot receiver belongs to local notifications and the microphone service is
   not exported. Android 15/16 boot/device behavior remains unverified.
-- Browser screen verification was blocked by automatic approval review citing
-  prior interruption; an explicit browser-resume question is pending. Code and
-  regression work continued independently.
-- This record does not claim a store submission, store approval or rollout.
+- Browser verification initially stopped at an approval review. The owner
+  explicitly authorized resuming it, and the checks below were subsequently run.
 
 ## Applied audit rules
 
@@ -91,5 +89,33 @@ device or store-track observations.
 - Production verification passed with two synthetic, unranked connections:
   create/join, reconnect, battle and result replay. No player profile was used.
   The health endpoint returned HTTP 200 with `{ "ok": true }`.
-- Store submission/approval/rollout: not performed. Browser resume approval
-  is pending; real-device, Play-track and visual checks remain open.
+- The initial checkpoint stopped before store submission; see the later
+  distribution checkpoint below for the current status.
+
+## Device and distribution checkpoint — October 19, 2026
+
+- Browser checks exercised the game, information, virtue, CPU battle and ritual
+  panels. CPU actions returned to the game, and a virtue increment survived a
+  reload. All five primary controls fit at 360x640, 390x844 and 430x932 with no
+  horizontal overflow. The first two sizes were also visually checked; the
+  narrow preview pane clipped the largest screenshot. Browser microphone and
+  reset confirmation completion remain unverified.
+- The Windows preview's three principal text assets matched the CI AAB after
+  CRLF/LF normalization. Their bytes were not identical across operating systems.
+- On an A302ZT running Android 13, the verification APK upgraded from code 21
+  to 23 using an in-place install. The signing certificate, app data identity
+  and original installation date were preserved. No uninstall or data clear ran.
+  The owner subsequently reported that the app appeared to work correctly.
+  This report is not a detailed device test matrix or proof of a Play-signed
+  upgrade: the installed APK is the verification build, not a Play install.
+- Google Play internal testing received 1.0.12 / 23 at 20:36 JST, using the
+  existing tester selection. The production update was submitted after the
+  owner's device check; Play Console showed it under changes in review.
+  Review approval and public availability are not yet confirmed.
+- The owner then explicitly requested this bug-fix update on both Android and
+  iPhone. iOS marketing versions were aligned to 1.0.12, with the existing CI
+  using a unique run ID for the build number. The iOS build, TestFlight upload,
+  App Review submission and iPhone device checks are separate pending steps.
+  Android's notification-receiver patch is not claimed as an iOS correction.
+- AI companion chat remains excluded from both platform releases. No new
+  permissions, pricing, review-access details or purchase behavior were added.
